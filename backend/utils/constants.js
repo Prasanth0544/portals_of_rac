@@ -5,7 +5,8 @@ module.exports = {
   getTRAIN_NO: () => global.RAC_CONFIG?.trainNo || null,
   getTRAIN_NAME: () => global.RAC_CONFIG?.trainName || null,
   TOTAL_COACHES: 9,
-  BERTHS_PER_COACH: 72,
+  BERTHS_PER_COACH: 72, // Default for SL coaches
+  BERTHS_PER_COACH_3A: 64, // For Three_Tier_AC (3A) coaches
 
   // Berth Types
   BERTH_TYPES: {

@@ -38,23 +38,23 @@ class TrainState {
     this.coaches = [];
     const totalSegments = this.stations.length - 1;
 
-    // Sleeper coaches (S1..Sn)
+    // Sleeper coaches (S1..Sn) - 72 berths
     for (let i = 1; i <= sleeperCount; i++) {
       const coachNo = `S${i}`;
       const coach = { coachNo, class: 'SL', capacity: 72, berths: [] };
       for (let j = 1; j <= 72; j++) {
-        const berthType = this.getBerthType(j);
+        const berthType = this.getBerthType(j, 'SL');
         coach.berths.push(new Berth(coachNo, j, berthType, totalSegments));
       }
       this.coaches.push(coach);
     }
 
-    // 3-Tier AC coaches (B1..Bn) — using same berth layout for parity
+    // 3-Tier AC coaches (B1..Bn) - 64 berths with updated mapping
     for (let i = 1; i <= threeAcCount; i++) {
       const coachNo = `B${i}`;
-      const coach = { coachNo, class: '3A', capacity: 72, berths: [] };
-      for (let j = 1; j <= 72; j++) {
-        const berthType = this.getBerthType(j);
+      const coach = { coachNo, class: '3A', capacity: 64, berths: [] };
+      for (let j = 1; j <= 64; j++) {
+        const berthType = this.getBerthType(j, '3A');
         coach.berths.push(new Berth(coachNo, j, berthType, totalSegments));
       }
       this.coaches.push(coach);
@@ -66,9 +66,15 @@ class TrainState {
   }
 
   /**
-   * Get berth type based on seat number
+   * Get berth type based on seat number and coach class
    */
-  getBerthType(seatNo) {
+  getBerthType(seatNo, coachClass = 'SL') {
+    // Three_Tier_AC (3A) coaches use 64 berths with different mapping
+    if (coachClass === '3A') {
+      return this.getBerthType3A(seatNo);
+    }
+    
+    // Sleeper (SL) coaches use 72 berths
     const berthMapping = {
       lowerBerths: [1, 4, 9, 12, 17, 20, 25, 28, 33, 36, 41, 44, 49, 52, 57, 60, 65, 68],
       middleBerths: [2, 5, 10, 13, 18, 21, 26, 29, 34, 37, 42, 45, 50, 53, 58, 61, 66, 69],
@@ -82,6 +88,27 @@ class TrainState {
     if (berthMapping.upperBerths.includes(seatNo)) return "Upper Berth";
     if (berthMapping.sideLower.includes(seatNo)) return "Side Lower";
     if (berthMapping.sideUpper.includes(seatNo)) return "Side Upper";
+    
+    return "Lower Berth";
+  }
+
+  /**
+   * Get berth type for Three_Tier_AC (3A) coaches - 64 berths
+   */
+  getBerthType3A(seatNo) {
+    const berthMapping3A = {
+      lowerBerths: [1, 4, 9, 12, 17, 20, 25, 28, 33, 36, 41, 44, 49, 52, 57, 60],
+      middleBerths: [2, 5, 10, 13, 18, 21, 26, 29, 34, 37, 42, 45, 50, 53, 58, 61],
+      upperBerths: [3, 6, 11, 14, 19, 22, 27, 30, 35, 38, 43, 46, 51, 54, 59, 62],
+      sideLower: [7, 15, 23, 31, 39, 47, 55, 63],  // RAC Berths
+      sideUpper: [8, 16, 24, 32, 40, 48, 56, 64]
+    };
+
+    if (berthMapping3A.lowerBerths.includes(seatNo)) return "Lower Berth";
+    if (berthMapping3A.middleBerths.includes(seatNo)) return "Middle Berth";
+    if (berthMapping3A.upperBerths.includes(seatNo)) return "Upper Berth";
+    if (berthMapping3A.sideLower.includes(seatNo)) return "Side Lower";
+    if (berthMapping3A.sideUpper.includes(seatNo)) return "Side Upper";
     
     return "Lower Berth";
   }
@@ -121,6 +148,14 @@ class TrainState {
     if (!coach) return null;
     
     return coach.berths.find(b => b.berthNo == seatNo);
+  }
+
+  /**
+   * Get coach class from berth
+   */
+  getCoachClassFromBerth(berth) {
+    const coach = this.coaches.find(c => c.coachNo === berth.coachNo);
+    return coach ? coach.class : 'SL';
   }
 
   /**

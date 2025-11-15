@@ -2,22 +2,24 @@
 
 class BerthAllocator {
   /**
-   * Get all side lower berth numbers
+   * Get all side lower berth numbers for Sleeper (SL) coaches - 72 berths
    */
-  static getSideLowerBerths() {
+  static getSideLowerBerths(coachClass = 'SL') {
+    if (coachClass === '3A') {
+      // Three_Tier_AC coaches - 64 berths, RAC berths are side lower
+      return [7, 15, 23, 31, 39, 47, 55, 63];
+    }
+    // Sleeper coaches - 72 berths
     return [7, 15, 23, 31, 39, 47, 55, 63, 71];
   }
 
   /**
-   * Check if berth is side lower
+   * Check if berth is side lower (RAC berth)
    */
-  static isSideLowerBerth(seatNo) {
-    return this.getSideLowerBerths().includes(parseInt(seatNo));
+  static isSideLowerBerth(seatNo, coachClass = 'SL') {
+    return this.getSideLowerBerths(coachClass).includes(parseInt(seatNo));
   }
 
-  /**
-   * Get berth priority (lower number = higher priority)
-   */
   static getBerthPriority(berthType) {
     const priority = {
       'Lower Berth': 1,
@@ -62,7 +64,7 @@ class BerthAllocator {
    * Get available RAC berths (side lower berths)
    */
   static getAvailableRACBerths(coach) {
-    const sideLowerBerths = this.getSideLowerBerths();
+    const sideLowerBerths = this.getSideLowerBerths(coach.class);
     return coach.berths.filter(berth => 
       sideLowerBerths.includes(berth.berthNo) && 
       (berth.status === 'VACANT' || berth.status === 'OCCUPIED')
@@ -70,9 +72,29 @@ class BerthAllocator {
   }
 
   /**
-   * Get berth type from seat number
+   * Get berth type from seat number and coach class
    */
-  static getBerthTypeFromSeatNo(seatNo) {
+  static getBerthTypeFromSeatNo(seatNo, coachClass = 'SL') {
+    // Three_Tier_AC (3A) coaches use 64 berths
+    if (coachClass === '3A') {
+      const berthMapping3A = {
+        lowerBerths: [1, 4, 9, 12, 17, 20, 25, 28, 33, 36, 41, 44, 49, 52, 57, 60],
+        middleBerths: [2, 5, 10, 13, 18, 21, 26, 29, 34, 37, 42, 45, 50, 53, 58, 61],
+        upperBerths: [3, 6, 11, 14, 19, 22, 27, 30, 35, 38, 43, 46, 51, 54, 59, 62],
+        sideLower: [7, 15, 23, 31, 39, 47, 55, 63],  // RAC Berths
+        sideUpper: [8, 16, 24, 32, 40, 48, 56, 64]
+      };
+
+      if (berthMapping3A.lowerBerths.includes(seatNo)) return "Lower Berth";
+      if (berthMapping3A.middleBerths.includes(seatNo)) return "Middle Berth";
+      if (berthMapping3A.upperBerths.includes(seatNo)) return "Upper Berth";
+      if (berthMapping3A.sideLower.includes(seatNo)) return "Side Lower";
+      if (berthMapping3A.sideUpper.includes(seatNo)) return "Side Upper";
+      
+      return "Lower Berth";
+    }
+
+    // Sleeper (SL) coaches use 72 berths
     const berthMapping = {
       lowerBerths: [1, 4, 9, 12, 17, 20, 25, 28, 33, 36, 41, 44, 49, 52, 57, 60, 65, 68],
       middleBerths: [2, 5, 10, 13, 18, 21, 26, 29, 34, 37, 42, 45, 50, 53, 58, 61, 66, 69],
@@ -92,9 +114,11 @@ class BerthAllocator {
 
   /**
    * Check if berth can accommodate RAC
+   * @param {Object} berth - Berth object
+   * @param {String} coachClass - Coach class ('SL' or '3A'), required parameter
    */
-  static canAccommodateRAC(berth) {
-    return this.isSideLowerBerth(berth.berthNo) && berth.passengers.length < 2;
+  static canAccommodateRAC(berth, coachClass = 'SL') {
+    return this.isSideLowerBerth(berth.berthNo, coachClass) && berth.passengers.length < 2;
   }
 
   /**
@@ -128,8 +152,11 @@ class BerthAllocator {
    * Validate berth allocation
    */
   static validateBerthAllocation(berth, passenger, trainState) {
+    // Get coach class from trainState
+    const coachClass = trainState.getCoachClassFromBerth(berth);
+    
     // Check class match
-    if (berth.class !== passenger.class) {
+    if (coachClass !== passenger.class) {
       return {
         valid: false,
         reason: 'Class mismatch'
