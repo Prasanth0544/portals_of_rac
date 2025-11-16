@@ -1,6 +1,6 @@
 // backend/services/ReallocationService.js
 
-const db = require('../config/db');
+const db = require("../config/db");
 
 class ReallocationService {
   /**
@@ -21,19 +21,21 @@ class ReallocationService {
       }
 
       if (passenger.noShow) {
-        throw new Error(`Passenger ${passenger.name} is already marked as no-show`);
+        throw new Error(
+          `Passenger ${passenger.name} is already marked as no-show`,
+        );
       }
 
       // Mark as no-show in memory
       passenger.noShow = true;
-      
+
       // Clear segment occupancy
       for (let i = passenger.fromIdx; i < passenger.toIdx; i++) {
         if (berth.segmentOccupancy[i] === passenger.pnr) {
           berth.segmentOccupancy[i] = null;
         }
       }
-      
+
       // Update berth status
       berth.updateStatus();
 
@@ -41,23 +43,23 @@ class ReallocationService {
       try {
         const passengersCollection = db.getPassengersCollection();
         await passengersCollection.updateOne(
-          { pnr: pnr },
-          { $set: { no_show: true } }
+          { PNR_Number: pnr },
+          { $set: { NO_show: true } },
         );
-        console.log(`✅ Updated no_show in MongoDB for PNR: ${pnr}`);
+        console.log(`✅ Updated NO_show in MongoDB for PNR: ${pnr}`);
       } catch (dbError) {
         console.error(`⚠️  Failed to update MongoDB:`, dbError.message);
       }
 
       console.log(`❌ Marked ${passenger.name} (PNR: ${pnr}) as NO-SHOW`);
 
-      trainState.logEvent('NO_SHOW', `Passenger marked as no-show`, {
+      trainState.logEvent("NO_SHOW", `Passenger marked as no-show`, {
         pnr: pnr,
         name: passenger.name,
         from: passenger.from,
         to: passenger.to,
         coach: coachNo,
-        berth: berth.fullBerthNo
+        berth: berth.fullBerthNo,
       });
 
       return {
@@ -68,10 +70,9 @@ class ReallocationService {
           from: passenger.from,
           to: passenger.to,
           coach: coachNo,
-          berth: berth.fullBerthNo
-        }
+          berth: berth.fullBerthNo,
+        },
       };
-
     } catch (error) {
       console.error(`❌ Error marking no-show:`, error.message);
       throw error;
@@ -82,20 +83,22 @@ class ReallocationService {
    * Get RAC queue
    */
   getRACQueue(trainState) {
-    return trainState.racQueue.map(rac => ({
+    return trainState.racQueue.map((rac) => ({
       pnr: rac.pnr,
       name: rac.name,
       age: rac.age,
       gender: rac.gender,
       racNumber: rac.racNumber,
       pnrStatus: rac.pnrStatus,
+      racStatus: rac.racStatus,
       class: rac.class,
       from: rac.from,
       to: rac.to,
       fromIdx: rac.fromIdx,
       toIdx: rac.toIdx,
       coach: rac.coach,
-      seatNo: rac.seatNo
+      seatNo: rac.seatNo,
+      berthType: rac.berthType,
     }));
   }
 
@@ -133,7 +136,7 @@ class ReallocationService {
       berth: berth.fullBerthNo,
       berthType: berth.type,
       noShow: passenger.noShow,
-      boarded: passenger.boarded
+      boarded: passenger.boarded,
     };
   }
 
@@ -144,14 +147,14 @@ class ReallocationService {
     const vacantBerths = trainState.getVacantBerths();
     const eligibilityMatrix = [];
 
-    vacantBerths.forEach(vacantBerth => {
-      const berth = trainState.findBerth(vacantBerth.coachNo, vacantBerth.berthNo);
-      
+    vacantBerths.forEach((vacancy) => {
+      const berth = trainState.findBerth(vacancy.coachNo, vacancy.berthNo);
+
       if (!berth) return;
 
       const eligibleRAC = [];
 
-      trainState.racQueue.forEach(rac => {
+      trainState.racQueue.forEach((rac) => {
         if (berth.isAvailableForSegment(rac.fromIdx, rac.toIdx)) {
           eligibleRAC.push({
             pnr: rac.pnr,
@@ -160,9 +163,11 @@ class ReallocationService {
             gender: rac.gender,
             racNumber: rac.racNumber,
             pnrStatus: rac.pnrStatus,
+            racStatus: rac.racStatus,
             from: rac.from,
             to: rac.to,
-            class: rac.class
+            class: rac.class,
+            berthType: rac.berthType,
           });
         }
       });
@@ -175,7 +180,7 @@ class ReallocationService {
           type: vacantBerth.type,
           class: vacantBerth.class,
           eligibleRAC: eligibleRAC,
-          topEligible: eligibleRAC[0]
+          topEligible: eligibleRAC[0],
         });
       }
     });
@@ -189,21 +194,21 @@ class ReallocationService {
   applyReallocation(trainState, allocations) {
     const results = {
       success: [],
-      failed: []
+      failed: [],
     };
 
-    allocations.forEach(allocation => {
+    allocations.forEach((allocation) => {
       try {
         const { berth: berthNo, coach: coachNo, pnr } = allocation;
 
         // Find RAC passenger
-        const racIndex = trainState.racQueue.findIndex(r => r.pnr === pnr);
-        
+        const racIndex = trainState.racQueue.findIndex((r) => r.pnr === pnr);
+
         if (racIndex === -1) {
           results.failed.push({
             berth: `${coachNo}-${berthNo}`,
             pnr: pnr,
-            reason: 'RAC passenger not found in queue'
+            reason: "RAC passenger not found in queue",
           });
           return;
         }
@@ -215,17 +220,19 @@ class ReallocationService {
           results.failed.push({
             berth: `${coachNo}-${berthNo}`,
             pnr: pnr,
-            reason: 'Berth not found'
+            reason: "Berth not found",
           });
           return;
         }
 
         // Check segment availability
-        if (!berth.isAvailableForSegment(racPassenger.fromIdx, racPassenger.toIdx)) {
+        if (
+          !berth.isAvailableForSegment(racPassenger.fromIdx, racPassenger.toIdx)
+        ) {
           results.failed.push({
             berth: `${coachNo}-${berthNo}`,
             pnr: pnr,
-            reason: 'Berth not available for passenger journey'
+            reason: "Berth not available for passenger journey",
           });
           return;
         }
@@ -246,10 +253,12 @@ class ReallocationService {
           toIdx: racPassenger.toIdx,
           from: racPassenger.from,
           to: racPassenger.to,
-          pnrStatus: 'CNF',
+          pnrStatus: "CNF", // Upgrade to CNF
           class: racPassenger.class,
+          racStatus: racPassenger.racStatus,
+          berthType: racPassenger.berthType,
           noShow: false,
-          boarded: false
+          boarded: false,
         });
 
         // Remove from RAC queue
@@ -260,18 +269,19 @@ class ReallocationService {
           pnr: racPassenger.pnr,
           name: racPassenger.name,
           previousStatus: racPassenger.pnrStatus,
-          newStatus: 'CNF'
+          newStatus: "CNF",
         });
 
         trainState.stats.totalRACUpgraded++;
 
-        console.log(`✅ Applied reallocation: ${racPassenger.name} (${racPassenger.pnrStatus} → CNF) to ${coachNo}-${berthNo}`);
-
+        console.log(
+          `✅ Applied reallocation: ${racPassenger.name} (${racPassenger.pnrStatus} → CNF) to ${coachNo}-${berthNo}`,
+        );
       } catch (error) {
         results.failed.push({
           berth: allocation.berth,
           pnr: allocation.pnr,
-          reason: error.message
+          reason: error.message,
         });
       }
     });

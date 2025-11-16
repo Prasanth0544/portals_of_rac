@@ -1,6 +1,6 @@
 // backend/middleware/validation.js
 
-const ValidationService = require('../services/ValidationService');
+const ValidationService = require("../services/ValidationService");
 
 class ValidationMiddleware {
   /**
@@ -12,14 +12,19 @@ class ValidationMiddleware {
     if (trainNo && !/^\d{5}$/.test(trainNo)) {
       return res.status(400).json({
         success: false,
-        message: 'Train number must be 5 digits'
+        message: "Train number must be 5 digits",
       });
     }
 
-    if (journeyDate && !/^\d{4}-\d{2}-\d{2}$/.test(journeyDate)) {
+    // Accept both YYYY-MM-DD and DD-MM-YYYY formats
+    if (
+      journeyDate &&
+      !/^\d{4}-\d{2}-\d{2}$/.test(journeyDate) &&
+      !/^\d{2}-\d{2}-\d{4}$/.test(journeyDate)
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Journey date must be in YYYY-MM-DD format'
+        message: "Journey date must be in YYYY-MM-DD or DD-MM-YYYY format",
       });
     }
 
@@ -35,7 +40,7 @@ class ValidationMiddleware {
     if (!pnr) {
       return res.status(400).json({
         success: false,
-        message: 'PNR is required'
+        message: "PNR is required",
       });
     }
 
@@ -43,7 +48,7 @@ class ValidationMiddleware {
     if (!validation.valid) {
       return res.status(400).json({
         success: false,
-        message: validation.reason
+        message: validation.reason,
       });
     }
 
@@ -59,14 +64,14 @@ class ValidationMiddleware {
     if (!allocations || !Array.isArray(allocations)) {
       return res.status(400).json({
         success: false,
-        message: 'Allocations array is required'
+        message: "Allocations array is required",
       });
     }
 
     if (allocations.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'At least one allocation is required'
+        message: "At least one allocation is required",
       });
     }
 
@@ -75,7 +80,7 @@ class ValidationMiddleware {
       if (!allocation.coach || !allocation.berth || !allocation.pnr) {
         return res.status(400).json({
           success: false,
-          message: 'Each allocation must have coach, berth, and pnr'
+          message: "Each allocation must have coach, berth, and pnr",
         });
       }
     }
@@ -87,13 +92,13 @@ class ValidationMiddleware {
    * Check if train is initialized
    */
   checkTrainInitialized(req, res, next) {
-    const trainController = require('../controllers/trainController');
+    const trainController = require("../controllers/trainController");
     const trainState = trainController.getGlobalTrainState();
 
     if (!trainState) {
       return res.status(400).json({
         success: false,
-        message: 'Train is not initialized. Please initialize the train first.'
+        message: "Train is not initialized. Please initialize the train first.",
       });
     }
 
@@ -104,20 +109,20 @@ class ValidationMiddleware {
    * Check if journey has started
    */
   checkJourneyStarted(req, res, next) {
-    const trainController = require('../controllers/trainController');
+    const trainController = require("../controllers/trainController");
     const trainState = trainController.getGlobalTrainState();
 
     if (!trainState) {
       return res.status(400).json({
         success: false,
-        message: 'Train is not initialized'
+        message: "Train is not initialized",
       });
     }
 
     if (!trainState.journeyStarted) {
       return res.status(400).json({
         success: false,
-        message: 'Journey has not started. Please start the journey first.'
+        message: "Journey has not started. Please start the journey first.",
       });
     }
 
@@ -133,14 +138,17 @@ class ValidationMiddleware {
     if (page && (isNaN(page) || parseInt(page) < 1)) {
       return res.status(400).json({
         success: false,
-        message: 'Page must be a positive integer'
+        message: "Page must be a positive integer",
       });
     }
 
-    if (limit && (isNaN(limit) || parseInt(limit) < 1 || parseInt(limit) > 100)) {
+    if (
+      limit &&
+      (isNaN(limit) || parseInt(limit) < 1 || parseInt(limit) > 100)
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Limit must be between 1 and 100'
+        message: "Limit must be between 1 and 100",
       });
     }
 
@@ -150,17 +158,25 @@ class ValidationMiddleware {
   validatePassengerAdd(req, res, next) {
     const { pnr, age, seat_no, from, to } = req.body;
     if (pnr && !/^\d{10}$/.test(pnr)) {
-      return res.status(400).json({ success: false, message: 'PNR must be 10 digits' });
+      return res
+        .status(400)
+        .json({ success: false, message: "PNR must be 10 digits" });
     }
     if (age && (isNaN(age) || age < 1 || age > 120)) {
-      return res.status(400).json({ success: false, message: 'Age must be 1-120' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Age must be 1-120" });
     }
     if (seat_no && (isNaN(seat_no) || seat_no < 1 || seat_no > 72)) {
-      return res.status(400).json({ success: false, message: 'Seat no must be 1-72' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Seat no must be 1-72" });
     }
     // Simple from < to check (full in controller)
     if (from && to && from === to) {
-      return res.status(400).json({ success: false, message: 'To station must be after From' });
+      return res
+        .status(400)
+        .json({ success: false, message: "To station must be after From" });
     }
     next();
   }
@@ -170,8 +186,8 @@ class ValidationMiddleware {
    */
   sanitizeBody(req, res, next) {
     if (req.body) {
-      Object.keys(req.body).forEach(key => {
-        if (typeof req.body[key] === 'string') {
+      Object.keys(req.body).forEach((key) => {
+        if (typeof req.body[key] === "string") {
           req.body[key] = req.body[key].trim();
         }
       });
@@ -192,7 +208,7 @@ class ValidationMiddleware {
       trainDetailsDb,
       trainDetailsCollection,
       trainNo,
-      journeyDate
+      journeyDate,
     } = req.body;
 
     // Allow "same database" behavior: if passengersDb is missing, default it to stationsDb
@@ -201,23 +217,45 @@ class ValidationMiddleware {
     req.body.passengersDb = effectivePassengersDb;
     // Default Train Details to stations DB and conventional collection name
     req.body.trainDetailsDb = trainDetailsDb || stationsDb;
-    req.body.trainDetailsCollection = trainDetailsCollection || 'Trains_Details';
+    req.body.trainDetailsCollection =
+      trainDetailsCollection || "Trains_Details";
 
-    if (!mongoUri || !stationsDb || !stationsCollection || !effectivePassengersDb || !passengersCollection) {
+    if (
+      !mongoUri ||
+      !stationsDb ||
+      !stationsCollection ||
+      !effectivePassengersDb ||
+      !passengersCollection
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Mongo URI, databases, and collections are required'
+        message: "Mongo URI, databases, and collections are required",
       });
     }
 
     if (!trainNo || !/^[0-9]{5}$/.test(trainNo)) {
-      return res.status(400).json({ success: false, message: 'Train number (5 digits) is required' });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Train number (5 digits) is required",
+        });
     }
 
     // Train name is optional and not validated; use as-is from frontend
 
-    if (!journeyDate || !/^\d{4}-\d{2}-\d{2}$/.test(journeyDate)) {
-      return res.status(400).json({ success: false, message: 'Journey date must be YYYY-MM-DD' });
+    // Accept both YYYY-MM-DD and DD-MM-YYYY formats
+    if (
+      !journeyDate ||
+      (!/^\d{4}-\d{2}-\d{2}$/.test(journeyDate) &&
+        !/^\d{2}-\d{2}-\d{4}$/.test(journeyDate))
+    ) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Journey date must be YYYY-MM-DD or DD-MM-YYYY",
+        });
     }
 
     next();

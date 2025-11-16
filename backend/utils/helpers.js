@@ -6,10 +6,10 @@ class Helpers {
    */
   static formatDate(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     });
   }
 
@@ -17,7 +17,7 @@ class Helpers {
    * Format time string
    */
   static formatTime(timeString) {
-    if (!timeString || timeString === '-' || timeString === 'First') {
+    if (!timeString || timeString === "-" || timeString === "First") {
       return timeString;
     }
     return timeString;
@@ -36,11 +36,11 @@ class Helpers {
    */
   static getBerthTypeAbbr(berthType) {
     const abbr = {
-      'Lower Berth': 'LB',
-      'Middle Berth': 'MB',
-      'Upper Berth': 'UB',
-      'Side Lower': 'SL',
-      'Side Upper': 'SU'
+      "Lower Berth": "LB",
+      "Middle Berth": "MB",
+      "Upper Berth": "UB",
+      "Side Lower": "SL",
+      "Side Upper": "SU",
     };
     return abbr[berthType] || berthType;
   }
@@ -51,9 +51,9 @@ class Helpers {
   static formatName(name) {
     return name
       .toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   }
 
   /**
@@ -61,7 +61,7 @@ class Helpers {
    */
   static formatPNR(pnr) {
     const pnrStr = String(pnr);
-    return pnrStr.replace(/(\d{3})(?=\d)/g, '$1 ');
+    return pnrStr.replace(/(\d{3})(?=\d)/g, "$1 ");
   }
 
   /**
@@ -75,8 +75,8 @@ class Helpers {
    * Sanitize input string
    */
   static sanitizeInput(str) {
-    if (!str) return '';
-    return String(str).trim().replace(/[<>]/g, '');
+    if (!str) return "";
+    return String(str).trim().replace(/[<>]/g, "");
   }
 
   /**
@@ -88,23 +88,33 @@ class Helpers {
   }
 
   /**
-   * Get gender display name
+   * Get gender display name (handles both old and new formats)
    */
   static getGenderDisplay(gender) {
-    return gender === 'M' ? 'Male' : gender === 'F' ? 'Female' : 'Other';
+    if (!gender) return "Unknown";
+    // Handle old format (M, F, O)
+    if (gender === "M") return "Male";
+    if (gender === "F") return "Female";
+    if (gender === "O") return "Other";
+    // Handle new format (already full words)
+    return gender;
   }
 
   /**
-   * Format class name
+   * Format class name (handles both old and new formats)
    */
   static formatClassName(classCode) {
+    if (!classCode) return "Unknown";
     const classNames = {
-      'SL': 'Sleeper',
-      '3A': 'AC 3-Tier',
-      '2A': 'AC 2-Tier',
-      '1A': 'AC 1-Tier',
-      'CC': 'Chair Car',
-      '2S': 'Second Sitting'
+      SL: "Sleeper",
+      "3A": "AC 3-Tier",
+      "3-TierAC": "AC 3-Tier",
+      "2A": "AC 2-Tier",
+      "2-TierAC": "AC 2-Tier",
+      "1A": "AC 1-Tier",
+      "1-TierAC": "AC 1-Tier",
+      CC: "Chair Car",
+      "2S": "Second Sitting",
     };
     return classNames[classCode] || classCode;
   }
@@ -144,7 +154,7 @@ class Helpers {
    * Sleep/delay function
    */
   static sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -185,7 +195,7 @@ class Helpers {
    */
   static truncate(str, maxLength) {
     if (str.length <= maxLength) return str;
-    return str.substring(0, maxLength) + '...';
+    return str.substring(0, maxLength) + "...";
   }
 
   /**
