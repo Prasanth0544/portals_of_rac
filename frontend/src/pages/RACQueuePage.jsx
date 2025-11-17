@@ -1,8 +1,8 @@
 // frontend/src/pages/RACQueuePage.jsx
 
-import React, { useState, useEffect } from 'react';
-import { getRACQueue } from '../services/api';
-import './RACQueuePage.css';
+import React, { useState, useEffect } from "react";
+import { getRACQueue } from "../services/api";
+import "./RACQueuePage.css";
 
 function RACQueuePage({ trainData, onClose }) {
   const [racQueue, setRacQueue] = useState([]);
@@ -16,12 +16,12 @@ function RACQueuePage({ trainData, onClose }) {
     try {
       setLoading(true);
       const response = await getRACQueue();
-      
+
       if (response.success) {
         setRacQueue(response.data.queue);
       }
     } catch (error) {
-      console.error('Error loading RAC queue:', error);
+      console.error("Error loading RAC queue:", error);
     } finally {
       setLoading(false);
     }
@@ -32,9 +32,15 @@ function RACQueuePage({ trainData, onClose }) {
       <div className="rac-queue-page">
         <div className="page-header">
           <button className="back-btn" onClick={onClose}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
+            ◄
           </button>
           <h2>🎫 RAC Queue</h2>
         </div>
@@ -50,9 +56,15 @@ function RACQueuePage({ trainData, onClose }) {
     <div className="rac-queue-page">
       <div className="page-header">
         <button className="back-btn" onClick={onClose}>
-          <svg viewBox="0 0 24 24" fill="<-" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
+          ◄
         </button>
         <h2>🎫 RAC Queue ({racQueue.length} passengers)</h2>
       </div>
@@ -72,7 +84,9 @@ function RACQueuePage({ trainData, onClose }) {
                   <span className="rac-status">{rac.pnrStatus}</span>
                 </div>
                 <div className="rac-info">
-                  <span className="rac-age-gender">{rac.age}/{rac.gender}</span>
+                  <span className="rac-age-gender">
+                    {rac.age}/{rac.gender}
+                  </span>
                   <span className="rac-class">{rac.class}</span>
                   <span className="rac-pnr">PNR: {rac.pnr}</span>
                 </div>

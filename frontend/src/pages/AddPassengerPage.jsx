@@ -126,6 +126,7 @@ const AddPassengerPage = ({ trainData, onClose }) => {
             >
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
+            ◄
           </button>
           <div className="header-content">
             <div className="header-icon">
@@ -146,7 +147,6 @@ const AddPassengerPage = ({ trainData, onClose }) => {
               <p>Fill in the passenger details for booking</p>
             </div>
           </div>
-          
         </div>
 
         <form onSubmit={handleSubmit} className="passenger-form">

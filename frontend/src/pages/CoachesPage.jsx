@@ -75,6 +75,7 @@ function CoachesPage({ trainData, onClose }) {
           >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
+          ◄
         </button>
         <h2>🚂 Train Coaches & Berths</h2>
       </div>
@@ -199,6 +200,7 @@ function BerthDetailsModal({
               >
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
+              ◄
             </button>
             <h3>🛏️ Berth Details: {berth.fullBerthNo}</h3>
           </div>
@@ -239,6 +241,7 @@ function BerthDetailsModal({
             >
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
+            ◄
           </button>
           <h3>🛏️ Berth Details: {berth.fullBerthNo}</h3>
         </div>

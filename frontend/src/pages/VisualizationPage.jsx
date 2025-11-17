@@ -1,8 +1,8 @@
 // frontend/src/pages/VisualizationPage.jsx - FIXED CONNECTION (YOUR CODE + API CALL CORRECTION)
 
-import React, { useState, useEffect } from 'react';
-import { getStationSchedule } from '../services/api'; // Use getStationSchedule from api.js (calls /station-schedule)
-import './VisualizationPage.css';
+import React, { useState, useEffect } from "react";
+import { getStationSchedule } from "../services/api"; // Use getStationSchedule from api.js (calls /station-schedule)
+import "./VisualizationPage.css";
 
 function VisualizationPage({ trainData, onClose }) {
   const [stations, setStations] = useState([]);
@@ -17,13 +17,13 @@ function VisualizationPage({ trainData, onClose }) {
     try {
       setLoading(true);
       const response = await getStationSchedule(); // Calls correct endpoint (/visualization/station-schedule)
-      
+
       if (response.success) {
         setStations(response.data.stations || []); // Extract stations from response.data.stations
       }
     } catch (error) {
-      console.error('Error loading station schedule:', error);
-      if (error.message?.includes('initialized')) {
+      console.error("Error loading station schedule:", error);
+      if (error.message?.includes("initialized")) {
         setStations([]); // Graceful empty for uninit
       }
     } finally {
@@ -35,25 +35,27 @@ function VisualizationPage({ trainData, onClose }) {
   const infoCards = [
     {
       id: 1,
-      title: 'Journey Segments',
-      icon: '🚆',
-      description: 'Each passenger journey is broken into segments (station-to-station).',
+      title: "Journey Segments",
+      icon: "🚆",
+      description:
+        "Each passenger journey is broken into segments (station-to-station).",
       details: `
         <h3>How Journey Segments Work:</h3>
         <ul>
-          <li>The train journey from ${stations[0]?.name || 'origin'} to ${stations[stations.length - 1]?.name || 'destination'} is divided into ${stations.length - 1} segments</li>
+          <li>The train journey from ${stations[0]?.name || "origin"} to ${stations[stations.length - 1]?.name || "destination"} is divided into ${stations.length - 1} segments</li>
           <li>Each segment represents travel between two consecutive stations</li>
           <li>Example: Station 1 → Station 2 is Segment 0, Station 2 → Station 3 is Segment 1</li>
           <li>This allows tracking which portions of the journey are occupied</li>
         </ul>
       `,
-      color: '#64b5f6' // Softer blue (was #2196f3)
+      color: "#64b5f6", // Softer blue (was #2196f3)
     },
     {
       id: 2,
-      title: 'Berth Timeline',
-      icon: '🛏️',
-      description: 'Each berth tracks which segments are occupied. Same berth can serve multiple passengers.',
+      title: "Berth Timeline",
+      icon: "🛏️",
+      description:
+        "Each berth tracks which segments are occupied. Same berth can serve multiple passengers.",
       details: `
         <h3>Berth Timeline Concept:</h3>
         <ul>
@@ -64,13 +66,14 @@ function VisualizationPage({ trainData, onClose }) {
           <li>This maximizes berth utilization and allows multiple passengers per berth</li>
         </ul>
       `,
-      color: '#81c784' // Softer green (was #4caf50)
+      color: "#81c784", // Softer green (was #4caf50)
     },
     {
       id: 3,
-      title: 'Eligibility Check',
-      icon: '✅',
-      description: 'RAC passenger is eligible only if ALL segments of their journey are vacant.',
+      title: "Eligibility Check",
+      icon: "✅",
+      description:
+        "RAC passenger is eligible only if ALL segments of their journey are vacant.",
       details: `
         <h3>RAC Eligibility Rules:</h3>
         <ul>
@@ -81,13 +84,14 @@ function VisualizationPage({ trainData, onClose }) {
           <li>This prevents overlapping passenger journeys</li>
         </ul>
       `,
-      color: '#ffb74d' // Softer orange (was #ff9800)
+      color: "#ffb74d", // Softer orange (was #ff9800)
     },
     {
       id: 4,
-      title: 'Dynamic Allocation',
-      icon: '🔄',
-      description: 'As passengers deboard, their segments become vacant and can be reallocated.',
+      title: "Dynamic Allocation",
+      icon: "🔄",
+      description:
+        "As passengers deboard, their segments become vacant and can be reallocated.",
       details: `
         <h3>Real-time Reallocation:</h3>
         <ul>
@@ -98,8 +102,8 @@ function VisualizationPage({ trainData, onClose }) {
           <li>Maximizes berth utilization throughout the journey</li>
         </ul>
       `,
-      color: '#ba68c8' // Softer purple (was #9c27b0)
-    }
+      color: "#ba68c8", // Softer purple (was #9c27b0)
+    },
   ];
 
   const handleCardClick = (card) => {
@@ -112,15 +116,15 @@ function VisualizationPage({ trainData, onClose }) {
 
   // YOUR ORIGINAL calculateJourneyTime (preserved)
   const calculateJourneyTime = () => {
-    if (!stations || stations.length < 2) return '0';
-    
+    if (!stations || stations.length < 2) return "0";
+
     const first = stations[0];
     const last = stations[stations.length - 1];
-    
-    const firstHour = parseInt(first.departure?.split(':')[0] || 0);
-    const lastHour = parseInt(last.arrival?.split(':')[0] || 0);
+
+    const firstHour = parseInt(first.departure?.split(":")[0] || 0);
+    const lastHour = parseInt(last.arrival?.split(":")[0] || 0);
     const hours = (last.day - 1) * 24 + lastHour - firstHour;
-    
+
     return hours > 0 ? hours : 0;
   };
 
@@ -135,9 +139,15 @@ function VisualizationPage({ trainData, onClose }) {
       <div className="visualization-page">
         <div className="page-header">
           <button className="back-btn" onClick={onClose}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
+            ◄
           </button>
           <h2>📊 Train Journey Visualization</h2>
         </div>
@@ -153,17 +163,25 @@ function VisualizationPage({ trainData, onClose }) {
     <div className="visualization-page">
       <div className="page-header">
         <button className="back-btn" onClick={onClose}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
+          ◄
         </button>
         <h2>📊 Train Journey Visualization</h2>
       </div>
 
       {/* YOUR Info Banner (preserved) */}
       <div className="vis-info-banner">
-        <strong>💡 Segment-Based Vacancy:</strong> Journey divided into <strong>{stations.length - 1} segments</strong>. 
-        A berth can be vacant in some segments and occupied in others. Click the cards below to learn more!
+        <strong>💡 Segment-Based Vacancy:</strong> Journey divided into{" "}
+        <strong>{stations.length - 1} segments</strong>. A berth can be vacant
+        in some segments and occupied in others. Click the cards below to learn
+        more!
       </div>
 
       {/* YOUR Station Schedule Table (preserved + empty handling) */}
@@ -199,31 +217,57 @@ function VisualizationPage({ trainData, onClose }) {
               {stations.length === 0 ? (
                 <tr>
                   <td colSpan="12" className="no-data">
-                    No stations loaded. <button onClick={loadStationSchedule} className="retry-btn">Retry</button> or initialize train on Home page.
+                    No stations loaded.{" "}
+                    <button onClick={loadStationSchedule} className="retry-btn">
+                      Retry
+                    </button>{" "}
+                    or initialize train on Home page.
                   </td>
                 </tr>
               ) : (
                 stations.map((station, idx) => (
-                  <tr key={station.code} className={
-                    idx === 0 ? 'first-station' : 
-                    idx === stations.length - 1 ? 'last-station' : ''
-                  }>
+                  <tr
+                    key={station.code}
+                    className={
+                      idx === 0
+                        ? "first-station"
+                        : idx === stations.length - 1
+                          ? "last-station"
+                          : ""
+                    }
+                  >
                     <td className="td-center">{station.sno}</td>
                     <td className="td-code">{station.code}</td>
                     <td className="td-name">
-                      {idx === 0 && <span className="station-badge origin">ORIGIN</span>}
-                      {idx === stations.length - 1 && <span className="station-badge destination">DESTINATION</span>}
+                      {idx === 0 && (
+                        <span className="station-badge origin">ORIGIN</span>
+                      )}
+                      {idx === stations.length - 1 && (
+                        <span className="station-badge destination">
+                          DESTINATION
+                        </span>
+                      )}
                       {station.name}
                     </td>
-                    <td className="td-center">{station.zone || 'South Central'}</td> {/* FIXED: Default if missing */}
-                    <td className="td-center">{station.division || 'Vijayawada'}</td> {/* FIXED: Default if missing */}
-                    <td className="td-center">{station.arrival === '-' ? 'First' : station.arrival}</td>
-                    <td className="td-center">{station.departure === '-' ? 'Last' : station.departure}</td>
+                    <td className="td-center">
+                      {station.zone || "South Central"}
+                    </td>{" "}
+                    {/* FIXED: Default if missing */}
+                    <td className="td-center">
+                      {station.division || "Vijayawada"}
+                    </td>{" "}
+                    {/* FIXED: Default if missing */}
+                    <td className="td-center">
+                      {station.arrival === "-" ? "First" : station.arrival}
+                    </td>
+                    <td className="td-center">
+                      {station.departure === "-" ? "Last" : station.departure}
+                    </td>
                     <td className="td-right">{station.halt || 0} min</td>
                     <td className="td-right">{station.distance}</td>
                     <td className="td-center">{station.day}</td>
-                    <td className="td-center">{station.platform || '-'}</td>
-                    <td className="td-center">{station.remarks || '-'}</td>
+                    <td className="td-center">{station.platform || "-"}</td>
+                    <td className="td-center">{station.remarks || "-"}</td>
                   </tr>
                 ))
               )}
@@ -234,22 +278,30 @@ function VisualizationPage({ trainData, onClose }) {
 
       {/* YOUR Interactive Info Cards (preserved) */}
       <div className="info-cards-section">
-        <h3 className="cards-section-title">🧠 How Segment-Based Vacancy Works</h3>
+        <h3 className="cards-section-title">
+          🧠 How Segment-Based Vacancy Works
+        </h3>
         <div className="info-cards-grid">
-          {infoCards.map(card => (
-            <div 
+          {infoCards.map((card) => (
+            <div
               key={card.id}
               className="info-card"
               style={{ borderLeft: `4px solid ${card.color}` }}
               onClick={() => handleCardClick(card)}
             >
-              <div className="card-number" style={{ backgroundColor: card.color }}>
+              <div
+                className="card-number"
+                style={{ backgroundColor: card.color }}
+              >
                 {card.id}
               </div>
               <div className="card-icon">{card.icon}</div>
               <h4 className="card-title">{card.title}</h4>
               <p className="card-description">{card.description}</p>
-              <button className="card-btn" style={{ backgroundColor: card.color }}>
+              <button
+                className="card-btn"
+                style={{ backgroundColor: card.color }}
+              >
                 Learn More →
               </button>
             </div>
@@ -260,22 +312,37 @@ function VisualizationPage({ trainData, onClose }) {
       {/* YOUR Modal for Card Details (preserved) */}
       {selectedCard && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content card-details-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header" style={{ borderBottom: `3px solid ${selectedCard.color}` }}>
+          <div
+            className="modal-content card-details-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="modal-header"
+              style={{ borderBottom: `3px solid ${selectedCard.color}` }}
+            >
               <button className="back-btn" onClick={closeModal}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
+                ◄
               </button>
               <div className="modal-title">
                 <span className="modal-icon">{selectedCard.icon}</span>
                 <h3>{selectedCard.title}</h3>
               </div>
             </div>
-            <div className="modal-body" dangerouslySetInnerHTML={{ __html: selectedCard.details }} />
+            <div
+              className="modal-body"
+              dangerouslySetInnerHTML={{ __html: selectedCard.details }}
+            />
             <div className="modal-footer">
-              <button 
-                className="btn-primary" 
+              <button
+                className="btn-primary"
                 style={{ backgroundColor: selectedCard.color }}
                 onClick={closeModal}
               >

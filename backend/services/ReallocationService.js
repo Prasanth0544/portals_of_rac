@@ -141,49 +141,123 @@ class ReallocationService {
   }
 
   /**
-   * Get eligibility matrix
+   * Get eligibility matrix with vacant segment ranges
    */
   getEligibilityMatrix(trainState) {
     const eligibilityMatrix = [];
+    const stations = trainState.stations;
 
     // Scan all berths; eligibility is segment-based, not only globally vacant
     for (const coach of trainState.coaches) {
       for (const berth of coach.berths) {
-        const eligibleRAC = [];
+        // Find all vacant segment ranges for this berth
+        const vacantRanges = this._getVacantSegmentRanges(berth, stations);
 
-        for (const rac of trainState.racQueue) {
-          if (berth.isAvailableForSegment(rac.fromIdx, rac.toIdx)) {
-            eligibleRAC.push({
-              pnr: rac.pnr,
-              name: rac.name,
-              age: rac.age,
-              gender: rac.gender,
-              racNumber: rac.racNumber,
-              pnrStatus: rac.pnrStatus,
-              racStatus: rac.racStatus,
-              from: rac.from,
-              to: rac.to,
-              class: rac.class,
-              berthType: rac.berthType,
+        // For each vacant range, find eligible RAC passengers
+        vacantRanges.forEach((range) => {
+          const eligibleRAC = [];
+
+          for (const rac of trainState.racQueue) {
+            // Check if RAC passenger's journey fits within this vacant range
+            if (
+              rac.fromIdx >= range.fromIdx &&
+              rac.toIdx <= range.toIdx &&
+              berth.isAvailableForSegment(rac.fromIdx, rac.toIdx)
+            ) {
+              eligibleRAC.push({
+                pnr: rac.pnr,
+                name: rac.name,
+                age: rac.age,
+                gender: rac.gender,
+                racNumber: rac.racNumber,
+                pnrStatus: rac.pnrStatus,
+                racStatus: rac.racStatus,
+                from: rac.from,
+                to: rac.to,
+                fromIdx: rac.fromIdx,
+                toIdx: rac.toIdx,
+                class: rac.class,
+                berthType: rac.berthType,
+              });
+            }
+          }
+
+          // Sort by RAC number (lowest first = highest priority)
+          eligibleRAC.sort((a, b) => {
+            // Extract numeric part from RAC status (e.g., "RAC 1" -> 1)
+            const getRACANumber = (racStatus) => {
+              const match = racStatus?.match(/RAC\s*(\d+)/i);
+              return match ? parseInt(match[1]) : 999;
+            };
+            return getRACANumber(a.racStatus) - getRACANumber(b.racStatus);
+          });
+
+          if (eligibleRAC.length > 0) {
+            eligibilityMatrix.push({
+              berth: berth.fullBerthNo,
+              coach: coach.coachNo,
+              berthNo: berth.berthNo,
+              type: berth.type,
+              class: coach.class,
+              vacantFrom: range.fromStation,
+              vacantTo: range.toStation,
+              vacantFromIdx: range.fromIdx,
+              vacantToIdx: range.toIdx,
+              vacantSegment: `${range.fromStation} → ${range.toStation}`,
+              eligibleRAC: eligibleRAC, // All eligible passengers
+              eligibleCount: eligibleRAC.length,
+              topEligible: eligibleRAC[0], // Highest priority (lowest RAC number)
             });
           }
-        }
-
-        if (eligibleRAC.length > 0) {
-          eligibilityMatrix.push({
-            berth: berth.fullBerthNo,
-            coach: coach.coachNo,
-            berthNo: berth.berthNo,
-            type: berth.type,
-            class: coach.class,
-            eligibleRAC,
-            topEligible: eligibleRAC[0],
-          });
-        }
+        });
       }
     }
 
     return eligibilityMatrix;
+  }
+
+  /**
+   * Helper: Get vacant segment ranges for a berth
+   * Returns array of continuous vacant ranges with station names
+   */
+  _getVacantSegmentRanges(berth, stations) {
+    const ranges = [];
+    let rangeStart = null;
+
+    for (let i = 0; i < berth.segmentOccupancy.length; i++) {
+      if (berth.segmentOccupancy[i] === null) {
+        // Vacant segment
+        if (rangeStart === null) {
+          rangeStart = i;
+        }
+      } else {
+        // Occupied segment
+        if (rangeStart !== null) {
+          // Close the range
+          ranges.push({
+            fromIdx: rangeStart,
+            toIdx: i,
+            fromStation: stations[rangeStart]?.code || `S${rangeStart}`,
+            toStation: stations[i]?.code || `S${i}`,
+          });
+          rangeStart = null;
+        }
+      }
+    }
+
+    // Close final range if it extends to the end
+    if (rangeStart !== null) {
+      ranges.push({
+        fromIdx: rangeStart,
+        toIdx: berth.segmentOccupancy.length,
+        fromStation: stations[rangeStart]?.code || `S${rangeStart}`,
+        toStation:
+          stations[berth.segmentOccupancy.length]?.code ||
+          `S${berth.segmentOccupancy.length}`,
+      });
+    }
+
+    return ranges;
   }
 
   /**
