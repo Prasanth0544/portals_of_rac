@@ -224,16 +224,43 @@ class PassengerController {
       berth.updateStatus();
       // Update statistics
       trainState.stats.totalPassengers++;
-      if (newPassenger.PNR_Status === "CNF") {
-        trainState.stats.cnfPassengers++;
-      } else if (
-        newPassenger.Rac_status &&
-        newPassenger.Rac_status.startsWith("RAC")
-      ) {
+      // Check if passenger has RAC status (PNR_Status is "RAC")
+      if (newPassenger.PNR_Status === "RAC") {
+        // Add to RAC queue
+        const racNumber = newPassenger.Rac_status
+          ? parseInt(newPassenger.Rac_status)
+          : 999;
+
+        trainState.racQueue.push({
+          pnr: newPassenger.PNR_Number,
+          name: newPassenger.Name,
+          age: newPassenger.Age,
+          gender: newPassenger.Gender,
+          racNumber: racNumber,
+          class: newPassenger.Class,
+          from: fromStation.code,
+          fromIdx: fromStation.idx,
+          to: toStation.code,
+          toIdx: toStation.idx,
+          pnrStatus: newPassenger.PNR_Status,
+          racStatus: newPassenger.Rac_status
+            ? `RAC ${newPassenger.Rac_status}`
+            : "RAC",
+          coach: newPassenger.Assigned_Coach,
+          seatNo: newPassenger.Assigned_berth,
+          berthType: newPassenger.Berth_Type,
+        });
+
+        // Sort RAC queue by RAC number
+        trainState.racQueue.sort((a, b) => a.racNumber - b.racNumber);
+
         trainState.stats.racPassengers++;
+      } else if (newPassenger.PNR_Status === "CNF") {
+        trainState.stats.cnfPassengers++;
       }
       // Recalculate vacant berths
       trainState.stats.vacantBerths = this.countVacantBerths(trainState);
+
       // Broadcast update via WebSocket
       if (wsManager) {
         wsManager.broadcastTrainUpdate("PASSENGER_ADDED", {

@@ -197,6 +197,11 @@ class DataService {
 
     passengers.forEach((p) => {
       try {
+        // Skip RAC passengers - they should only be in the RAC queue, not allocated to berths
+        if (p.PNR_Status === "RAC") {
+          return;
+        }
+
         // Find station indices
         const fromStation = this.findStation(
           trainState.stations,
@@ -232,7 +237,10 @@ class DataService {
           toIdx: toStation.idx,
           pnrStatus: p.PNR_Status,
           class: p.Class,
-          racStatus: p.Rac_status,
+          racStatus:
+            p.PNR_Status === "RAC" && p.Rac_status
+              ? `RAC ${p.Rac_status}`
+              : p.Rac_status || "-",
           berthType: p.Berth_Type,
           noShow: p.NO_show || false,
           boarded: false,
@@ -253,10 +261,13 @@ class DataService {
    */
   buildRACQueue(trainState, passengers) {
     const racPassengers = passengers
-      .filter((p) => p.Rac_status && p.Rac_status.startsWith("RAC"))
+      .filter((p) => {
+        // Check if PNR_Status is "RAC"
+        return p.PNR_Status === "RAC";
+      })
       .map((p) => {
-        const match = p.Rac_status.match(/RAC\s*(\d+)/i);
-        const racNumber = match ? parseInt(match[1]) : 999;
+        // Extract RAC number from Rac_status field (now just a number string like "1", "2", etc.)
+        const racNumber = p.Rac_status ? parseInt(p.Rac_status) : 999;
 
         const fromStation = this.findStation(
           trainState.stations,
@@ -279,7 +290,7 @@ class DataService {
           to: toStation ? toStation.code : p.Deboarding_Station,
           toIdx: toStation ? toStation.idx : trainState.stations.length - 1,
           pnrStatus: p.PNR_Status,
-          racStatus: p.Rac_status,
+          racStatus: p.Rac_status ? `RAC ${p.Rac_status}` : "RAC",
           coach: p.Assigned_Coach,
           seatNo: p.Assigned_berth,
           berthType: p.Berth_Type,

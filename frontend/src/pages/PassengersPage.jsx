@@ -147,24 +147,26 @@ function PassengersPage({ trainData, onClose, onNavigate }) {
         const berthPassengers = passengersRes.data.passengers || [];
         let racPassengers = [];
         if (racRes?.success) {
-          racPassengers = (racRes.data.queue || []).map((r) => ({
-            pnr: r.pnr,
-            name: r.name,
-            age: r.age,
-            gender: r.gender,
-            from: r.from,
-            to: r.to,
-            fromIdx: r.fromIdx,
-            toIdx: r.toIdx,
-            pnrStatus: r.pnrStatus,
-            racStatus: r.racStatus,
-            class: r.class,
-            coach: r.coach,
-            berth: r.seatNo ? `${r.coach}-${r.seatNo}` : "RAC",
-            berthType: r.berthType,
-            boarded: false,
-            noShow: false,
-          }));
+          racPassengers = (racRes.data.queue || [])
+            .filter((r) => r.pnrStatus === "RAC")
+            .map((r) => ({
+              pnr: r.pnr,
+              name: r.name,
+              age: r.age,
+              gender: r.gender,
+              from: r.from,
+              to: r.to,
+              fromIdx: r.fromIdx,
+              toIdx: r.toIdx,
+              pnrStatus: r.pnrStatus,
+              racStatus: r.racStatus,
+              class: r.class,
+              coach: r.coach,
+              berth: r.seatNo ? `${r.coach}-${r.seatNo}` : "RAC",
+              berthType: r.berthType,
+              boarded: false,
+              noShow: false,
+            }));
         }
         setPassengers([...berthPassengers, ...racPassengers]);
       }
@@ -192,19 +194,10 @@ function PassengersPage({ trainData, onClose, onNavigate }) {
     // Filter by status
     switch (filterStatus) {
       case "cnf":
-        filtered = filtered.filter(
-          (p) => p.pnrStatus === "CNF" && !p.pnrStatus.includes("RAC"),
-        );
-        break;
-      case "rac-cnf":
-        filtered = filtered.filter(
-          (p) => p.pnrStatus === "CNF" && p.racStatus?.startsWith("RAC"),
-        );
+        filtered = filtered.filter((p) => p.pnrStatus === "CNF");
         break;
       case "rac":
-        filtered = filtered.filter(
-          (p) => p.pnrStatus && p.pnrStatus.startsWith("RAC"),
-        );
+        filtered = filtered.filter((p) => p.pnrStatus === "RAC");
         break;
       case "boarded":
         filtered = filtered.filter((p) => p.boarded === true && !p.noShow);
@@ -300,10 +293,6 @@ function PassengersPage({ trainData, onClose, onNavigate }) {
             <div className="pass-stat-label">CNF</div>
             <div className="pass-stat-value">{counts.cnf}</div>
           </div>
-          <div className="pass-stat" onClick={() => setFilterStatus("rac-cnf")}>
-            <div className="pass-stat-label">RAC→CNF</div>
-            <div className="pass-stat-value">{counts.racCnf}</div>
-          </div>
           <div className="pass-stat" onClick={() => setFilterStatus("rac")}>
             <div className="pass-stat-label">RAC</div>
             <div className="pass-stat-value">{counts.rac}</div>
@@ -341,7 +330,6 @@ function PassengersPage({ trainData, onClose, onNavigate }) {
         >
           <option value="all">All</option>
           <option value="cnf">CNF</option>
-          <option value="rac-cnf">RAC→CNF</option>
           <option value="rac">RAC</option>
           <option value="boarded">Boarded</option>
           <option value="no-show">No-Show</option>
