@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { getRACQueue } from "../services/api";
 import "./RACQueuePage.css";
 
+
 function RACQueuePage({ trainData, onClose }) {
   const [racQueue, setRacQueue] = useState([]);
   const [loading, setLoading] = useState(true);

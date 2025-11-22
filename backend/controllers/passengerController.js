@@ -5,7 +5,137 @@ const wsManager = require("../config/websocket");
 const trainController = require("./trainController");
 
 class PassengerController {
-  // backend/controllers/passengerController.js (ADD THIS METHOD)
+  /**
+   * Get PNR details (PUBLIC - no authentication required)
+   */
+  async getPNRDetails(req, res) {
+    try {
+      const { pnr } = req.params;
+
+      if (!pnr) {
+        return res.status(400).json({
+          success: false,
+          message: "PNR number is required"
+        });
+      }
+
+      const passengersCollection = db.getPassengersCollection();
+      const passenger = await passengersCollection.findOne({ PNR_Number: pnr });
+
+      if (!passenger) {
+        return res.status(404).json({
+          success: false,
+          message: "PNR not found"
+        });
+      }
+
+      const trainState = trainController.getGlobalTrainState();
+      const stationData = trainState ? trainState.stations.find(s => s.code === passenger.Boarding_Station) : null;
+
+      res.json({
+        success: true,
+        data: {
+          pnr: passenger.PNR_Number,
+          name: passenger.Name,
+          age: passenger.Age,
+          gender: passenger.Gender,
+          trainNo: passenger.Train_Number,
+          trainName: trainState ? trainState.trainName : "Unknown",
+          berth: `${passenger.Assigned_Coach}-${passenger.Assigned_berth}`,
+          berthType: passenger.Berth_Type,
+          pnrStatus: passenger.PNR_Status,
+          racStatus: passenger.Rac_status,
+          class: passenger.Class,
+          boardingStation: passenger.Boarding_Station,
+          boardingTime: stationData ? stationData.arrival : "N/A",
+          destinationStation: passenger.Deboarding_Station,
+          boarded: passenger.NO_show ? false : true,
+          noShow: passenger.NO_show || false
+        }
+      });
+    } catch (error) {
+      console.error("❌ Error getting PNR details:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Mark passenger as no-show (self-cancellation)
+   */
+  async markNoShow(req, res) {
+    try {
+      const { pnr } = req.body;
+
+      if (!pnr) {
+        return res.status(400).json({
+          success: false,
+          message: "PNR number is required"
+        });
+      }
+
+      const passengersCollection = db.getPassengersCollection();
+      const trainState = trainController.getGlobalTrainState();
+
+      if (!trainState) {
+        return res.status(400).json({
+          success: false,
+          message: "Train not initialized"
+        });
+      }
+
+      // Update MongoDB
+      const result = await passengersCollection.updateOne(
+        { PNR_Number: pnr },
+        { $set: { NO_show: true } }
+      );
+
+      if (result.matchedCount === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "PNR not found"
+        });
+      }
+
+      // Update in-memory state
+      const passenger = trainState.findPassengerByPNR(pnr);
+      if (passenger) {
+        passenger.noShow = true;
+
+        // Free up the berth
+        const location = trainState.findPassenger(pnr);
+        if (location) {
+          location.berth.removePassenger(pnr);
+          location.berth.updateStatus();
+        }
+
+        trainState.stats.totalNoShows++;
+        trainState.updateStats();
+      }
+
+      // Broadcast update
+      if (wsManager) {
+        wsManager.broadcastTrainUpdate('NO_SHOW_MARKED', {
+          pnr: pnr,
+          stats: trainState.stats
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Passenger marked as no-show successfully",
+        data: { pnr: pnr }
+      });
+    } catch (error) {
+      console.error("❌ Error marking no-show:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
 
   /**
    * Get list of vacant berths with details
@@ -471,6 +601,143 @@ class PassengerController {
       res.status(500).json({
         success: false,
         error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get pending upgrade notifications for a passenger
+   */
+  getUpgradeNotifications(req, res) {
+    try {
+      const { pnr } = req.params;
+      const UpgradeNotificationService = require('../services/UpgradeNotificationService');
+
+      const notifications = UpgradeNotificationService.getPendingNotifications(pnr);
+
+      res.json({
+        success: true,
+        data: {
+          pnr: pnr,
+          count: notifications.length,
+          notifications: notifications
+        }
+      });
+    } catch (error) {
+      console.error("❌ Error getting upgrade notifications:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Accept an upgrade offer
+   */
+  async acceptUpgrade(req, res) {
+    try {
+      const { pnr, notificationId } = req.body;
+
+      if (!pnr || !notificationId) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields: pnr, notificationId"
+        });
+      }
+
+      const UpgradeNotificationService = require('../services/UpgradeNotificationService');
+      const ReallocationService = require('../services/ReallocationService');
+      const trainController = require('./trainController'); // Assuming trainController is available or imported
+      const wsManager = require('../utils/wsManager'); // Assuming wsManager is available or imported
+
+      const trainState = trainController.getGlobalTrainState();
+
+      if (!trainState) {
+        return res.status(400).json({
+          success: false,
+          message: "Train not initialized"
+        });
+      }
+
+      // Accept the notification
+      const notification = UpgradeNotificationService.acceptUpgrade(pnr, notificationId);
+
+      // Perform the actual upgrade
+      const upgradeResult = await ReallocationService.upgradeRACPassengerWithCoPassenger(
+        pnr,
+        {
+          coachNo: notification.offeredCoach,
+          berthNo: notification.offeredSeatNo
+        },
+        trainState
+      );
+
+      // Broadcast update
+      if (wsManager) {
+        wsManager.broadcastTrainUpdate('RAC_UPGRADE_ACCEPTED', {
+          pnr: pnr,
+          upgrade: upgradeResult
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Upgrade accepted and processed",
+        data: upgradeResult
+      });
+
+    } catch (error) {
+      console.error("❌ Error accepting upgrade:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Deny an upgrade offer
+   */
+  denyUpgrade(req, res) {
+    try {
+      const { pnr, notificationId, reason } = req.body;
+
+      if (!pnr || !notificationId) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields: pnr, notificationId"
+        });
+      }
+
+      const UpgradeNotificationService = require('../services/UpgradeNotificationService');
+      const wsManager = require('../utils/wsManager'); // Assuming wsManager is available or imported
+
+      const notification = UpgradeNotificationService.denyUpgrade(
+        pnr,
+        notificationId,
+        reason || 'Passenger declined'
+      );
+
+      // Broadcast update
+      if (wsManager) {
+        wsManager.broadcastTrainUpdate('RAC_UPGRADE_DENIED', {
+          pnr: pnr,
+          notification: notification
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Upgrade denied and logged",
+        data: notification
+      });
+
+    } catch (error) {
+      console.error("❌ Error denying upgrade:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message
       });
     }
   }

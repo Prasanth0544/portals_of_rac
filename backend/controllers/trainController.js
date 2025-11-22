@@ -25,14 +25,14 @@ class TrainController {
       wsManager.broadcastStatsUpdate(trainState.stats);
     }
   }
-  
+
   async initializeTrain(req, res) {
     try {
       const { trainNo, journeyDate, trainName } = req.body;
 
       // Use global config if available
       const config = global.RAC_CONFIG || {};
-      
+
       const train = trainNo || config.trainNo;
       const date = journeyDate || config.journeyDate;
       const name = trainName || config.trainName || await DataService.getTrainName(train);
@@ -179,7 +179,7 @@ class TrainController {
   /**
    * Move to next station
    */
-  moveToNextStation(req, res) {
+  async moveToNextStation(req, res) {
     try {
       if (!trainState) {
         return res.status(400).json({
@@ -217,7 +217,7 @@ class TrainController {
         });
       }
 
-      const result = StationEventService.processStationArrival(trainState);
+      const result = await StationEventService.processStationArrival(trainState);
       trainState.currentStationIdx++;
 
       // Broadcast station arrival with all details
@@ -232,7 +232,8 @@ class TrainController {
           boarded: result.boarded,
           vacancies: result.vacancies,
           stats: result.stats,
-          nextStation: trainState.getCurrentStation()?.name
+          nextStation: trainState.getCurrentStation()?.name,
+          upgrades: result.upgrades || []
         });
 
         // Broadcast updated statistics

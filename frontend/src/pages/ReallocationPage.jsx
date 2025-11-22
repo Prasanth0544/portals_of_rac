@@ -1,340 +1,354 @@
 // frontend/src/pages/ReallocationPage.jsx
+import React, { useState, useEffect } from 'react';
+import api from '../services/api';
+import './ReallocationPage.css';
 
-import React, { useState, useEffect } from "react";
-import {
-  getEligibilityMatrix,
-  getRACQueue,
-  getVacantBerths,
-  applyReallocation,
-} from "../services/api";
-import "./ReallocationPage.css";
+const ReallocationPage = () => {
+    const [trainState, setTrainState] = useState(null);
+    const [vacantBerths, setVacantBerths] = useState([]);
+    const [racQueue, setRacQueue] = useState([]);
+    const [eligibilityMatrix, setEligibilityMatrix] = useState([]);
+    const [upgradeNotifications, setUpgradeNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('vacant');
+    const [selectedPNR, setSelectedPNR] = useState('');
+    const [pnrDetails, setPnrDetails] = useState(null);
 
-function ReallocationPage({ trainData, onClose, loadTrainState }) {
-  const [eligibility, setEligibility] = useState([]);
-  const [racQueue, setRacQueue] = useState([]);
-  const [vacantBerths, setVacantBerths] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [applying, setApplying] = useState(false);
-  const [expandedRows, setExpandedRows] = useState({});
-  const [applyErrors, setApplyErrors] = useState([]);
+    // Fetch all data
+    useEffect(() => {
+        fetchAllData();
+        const interval = setInterval(fetchAllData, 5000); // Refresh every 5 seconds
+        return () => clearInterval(interval);
+    }, []);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+    const fetchAllData = async () => {
+        try {
+            const [stateRes, vacantRes, queueRes] = await Promise.all([
+                api.get('/train/state'),
+                api.get('/train/vacant-berths'),
+                api.get('/train/rac-queue')
+            ]);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-
-      const [eligibilityRes, racRes, vacancyRes] = await Promise.all([
-        getEligibilityMatrix(),
-        getRACQueue(),
-        getVacantBerths(),
-      ]);
-
-      if (eligibilityRes.success) {
-        setEligibility(eligibilityRes.data.eligibility);
-      }
-
-      if (racRes.success) {
-        setRacQueue(racRes.data.queue);
-      }
-
-      if (vacancyRes.success) {
-        setVacantBerths(vacancyRes.data.vacancies);
-      }
-    } catch (error) {
-      console.error("Error loading data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getUniqueAllocations = () => {
-    const seen = new Set();
-    const list = [];
-    eligibility.forEach((e) => {
-      const top = e.topEligible;
-      if (!top) return;
-      const allocation = { coach: e.coach, berth: e.berthNo, pnr: top.pnr };
-      if (!allocation.coach || !allocation.berth || !allocation.pnr) return;
-      if (seen.has(allocation.pnr)) return; // prevent duplicate PNR allocations
-      list.push(allocation);
-      seen.add(allocation.pnr);
-    });
-    return list;
-  };
-
-  const handleApplyReallocation = async () => {
-    if (eligibility.length === 0) {
-      alert("No eligible RAC passengers for reallocation");
-      return;
-    }
-
-    const allocations = getUniqueAllocations();
-    if (allocations.length === 0) {
-      alert("No valid allocations to apply");
-      return;
-    }
-
-    if (!window.confirm(`Apply reallocation for ${allocations.length} allocations?`)) {
-      return;
-    }
-
-    try {
-      setApplying(true);
-
-      setApplyErrors([]);
-      const response = await applyReallocation(allocations);
-
-      if (response.success) {
-        const failed = response.data.failed || [];
-        if (failed.length > 0) {
-          setApplyErrors(failed.map(f => `${f.berth} / ${f.pnr}: ${f.reason}`));
+            setTrainState(stateRes.data.data);
+            setVacantBerths(vacantRes.data.data || []);
+            setRacQueue(queueRes.data.data || []);
+            setLoading(false);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            setLoading(false);
         }
-        alert(`✅ Reallocation Applied!\n\nSuccess: ${response.data.success.length}\nFailed: ${failed.length}`);
+    };
 
-        await loadTrainState();
-        await loadData();
-      }
-    } catch (error) {
-      alert(`Error: ${error.message}`);
-    } finally {
-      setApplying(false);
+    const fetchEligibilityMatrix = async () => {
+        try {
+            const res = await api.get('/reallocation/eligibility');
+            setEligibilityMatrix(res.data.data || []);
+        } catch (error) {
+            console.error('Error fetching eligibility matrix:', error);
+        }
+    };
+
+    const searchPNR = async (e) => {
+        e.preventDefault();
+        if (!selectedPNR) return;
+
+        try {
+            const res = await api.get(`/passenger/pnr/${selectedPNR}`);
+            setPnrDetails(res.data.data);
+        } catch (error) {
+            alert(error.response?.data?.message || 'PNR not found');
+            setPnrDetails(null);
+        }
+    };
+
+    const markNoShow = async (pnr) => {
+        if (!window.confirm(`Mark passenger ${pnr} as No-Show?`)) return;
+
+        try {
+            await api.post('/passenger/cancel', { pnr });
+            alert('Passenger marked as No-Show successfully');
+            fetchAllData();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to mark no-show');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="reallocation-page">
+                <div className="loading">Loading reallocation data...</div>
+            </div>
+        );
     }
-  };
 
-  if (loading) {
     return (
-      <div className="reallocation-page">
-        <div className="page-header">
-          <button className="back-btn" onClick={onClose}>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            ◄
-          </button>
-          <h2>🎯 RAC Reallocation</h2>
-        </div>
-        <div className="loading-container">
-          <div className="spinner-large"></div>
-          <p>Loading reallocation data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="reallocation-page">
-      <div className="page-header">
-        <button className="back-btn" onClick={onClose}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-          ◄
-        </button>
-        <h2>🎯 RAC Reallocation</h2>
-      </div>
-
-      {/* Info Banner */}
-      <div className="info-banner">
-        <strong>ℹ️ Eligibility Matrix:</strong> Shows vacant berth segments and
-        all eligible RAC passengers. Priority is given to lowest RAC number.
-        Click row to see all eligible passengers.
-      </div>
-
-      {/* Summary - Compact */}
-      <div className="realloc-summary">
-        <div className="summary-item">
-          <div className="summary-label">RAC Queue</div>
-          <div className="summary-value">{racQueue.length}</div>
-        </div>
-        <div className="summary-item">
-          <div className="summary-label">Vacant</div>
-          <div className="summary-value">{vacantBerths.length}</div>
-        </div>
-        <div className="summary-item">
-          <div className="summary-label">Eligible</div>
-          <div className="summary-value">{eligibility.length}</div>
-        </div>
-      </div>
-
-      {/* Apply Button */}
-      {eligibility.length > 0 && (
-        <button
-          onClick={handleApplyReallocation}
-          disabled={applying}
-          className="btn-apply-realloc"
-        >
-          {applying
-            ? "Applying..."
-            : `Apply Reallocation (${getUniqueAllocations().length})`}
-        </button>
-      )}
-
-      {applyErrors.length > 0 && (
-        <div className="error-banner compact">
-          <strong>Some allocations failed:</strong>
-          <ul>
-            {applyErrors.map((e, i) => (
-              <li key={i}>{e}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Eligibility Table - Enhanced with All Eligible RAC */}
-      <div className="eligibility-section">
-        <h3>Eligibility Matrix ({eligibility.length} vacant segments)</h3>
-
-        {eligibility.length === 0 ? (
-          <div className="empty-state">
-            <p>✅ No vacant berth segments available for RAC reallocation</p>
-          </div>
-        ) : (
-          <div className="table-container">
-            <table className="eligibility-table">
-              <thead>
-                <tr>
-                  <th>No.</th>
-                  <th>Berth</th>
-                  <th>Type</th>
-                  <th>Top Priority</th>
-                  <th>RAC Status</th>
-                  <th>Journey</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {eligibility.map((item, idx) => (
-                  <React.Fragment key={`${item.berth}-${idx}`}>
-                    <tr
-                      className={`eligibility-row ${expandedRows[idx] ? "expanded" : ""}`}
-                      onClick={() =>
-                        setExpandedRows((prev) => ({
-                          ...prev,
-                          [idx]: !prev[idx],
-                        }))
-                      }
-                      style={{ cursor: "pointer" }}
-                    >
-                      <td className="td-no">{idx + 1}</td>
-                      <td className="td-berth">{item.berth}</td>
-                      <td className="td-type">{item.type}</td>
-                      <td className="td-name">
-                        <strong>{item.topEligible.name}</strong>
-                      </td>
-                      <td className="td-status">
-                        <span className="badge-rac-priority">
-                          {item.topEligible.racStatus}
-                        </span>
-                      </td>
-                      <td className="td-journey">
-                        {item.topEligible.from} → {item.topEligible.to}
-                      </td>
-                      <td className="td-action">
-                        <button
-                          className="btn-expand"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedRows((prev) => ({
-                              ...prev,
-                              [idx]: !prev[idx],
-                            }));
-                          }}
-                        >
-                          {expandedRows[idx] ? "▼" : "▶"}
-                        </button>
-                      </td>
-                    </tr>
-
-                    {/* Expanded Row - Show All Eligible RAC */}
-                    {expandedRows[idx] && (
-                      <tr className="expanded-details">
-                        <td colSpan="7">
-                          <div className="eligible-rac-list">
-                            <h4>
-                              All Eligible RAC Passengers ({(item.eligibleRAC || []).length}):
-                            </h4>
-                            <table className="rac-details-table">
-                              <thead>
-                                <tr>
-                                  <th>Priority</th>
-                                  <th>PNR</th>
-                                  <th>Name</th>
-                                  <th>Age/Gender</th>
-                                  <th>RAC Status</th>
-                                  <th>Journey</th>
-                                  <th>Class</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {item.eligibleRAC.map((rac, racIdx) => (
-                                  <tr
-                                    key={rac.pnr}
-                                    className={
-                                      racIdx === 0 ? "top-priority" : ""
-                                    }
-                                  >
-                                    <td>
-                                      {racIdx === 0 ? (
-                                        <span className="priority-badge top">
-                                          🥇 Top
-                                        </span>
-                                      ) : (
-                                        <span className="priority-badge">
-                                          #{racIdx + 1}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td>{rac.pnr}</td>
-                                    <td>
-                                      <strong>{rac.name}</strong>
-                                    </td>
-                                    <td>
-                                      {rac.age}/{rac.gender}
-                                    </td>
-                                    <td>
-                                      <span className="badge-rac-detail">
-                                        {rac.racStatus}
-                                      </span>
-                                    </td>
-                                    <td>
-                                      {rac.from} → {rac.to}
-                                    </td>
-                                    <td>{rac.class}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                            <div className="allocation-note">
-                              <strong>Note:</strong> Top priority passenger
-                              (lowest RAC number) will be allocated when "Apply
-                              Reallocation" is clicked.
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
+        <div className="reallocation-page">
+            <div className="page-header">
+                <h1>🔄 Dynamic RAC Reallocation System</h1>
+                <div className="train-info">
+                    {trainState && (
+                        <>
+                            <span className="train-name">{trainState.trainName}</span>
+                            <span className="train-no">#{trainState.trainNo}</span>
+                            <span className="current-station">
+                                📍 {trainState.stations[trainState.currentStationIdx]?.name}
+                            </span>
+                        </>
                     )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+                </div>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="tab-navigation">
+                <button
+                    className={`tab ${activeTab === 'vacant' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('vacant')}
+                >
+                    Vacant Berths ({vacantBerths.length})
+                </button>
+                <button
+                    className={`tab ${activeTab === 'rac' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('rac')}
+                >
+                    RAC Queue ({racQueue.length})
+                </button>
+                <button
+                    className={`tab ${activeTab === 'eligibility' ? 'active' : ''}`}
+                    onClick={() => {
+                        setActiveTab('eligibility');
+                        fetchEligibilityMatrix();
+                    }}
+                >
+                    Eligibility Matrix
+                </button>
+                <button
+                    className={`tab ${activeTab === 'pnr' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('pnr')}
+                >
+                    PNR Lookup
+                </button>
+            </div>
+
+            {/* Vacant Berths Tab */}
+            {activeTab === 'vacant' && (
+                <div className="tab-content">
+                    <h2>🛏️ Vacant Berths</h2>
+                    {vacantBerths.length === 0 ? (
+                        <div className="empty-state">No vacant berths available</div>
+                    ) : (
+                        <div className="berths-grid">
+                            {vacantBerths.map((berth, index) => (
+                                <div key={index} className="berth-card vacant">
+                                    <div className="berth-header">
+                                        <span className="berth-id">
+                                            {berth.coachName}-{berth.berthNo}
+                                        </span>
+                                        <span className={`berth-type ${berth.berthType.toLowerCase()}`}>
+                                            {berth.berthType}
+                                        </span>
+                                    </div>
+                                    <div className="vacant-segments">
+                                        <h4>Vacant Segments:</h4>
+                                        {berth.vacantSegments.map((seg, idx) => (
+                                            <div key={idx} className="segment">
+                                                <span className="segment-route">
+                                                    {seg.startStation} → {seg.endStation}
+                                                </span>
+                                                <span className="segment-range">
+                                                    ({seg.startStationName} to {seg.endStationName})
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* RAC Queue Tab */}
+            {activeTab === 'rac' && (
+                <div className="tab-content">
+                    <h2>📋 RAC Queue (Priority Order)</h2>
+                    {racQueue.length === 0 ? (
+                        <div className="empty-state">RAC queue is empty</div>
+                    ) : (
+                        <div className="rac-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>PNR</th>
+                                        <th>Name</th>
+                                        <th>RAC Status</th>
+                                        <th>Journey</th>
+                                        <th>Current Berth</th>
+                                        <th>Boarded</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {racQueue.map((passenger, index) => (
+                                        <tr key={passenger.pnr} className={passenger.boarded ? 'boarded' : 'pending'}>
+                                            <td>{index + 1}</td>
+                                            <td className="pnr">{passenger.pnr}</td>
+                                            <td>{passenger.name}</td>
+                                            <td>
+                                                <span className="rac-badge">{passenger.racStatus}</span>
+                                            </td>
+                                            <td className="journey">
+                                                {passenger.from} → {passenger.to}
+                                            </td>
+                                            <td>{passenger.berth || 'N/A'}</td>
+                                            <td>
+                                                <span className={`status-badge ${passenger.boarded ? 'yes' : 'no'}`}>
+                                                    {passenger.boarded ? '✓ Yes' : '✗ No'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {!passenger.noShow && (
+                                                    <button
+                                                        className="btn-danger btn-small"
+                                                        onClick={() => markNoShow(passenger.pnr)}
+                                                    >
+                                                        Mark No-Show
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Eligibility Matrix Tab */}
+            {activeTab === 'eligibility' && (
+                <div className="tab-content">
+                    <h2>✅ Eligibility Matrix</h2>
+                    <p className="matrix-description">
+                        Shows which RAC passengers are eligible for which vacant berths based on journey coverage
+                    </p>
+                    {eligibilityMatrix.length === 0 ? (
+                        <div className="empty-state">No eligibility data available. Click "Refresh" to check.</div>
+                    ) : (
+                        <div className="eligibility-grid">
+                            {eligibilityMatrix.map((item, index) => (
+                                <div key={index} className={`eligibility-card ${item.eligible ? 'eligible' : 'not-eligible'}`}>
+                                    <div className="eligibility-header">
+                                        <h4>{item.passenger.name} ({item.passenger.pnr})</h4>
+                                        <span className={`status ${item.eligible ? 'eligible' : 'not-eligible'}`}>
+                                            {item.eligible ? '✓ ELIGIBLE' : '✗ NOT ELIGIBLE'}
+                                        </span>
+                                    </div>
+                                    <div className="eligibility-details">
+                                        <p><strong>Berth:</strong> {item.berth.coachName}-{item.berth.berthNo}</p>
+                                        <p><strong>Passenger Journey:</strong> {item.passenger.from} → {item.passenger.to}</p>
+                                        <p><strong>Vacant Segment:</strong> {item.vacantSegment.from} → {item.vacantSegment.to}</p>
+                                        {!item.eligible && item.reason && (
+                                            <p className="reason"><strong>Reason:</strong> {item.reason}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <button className="btn-primary" onClick={fetchEligibilityMatrix}>
+                        🔄 Refresh Matrix
+                    </button>
+                </div>
+            )}
+
+            {/* PNR Lookup Tab */}
+            {activeTab === 'pnr' && (
+                <div className="tab-content">
+                    <h2>🔍 PNR Lookup</h2>
+                    <form onSubmit={searchPNR} className="pnr-search-form">
+                        <input
+                            type="text"
+                            placeholder="Enter PNR Number"
+                            value={selectedPNR}
+                            onChange={(e) => setSelectedPNR(e.target.value.toUpperCase())}
+                            className="pnr-input"
+                        />
+                        <button type="submit" className="btn-primary">Search</button>
+                    </form>
+
+                    {pnrDetails && (
+                        <div className="pnr-result-card">
+                            <div className="pnr-header">
+                                <h3>PNR: {pnrDetails.pnr}</h3>
+                                <span className={`status-badge ${pnrDetails.pnrStatus.toLowerCase()}`}>
+                                    {pnrDetails.pnrStatus}
+                                </span>
+                            </div>
+                            <div className="pnr-details-grid">
+                                <div className="detail-item">
+                                    <span className="label">Name:</span>
+                                    <span className="value">{pnrDetails.name}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="label">Age:</span>
+                                    <span className="value">{pnrDetails.age}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="label">Gender:</span>
+                                    <span className="value">{pnrDetails.gender}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="label">Train:</span>
+                                    <span className="value">{pnrDetails.trainName} ({pnrDetails.trainNo})</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="label">Berth:</span>
+                                    <span className="value">{pnrDetails.berth}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="label">Class:</span>
+                                    <span className="value">{pnrDetails.class}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="label">RAC Status:</span>
+                                    <span className="value">{pnrDetails.racStatus}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="label">Boarding:</span>
+                                    <span className="value">{pnrDetails.boardingStation}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="label">Destination:</span>
+                                    <span className="value">{pnrDetails.destinationStation}</span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="label">Boarded:</span>
+                                    <span className="value">
+                                        {pnrDetails.boarded ? '✓ Yes' : '✗ No'}
+                                    </span>
+                                </div>
+                                <div className="detail-item">
+                                    <span className="label">No-Show:</span>
+                                    <span className="value">
+                                        {pnrDetails.noShow ? '✓ Yes' : '✗ No'}
+                                    </span>
+                                </div>
+                            </div>
+                            {!pnrDetails.noShow && (
+                                <button
+                                    className="btn-danger"
+                                    onClick={() => markNoShow(pnrDetails.pnr)}
+                                >
+                                    Mark as No-Show
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default ReallocationPage;

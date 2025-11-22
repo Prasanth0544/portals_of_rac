@@ -336,15 +336,7 @@ function PassengersPage({ trainData, onClose, onNavigate }) {
           <option value="upcoming">Upcoming</option>
         </select>
 
-        <button
-          onClick={() => {
-            setSearchPNR("");
-            setFilterStatus("all");
-          }}
-          className="filter-reset"
-        >
-          Reset
-        </button>
+
       </div>
 
       {/* Vacant Berths Toggle Button - Separate Row */}

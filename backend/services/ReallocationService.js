@@ -80,26 +80,33 @@ class ReallocationService {
   }
 
   /**
-   * Get RAC queue
+   * Get RAC queue - ONLY BOARDED PASSENGERS (currently on train)
+   * Reallocation should only happen for passengers who have boarded
    */
   getRACQueue(trainState) {
-    return trainState.racQueue.map((rac) => ({
-      pnr: rac.pnr,
-      name: rac.name,
-      age: rac.age,
-      gender: rac.gender,
-      racNumber: rac.racNumber,
-      pnrStatus: rac.pnrStatus,
-      racStatus: rac.racStatus,
-      class: rac.class,
-      from: rac.from,
-      to: rac.to,
-      fromIdx: rac.fromIdx,
-      toIdx: rac.toIdx,
-      coach: rac.coach,
-      seatNo: rac.seatNo,
-      berthType: rac.berthType,
-    }));
+    // FILTER: Only return RAC passengers who have BOARDED the train
+    // This ensures reallocation only works on current onboard passengers
+    return trainState.racQueue
+      .filter((rac) => rac.boarded === true) // 🔥 KEY FILTER: Only boarded passengers
+      .map((rac) => ({
+        pnr: rac.pnr,
+        name: rac.name,
+        age: rac.age,
+        gender: rac.gender,
+        racNumber: rac.racNumber,
+        pnrStatus: rac.pnrStatus,
+        racStatus: rac.racStatus,
+        class: rac.class,
+        from: rac.from,
+        to: rac.to,
+        fromIdx: rac.fromIdx,
+        toIdx: rac.toIdx,
+        coach: rac.coach,
+        seatNo: rac.seatNo,
+        berthType: rac.berthType,
+        boarded: rac.boarded, // Include boarded status in response
+        berth: rac.coach && rac.seatNo ? `${rac.coach}-${rac.seatNo}` : 'N/A'
+      }));
   }
 
   /**
@@ -361,6 +368,245 @@ class ReallocationService {
     trainState.updateStats();
 
     return results;
+  }
+
+  /**
+   * Check if RAC passenger is eligible for a vacant segment
+   * Rules:
+   * 1. Passenger must be boarded
+   * 2. Vacant segment must fully cover passenger's remaining journey
+   * 3. Class must match
+   */
+  isEligibleForSegment(racPassenger, vacantSegment, currentStationIdx, trainState) {
+    // Rule 1: Must be boarded
+    if (!racPassenger.boarded) {
+      return false;
+    }
+
+    // Rule 2: Vacant segment must fully cover remaining journey
+    const remainingFromIdx = Math.max(racPassenger.fromIdx, currentStationIdx);
+    const remainingToIdx = racPassenger.toIdx;
+
+    if (vacantSegment.fromIdx > remainingFromIdx || vacantSegment.toIdx < remainingToIdx) {
+      return false;
+    }
+
+    // Rule 3: Class must match
+    if (racPassenger.class !== vacantSegment.class) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Find co-passenger sharing the same RAC berth
+   */
+  findCoPassenger(racPassenger, trainState) {
+    // Find the berth where RAC passenger is located
+    const result = trainState.findPassenger(racPassenger.pnr);
+
+    if (!result) {
+      return null;
+    }
+
+    const { berth } = result;
+
+    // Use the new getCoPassenger method from Berth
+    return berth.getCoPassenger(racPassenger.pnr);
+  }
+
+  /**
+   * Upgrade RAC passenger and handle co-passenger upgrade
+   * This is the core upgrade function that handles both passengers atomically
+   */
+  async upgradeRACPassengerWithCoPassenger(racPNR, newBerthDetails, trainState) {
+    try {
+      console.log(`\n🔄 Starting upgrade process for RAC passenger ${racPNR}...`);
+
+      // Find RAC passenger in queue
+      const racIndex = trainState.racQueue.findIndex(r => r.pnr === racPNR);
+
+      if (racIndex === -1) {
+        throw new Error(`RAC passenger ${racPNR} not found in queue`);
+      }
+
+      const racPassenger = trainState.racQueue[racIndex];
+
+      // Find old location and co-passenger
+      const oldLocation = trainState.findPassenger(racPNR);
+      if (!oldLocation) {
+        throw new Error(`Cannot find old location for ${racPNR}`);
+      }
+
+      const { berth: oldBerth, coachNo: oldCoachNo } = oldLocation;
+      const oldBerthNo = oldBerth.berthNo;
+      const oldBerthType = oldBerth.type;
+
+      // Find co-passenger
+      const coPassenger = this.findCoPassenger(racPassenger, trainState);
+      let coPassengerPNR = null;
+      let coPassengerName = null;
+      let coPassengerIndex = -1;
+
+      if (coPassenger) {
+        coPassengerPNR = coPassenger.pnr;
+        coPassengerName = coPassenger.name;
+        coPassengerIndex = trainState.racQueue.findIndex(r => r.pnr === coPassengerPNR);
+        console.log(`   Found co-passenger: ${coPassengerName} (${coPassengerPNR})`);
+      }
+
+      // Get new berth
+      const newBerth = trainState.findBerth(newBerthDetails.coachNo, newBerthDetails.berthNo);
+
+      if (!newBerth) {
+        throw new Error(`New berth ${newBerthDetails.coachNo}-${newBerthDetails.berthNo} not found`);
+      }
+
+      // Validate availability
+      if (!newBerth.isAvailableForSegment(racPassenger.fromIdx, racPassenger.toIdx)) {
+        throw new Error(`New berth not available for passenger journey`);
+      }
+
+      console.log(`   Moving ${racPassenger.name} from ${oldBerth.fullBerthNo} to ${newBerth.fullBerthNo}`);
+
+      // Step 1: Remove RAC passenger from old berth
+      oldBerth.removePassenger(racPNR);
+
+      // Step 2: Add RAC passenger to new berth with CNF status
+      newBerth.addPassenger({
+        pnr: racPassenger.pnr,
+        name: racPassenger.name,
+        age: racPassenger.age,
+        gender: racPassenger.gender,
+        fromIdx: racPassenger.fromIdx,
+        toIdx: racPassenger.toIdx,
+        from: racPassenger.from,
+        to: racPassenger.to,
+        pnrStatus: 'CNF', // Upgraded to CNF
+        class: racPassenger.class,
+        noShow: false,
+        boarded: racPassenger.boarded
+      });
+
+      // Step 3: Update co-passenger to CNF ONLY if berth hasn't been re-allocated
+      if (coPassenger) {
+        // CRITICAL: Check if old berth has been re-allocated to new RAC passengers
+        const currentBerthPassengers = oldBerth.getRACPassengers();
+        const coPassengerStillOnBerth = currentBerthPassengers.find(p => p.pnr === coPassengerPNR);
+
+        if (coPassengerStillOnBerth && currentBerthPassengers.length === 1) {
+          // Safe to upgrade: co-passenger is alone on the berth
+          console.log(`   Upgrading co-passenger ${coPassengerName} to CNF on ${oldBerth.fullBerthNo}`);
+
+          // Update co-passenger status in old berth
+          coPassenger.pnrStatus = 'CNF';
+          coPassenger.racStatus = '-';
+
+          // Update berth status
+          oldBerth.updateStatus();
+
+          // Remove co-passenger from RAC queue
+          if (coPassengerIndex !== -1) {
+            trainState.racQueue.splice(coPassengerIndex, 1);
+          }
+
+          // Update MongoDB for co-passenger
+          try {
+            const passengersCollection = db.getPassengersCollection();
+            await passengersCollection.updateOne(
+              { PNR_Number: coPassengerPNR },
+              {
+                $set: {
+                  PNR_Status: 'CNF',
+                  RAC_Status: '-'
+                }
+              }
+            );
+            console.log(`   ✅ Updated co-passenger in MongoDB: ${coPassengerPNR}`);
+          } catch (dbError) {
+            console.error(`   ⚠️  Failed to update co-passenger in MongoDB:`, dbError.message);
+          }
+
+          trainState.stats.totalRACUpgraded++;
+        } else {
+          // Berth has been re-allocated - don't upgrade co-passenger
+          console.log(`   ⚠️  Berth ${oldBerth.fullBerthNo} has been re-allocated, skipping co-passenger upgrade`);
+        }
+      }
+
+      // Step 4: Remove main RAC passenger from queue
+      trainState.racQueue.splice(racIndex, 1);
+
+      // Step 5: Update MongoDB for main passenger
+      try {
+        const passengersCollection = db.getPassengersCollection();
+        await passengersCollection.updateOne(
+          { PNR_Number: racPNR },
+          {
+            $set: {
+              PNR_Status: 'CNF',
+              RAC_Status: '-',
+              Coach: newBerthDetails.coachNo,
+              Seat_No: newBerthDetails.berthNo
+            }
+          }
+        );
+        console.log(`   ✅ Updated main passenger in MongoDB: ${racPNR}`);
+      } catch (dbError) {
+        console.error(`   ⚠️  Failed to update main passenger in MongoDB:`, dbError.message);
+      }
+
+      trainState.stats.totalRACUpgraded++;
+      trainState.updateStats();
+
+      const result = {
+        success: true,
+        mainPassenger: {
+          pnr: racPNR,
+          name: racPassenger.name,
+          oldBerth: `${oldCoachNo}-${oldBerthNo}`,
+          newBerth: newBerth.fullBerthNo,
+          status: 'CNF'
+        },
+        coPassenger: coPassenger ? {
+          pnr: coPassengerPNR,
+          name: coPassengerName,
+          berth: oldBerth.fullBerthNo,
+          status: 'CNF'
+        } : null
+      };
+
+      console.log(`✅ Upgrade complete!`);
+      if (coPassenger) {
+        console.log(`   ${racPassenger.name}: ${oldCoachNo}-${oldBerthNo} → ${newBerth.fullBerthNo} (CNF)`);
+        console.log(`   ${coPassengerName}: Inherited ${oldBerth.fullBerthNo} (CNF)`);
+      } else {
+        console.log(`   ${racPassenger.name}: ${oldCoachNo}-${oldBerthNo} → ${newBerth.fullBerthNo} (CNF)`);
+      }
+
+      trainState.logEvent('RAC_UPGRADE', `RAC passenger upgraded`, result);
+
+      return result;
+
+    } catch (error) {
+      console.error(`❌ Error upgrading RAC passenger:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Get eligible RAC passengers for a specific vacant segment
+   * Returns the first eligible passenger based on RAC queue priority
+   */
+  getEligibleRACForVacantSegment(vacantSegment, currentStationIdx, trainState) {
+    // Iterate through RAC queue in order (priority-based)
+    for (const racPassenger of trainState.racQueue) {
+      if (this.isEligibleForSegment(racPassenger, vacantSegment, currentStationIdx, trainState)) {
+        return racPassenger;
+      }
+    }
+    return null;
   }
 }
 

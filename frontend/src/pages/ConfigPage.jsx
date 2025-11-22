@@ -23,7 +23,7 @@ function ConfigPage({ onClose, loadTrainState }) {
       try {
         const res = await getTrains();
         if (res.success) setTrainList(res.data || []);
-      } catch (_) {}
+      } catch (_) { }
     })();
   }, []);
 

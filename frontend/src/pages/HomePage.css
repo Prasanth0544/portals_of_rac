@@ -213,8 +213,11 @@
 
 /* Start Journey Button */
 .btn-start-journey {
+  display: block;
   width: 100%;
-  padding: 10px;
+  max-width: 300px;
+  margin: 0 auto 20px auto;
+  padding: 10px 20px;
   background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
   color: white;
   border: none;
@@ -223,7 +226,6 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  margin-bottom: 20px;
   box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
 }
 
@@ -257,7 +259,7 @@
   box-shadow: 0 2px 6px rgba(44, 62, 80, 0.08);
   display: flex;
   flex-direction: column;
-  min-height: 120px;
+  min-height: 100px;
 }
 
 .action-card-compact:hover {
@@ -269,13 +271,11 @@
 .card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   margin-bottom: 10px;
 }
 
-.card-icon {
-  font-size: 20px;
-}
+
 
 .card-header h4 {
   margin: 0;

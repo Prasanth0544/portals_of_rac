@@ -502,7 +502,7 @@
 .td-status,
 .td-rac,
 .td-class {
-  text-align: center;
+  text-align: left;
 }
 
 .td-age,
@@ -515,7 +515,7 @@
 .th-gender,
 .th-status,
 .th-rac {
-  text-align: center;
+  text-align: left;
 }
 
 .td-rac {

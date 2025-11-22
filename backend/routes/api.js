@@ -18,7 +18,7 @@ router.post('/config/setup',
   (req, res) => configController.setup(req, res)
 );
 
-router.post('/train/initialize', 
+router.post('/train/initialize',
   validationMiddleware.sanitizeBody,
   validationMiddleware.validateTrainInit,
   (req, res) => trainController.initializeTrain(req, res)
@@ -128,13 +128,75 @@ router.get('/visualization/berth-timeline/:coach/:berth',
   (req, res) => visualizationController.getBerthTimeline(req, res)
 );
 
-router.post('/passengers/add', validationMiddleware.validatePassengerAdd, validationMiddleware.checkTrainInitialized, 
+router.post('/passengers/add', validationMiddleware.validatePassengerAdd, validationMiddleware.checkTrainInitialized,
   (req, res) => passengerController.addPassenger(req, res)
 );
 
 router.get('/visualization/vacancy-matrix',
   validationMiddleware.checkTrainInitialized,
   (req, res) => visualizationController.getVacancyMatrix(req, res)
+);
+
+// ========== NEW PASSENGER PORTAL ROUTES ==========
+// Public PNR lookup (no authentication)
+router.get('/passenger/pnr/:pnr',
+  (req, res) => passengerController.getPNRDetails(req, res)
+);
+
+// Self-cancellation (mark no-show)
+router.post('/passenger/cancel',
+  validationMiddleware.sanitizeBody,
+  (req, res) => passengerController.markNoShow(req, res)
+);
+
+// Upgrade notification endpoints
+router.get('/passenger/upgrade-notifications/:pnr',
+  (req, res) => passengerController.getUpgradeNotifications(req, res)
+);
+
+router.post('/passenger/accept-upgrade',
+  validationMiddleware.sanitizeBody,
+  (req, res) => passengerController.acceptUpgrade(req, res)
+);
+
+router.post('/passenger/deny-upgrade',
+  validationMiddleware.sanitizeBody,
+  (req, res) => passengerController.denyUpgrade(req, res)
+);
+
+// ========== TTE/ADMIN PORTAL ROUTES ==========
+const tteController = require('../controllers/tteController');
+
+// Get all passengers with filters
+router.get('/tte/passengers',
+  validationMiddleware.checkTrainInitialized,
+  (req, res) => tteController.getAllPassengersFiltered(req, res)
+);
+
+// Manual passenger operations
+router.post('/tte/mark-boarded',
+  validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
+  (req, res) => tteController.manualMarkBoarded(req, res)
+);
+
+router.post('/tte/mark-deboarded',
+  validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
+  (req, res) => tteController.manualMarkDeboarded(req, res)
+);
+
+// TTE upgrade confirmation
+router.post('/tte/confirm-upgrade',
+  validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
+  (req, res) => tteController.confirmUpgrade(req, res)
+);
+
+// Journey statistics
+router.get('/tte/statistics',
+  validationMiddleware.checkTrainInitialized,
+  (req, res) => tteController.getStatistics(req, res)
 );
 
 module.exports = router;

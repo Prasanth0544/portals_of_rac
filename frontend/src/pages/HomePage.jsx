@@ -64,7 +64,7 @@ function HomePage({
 
                 {/* Station Circle */}
                 <div className={`timeline-circle ${idx < trainData.currentStationIdx ? 'completed' :
-                    idx === trainData.currentStationIdx ? 'current' : 'upcoming'
+                  idx === trainData.currentStationIdx ? 'current' : 'upcoming'
                   }`}>
                   {idx < trainData.currentStationIdx ? '✓' : station.sno}
                 </div>
@@ -96,7 +96,6 @@ function HomePage({
         {/* 1. Train Simulation */}
         <div className="action-card-compact simulation-card">
           <div className="card-header">
-            <span className="card-icon">🚂</span>
             <h4>Train Controls</h4>
           </div>
           <button
@@ -118,7 +117,6 @@ function HomePage({
         {/* 2. Phase 1 */}
         <div className="action-card-compact phase1-card" onClick={() => onNavigate('phase1')}>
           <div className="card-header">
-            <span className="card-icon">🎯</span>
             <h4>Phase 1</h4>
           </div>
           <p className="card-description">Initial reallocation phase</p>
@@ -128,7 +126,6 @@ function HomePage({
         {/* 3. Apply Reallocation */}
         <div className="action-card-compact reallocation-card" onClick={() => onNavigate('reallocation')}>
           <div className="card-header">
-            <span className="card-icon">🔄</span>
             <h4>Reallocation</h4>
           </div>
           <p className="card-description">Upgrade RAC passengers</p>
