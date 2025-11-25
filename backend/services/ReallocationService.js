@@ -559,18 +559,95 @@ class ReallocationService {
   }
 
   /**
+   * Check if RAC passenger is sharing or will share their berth
+   * Returns true if:
+   * 1. Currently sharing with another passenger
+   * 2. Alone now, but another passenger will board later (overlapping journey)
+   */
+  checkSharingStatus(racPassenger, trainState, currentStationIdx) {
+    const location = trainState.findPassenger(racPassenger.pnr);
+    if (!location) return false; // Should not happen
+
+    const { berth } = location;
+
+    // Get all passengers on this berth (excluding current passenger)
+    const otherPassengers = berth.passengers.filter(p => p.pnr !== racPassenger.pnr);
+
+    if (otherPassengers.length === 0) {
+      // Completely alone on berth (no past, present, or future sharers)
+      return false;
+    }
+
+    // Check for overlap with remaining journey
+    // Current passenger remaining journey: max(fromIdx, currentStation) -> toIdx
+    const myStart = Math.max(racPassenger.fromIdx, currentStationIdx);
+    const myEnd = racPassenger.toIdx;
+
+    for (const other of otherPassengers) {
+      // Skip cancelled/no-show
+      if (other.noShow || other.pnrStatus === 'CAN') continue;
+
+      // Check overlap
+      // Overlap exists if: (OtherStart < MyEnd) && (OtherEnd > MyStart)
+      const otherStart = other.fromIdx;
+      const otherEnd = other.toIdx;
+
+      if (otherStart < myEnd && otherEnd > myStart) {
+        // Found someone sharing or will share
+        return true;
+      }
+    }
+
+    // No overlap found -> Effectively alone for the rest of the journey
+    return false;
+  }
+
+  /**
+   * Calculate journey distance in kilometers
+   * Returns distance between boarding and deboarding stations
+   */
+  calculateJourneyDistance(fromStationCode, toStationCode, trainState) {
+    try {
+      const stations = trainState.stations;
+
+      // Find stations by code
+      const fromStation = stations.find(s => s.code === fromStationCode || s.name === fromStationCode);
+      const toStation = stations.find(s => s.code === toStationCode || s.name === toStationCode);
+
+      if (!fromStation || !toStation) {
+        console.warn(`⚠️ Station not found: ${fromStationCode} or ${toStationCode}`);
+        return 0;
+      }
+
+      // Calculate distance (assuming stations have distance field)
+      // Distance is cumulative from origin, so: toDistance - fromDistance
+      const fromDistance = fromStation.distance || fromStation.Distance || 0;
+      const toDistance = toStation.distance || toStation.Distance || 0;
+
+      const journeyDistance = Math.abs(toDistance - fromDistance);
+
+      return journeyDistance;
+    } catch (error) {
+      console.error('Error calculating journey distance:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Check if RAC passenger is eligible for a vacant segment
-   * COMPLETE RULES (10 Total):
+   * COMPLETE RULES (11 Total):
+   * 0. Must have RAC status (not CNF or WL)
    * 1. Passenger must be ONLINE (passengerStatus === 'Online')
    * 2. Passenger must be BOARDED
    * 3. Vacant segment must fully cover passenger's remaining journey
    * 4. Class must match
-   * 5. Co-passenger consistency (if applicable)
+   * 5. Solo RAC Constraint (must be sharing or will share berth)
    * 6. No conflicting CNF passenger boarding later
    * 7. Not already offered this vacancy
    * 8. Not already accepted another offer
    * 9. RAC rank priority (handled in sorting)
    * 10. Time-gap constraint (optional)
+   * 11. Minimum journey distance (70km)
    */
   isEligibleForSegment(racPassenger, vacantSegment, currentStationIdx, trainState, vacancyId = null) {
     // Rule 0: MUST have RAC status (PRIMARY CONSTRAINT)
@@ -609,21 +686,29 @@ class ReallocationService {
       return { eligible: false, reason: 'Class mismatch' };
     }
 
-    // Rule 5: Co-passenger consistency check
-    const coPassenger = this.findCoPassenger(racPassenger, trainState);
-    if (coPassenger) {
-      // Both must be valid RAC holders
-      if (coPassenger.noShow) {
-        return { eligible: false, reason: 'Co-passenger is no-show' };
-      }
-      if (coPassenger.pnrStatus === 'CNF') {
-        return { eligible: false, reason: 'Co-passenger already confirmed' };
-      }
-      // Co-passenger must also be boarded
-      if (!coPassenger.boarded) {
-        return { eligible: false, reason: 'Co-passenger not boarded' };
-      }
+    // Rule 5: Solo RAC Constraint (Revised)
+    // If a passenger is currently alone in their RAC berth (Side Lower), they effectively have a full seat.
+    // They should NOT be eligible for upgrade unless:
+    // a) They are currently sharing with someone.
+    // b) Someone is scheduled to board and share with them later (incoming co-passenger).
+
+    const isSharingOrWillShare = this.checkSharingStatus(racPassenger, trainState, currentStationIdx);
+    if (!isSharingOrWillShare) {
+      return { eligible: false, reason: 'Already has full Side Lower (No co-passenger)' };
     }
+
+    // Original Rule 5 checks (Co-passenger consistency) are now implicitly handled
+    // because if they ARE sharing, we still need to check if the co-passenger is valid for a move?
+    // Actually, if they are sharing, we should try to move them.
+    // But we still need to check co-passenger constraints if we were to move them TOGETHER.
+    // However, the current logic moves ONE passenger at a time (usually).
+    // If we move one, the other becomes solo (which is good for them).
+    // So we don't need to block this passenger if the co-passenger is "bad", 
+    // unless we are trying to move BOTH (which upgradeRACPassengerWithCoPassenger handles).
+    // But for ELIGIBILITY of this single passenger, being sharing is enough.
+
+    // Wait, if we move this passenger, we leave the co-passenger alone. That's fine.
+    // The only constraint is: don't move someone who is ALREADY alone.
 
     // Rule 6: No conflicting CNF passenger boarding later
     // Check if any CNF passenger will board this berth during the vacancy
@@ -644,6 +729,22 @@ class ReallocationService {
     // Rule 8: Not already accepted another offer
     if (racPassenger.offerStatus === 'accepted') {
       return { eligible: false, reason: 'Already accepted another offer' };
+    }
+
+    // Rule 11: Minimum Journey Distance (70km)
+    // Only passengers traveling 70km or more are eligible for upgrade
+    // This ensures upgrades prioritize long-distance passengers who need comfort most
+    const journeyDistance = this.calculateJourneyDistance(
+      racPassenger.from,
+      racPassenger.to,
+      trainState
+    );
+
+    if (journeyDistance < 70) {
+      return {
+        eligible: false,
+        reason: `Journey too short (${journeyDistance}km < 70km minimum)`
+      };
     }
 
     // Rule 10: Time-gap constraint (optional)

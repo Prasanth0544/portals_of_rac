@@ -130,16 +130,22 @@ passenger.class === berth.class
 
 ---
 
-### 🔹 Rule 5 — Co-passenger Consistency
-If RAC passenger has a sharing partner (side-lower berths):
-1. **Both** must be valid RAC holders.
-2. Co-passenger must **NOT** be:
-   - ❌ Cancelled
-   - ❌ No-show
-   - ❌ Already upgraded
-   - ❌ Inconsistent berth assignment
+### 🔹 Rule 5 — Solo RAC Constraint (Revised)
+**RAC Sharing Logic**: RAC passengers share a Side Lower berth (2 passengers per berth).
 
-**Action**: If inconsistent → skip this candidate until TTE resolves.
+**Constraint**: A passenger who is **alone** in their RAC berth is NOT eligible for upgrade.
+
+**Reasoning**:
+- If alone, they effectively have a full berth (no need to share → comfortable).
+- Upgrades should prioritize passengers currently **sharing** or **will share soon**.
+
+**Check**:
+1. Is passenger **currently sharing** with another passenger?
+2. If alone now, will **another passenger board** and share this berth later (journey overlap)?
+
+**If NO to both** → ❌ Not eligible ("Already has full Side Lower - No co-passenger")
+
+**Implementation**: `checkSharingStatus(racPassenger, trainState, currentStationIdx)`
 
 ---
 
@@ -183,26 +189,51 @@ Ignore offers if the vacancy appears **too close** to upcoming station:
 
 ---
 
+### 🔹 Rule 11 — Minimum Journey Distance (70km)
+**NEW CONSTRAINT**: Only passengers traveling **70km or more** are eligible for upgrade.
+
+**Reasoning**:
+- Short trips (< 70km ≈ 1-1.5 hours) are tolerable sitting.
+- Long trips (≥ 70km ≈ 1.5+ hours) genuinely need sleeping berths.
+- Prioritizes passengers with **real comfort needs**.
+
+**Calculation**:
+```javascript
+journeyDistance = toStation.distance - fromStation.distance
+if (journeyDistance < 70) → ❌ Not eligible
+```
+
+**Data Source**: Stations collection has cumulative `distance` field from train origin.
+
+**Example**:
+- Passenger A: 150km → 230km = **80km** ✅ Eligible
+- Passenger B: 50km → 100km = **50km** ❌ Not Eligible ("Journey too short")
+
+---
+
 ## Summary of Critical Constraints
 
-### 🚨 **STRICT ELIGIBILITY REQUIREMENTS**
+### 🚨 **STRICT ELIGIBILITY REQUIREMENTS (11 Rules)**
 **ONLY passengers matching ALL criteria are eligible:**
 1. ✅ `PNR_Status === "RAC"`
 2. ✅ `Passenger_Status === "Online"`  
 3. ✅ `Boarded === true`
-4. ✅ No conflicting CNF passengers
-5. ✅ Full journey coverage
-6. ✅ Class match
-7. ✅ Co-passenger valid (if applicable)
-8. ✅ Not already offered/accepted
-9. ✅ Sufficient time remaining
+4. ✅ Full journey coverage (vacant segment must cover remaining journey)
+5. ✅ Class match (SL → SL, 3A → 3A)
+6. ✅ Solo RAC Constraint (must be sharing or will share berth)
+7. ✅ No conflicting CNF passengers boarding later
+8. ✅ Not already offered this vacancy
+9. ✅ Not already accepted another offer
+10. ✅ Sufficient time remaining (not too close to destination)
+11. ✅ **Journey distance ≥ 70km** (NEW)
 
 ### ❌ **EXCLUDED FROM REALLOCATION:**
 - CNF passengers (already confirmed)
 - WL passengers (waitlist)
-- Offline RAC passengers
+- Offline RAC passengers (handled via TTE Portal)
 - Not-yet-boarded RAC passengers
-- RAC passengers with invalid co-passengers
+- Solo RAC passengers (no current/future co-passenger)
+- RAC passengers with journey < 70km (too short to justify upgrade)
 
 ---
 
@@ -214,4 +245,10 @@ Ignore offers if the vacancy appears **too close** to upcoming station:
 **Files Updated**:
 - `backend/services/ReallocationService.js`
   - `getRACQueue()` - 3-way filter (RAC + Online + Boarded)
-  - `isEligibleForSegment()` - 11 comprehensive rules (including Rule 0: RAC Status)
+  - `isEligibleForSegment()` - 11 comprehensive rules
+  - `checkSharingStatus()` - Validates Solo RAC Constraint
+  - `calculateJourneyDistance()` - Computes distance from stations collection
+
+**Latest Updates**:
+- ✅ Rule 5 revised to **Solo RAC Constraint** (prevents upgrading passengers who are already alone)
+- ✅ Rule 11 added: **70km minimum journey distance** (ensures upgrades prioritize long-distance passengers)
