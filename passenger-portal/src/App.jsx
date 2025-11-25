@@ -1,16 +1,13 @@
 // passenger-portal/src/App.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline, AppBar, Toolbar, Typography, Container, Box, Button } from '@mui/material';
 import TrainIcon from '@mui/icons-material/Train';
-import SearchIcon from '@mui/icons-material/Search';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-
-// Pages
+import LoginPage from './pages/LoginPage';
 import './App.css';
 
-// Temporary Home Component (until login is implemented)
+// Temporary Home Component (will be replaced with actual dashboard)
 function HomePage() {
     return (
         <Box sx={{ textAlign: 'center', mt: 8 }}>
@@ -51,6 +48,25 @@ const theme = createTheme({
 });
 
 function App() {
+    // ✅ NEW: Authentication state
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [user, setUser] = useState(null);
+
+    // ✅ NEW: Check for existing auth token on mount
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        const userData = localStorage.getItem('user');
+
+        if (token && userData) {
+            setIsAuthenticated(true);
+            setUser(JSON.parse(userData));
+        }
+    }, []);
+
+    // ✅ NEW: Show login page if not authenticated
+    if (!isAuthenticated) {
+        return <LoginPage />;
+    }
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />

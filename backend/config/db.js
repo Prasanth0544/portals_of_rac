@@ -206,6 +206,22 @@ class Database {
   }
 
   /**
+   * Get the main 'rac' database for authentication collections
+   * Used by authController to access tte_users and passenger_accounts
+   */
+  async getDb() {
+    // Ensure we have a connection to MongoDB
+    if (!stationsClient) {
+      const { MongoClient } = require('mongodb');
+      stationsClient = new MongoClient(this.mongoUri || 'mongodb://localhost:27017');
+      await stationsClient.connect();
+    }
+
+    // Return the 'rac' database which contains auth collections
+    return stationsClient.db('rac');
+  }
+
+  /**
    * Get current configuration
    */
   getConfig() {

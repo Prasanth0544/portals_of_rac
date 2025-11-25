@@ -1,27 +1,41 @@
-// frontend/src/App.jsx (UPDATED WITH ADD PASSENGER PAGE INTEGRATION)
-
 import React, { useState, useEffect } from 'react';
 import { initializeTrain, startJourney, getTrainState, moveToNextStation, resetTrain, markPassengerNoShow } from './services/api';
 import wsService from './services/websocket';
+import LoginPage from './pages/LoginPage'; // ✅ NEW
 import HomePage from './pages/HomePage';
 import RACQueuePage from './pages/RACQueuePage';
 import CoachesPage from './pages/CoachesPage';
 import PassengersPage from './pages/PassengersPage';
 import ReallocationPage from './pages/ReallocationPage';
 import VisualizationPage from './pages/VisualizationPage';
-import AddPassengerPage from './pages/AddPassengerPage'; // NEW: Import AddPassengerPage
+import AddPassengerPage from './pages/AddPassengerPage';
 import AllocationDiagnosticsPage from './pages/AllocationDiagnosticsPage';
 import PhaseOnePage from './pages/PhaseOnePage';
 import ConfigPage from './pages/ConfigPage';
 import './App.css';
 
 function App() {
+  // ✅ NEW: Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
+
   const [trainData, setTrainData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState('config');
   const [journeyStarted, setJourneyStarted] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+
+  // ✅ NEW: Check for existing auth token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+
+    if (token && userData) {
+      setIsAuthenticated(true);
+      setUser(JSON.parse(userData));
+    }
+  }, []);
 
   useEffect(() => {
     // Always start on configuration page; connect WebSocket for status updates
@@ -241,10 +255,23 @@ function App() {
     setCurrentPage(page);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setIsAuthenticated(false);
+    setUser(null);
+    window.location.reload();
+  };
+
   const handleClosePage = () => {
     setCurrentPage('home');
     loadTrainState(); // Reload stats after closing pages (e.g., after add passenger)
   };
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   if (!trainData && loading) {
     return (

@@ -8,6 +8,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 
 // Pages/Components
+import LoginPage from './pages/LoginPage'; // ✅ NEW
 import './App.css';
 
 // Temporary Placeholder Components (until features are implemented)
@@ -70,8 +71,27 @@ const theme = createTheme({
 });
 
 function App() {
+    // ✅ NEW: Authentication state
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [user, setUser] = useState(null);
     const [currentTab, setCurrentTab] = useState(0);
     const { isConnected, pendingUpgrades } = useTteSocket();
+
+    // ✅ NEW: Check for existing auth token on mount
+    React.useEffect(() => {
+        const token = localStorage.getItem('token');
+        const userData = localStorage.getItem('user');
+
+        if (token && userData) {
+            setIsAuthenticated(true);
+            setUser(JSON.parse(userData));
+        }
+    }, []);
+
+    // ✅ NEW: Show login page if not authenticated
+    if (!isAuthenticated) {
+        return <LoginPage />;
+    }
 
     const handleTabChange = (event, newValue) => {
         setCurrentTab(newValue);

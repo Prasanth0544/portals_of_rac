@@ -7,7 +7,34 @@ const reallocationController = require('../controllers/reallocationController');
 const passengerController = require('../controllers/passengerController');
 const visualizationController = require('../controllers/visualizationController');
 const configController = require('../controllers/configController');
+const authController = require('../controllers/authController'); // ✅ NEW
 const validationMiddleware = require('../middleware/validation');
+const { authMiddleware, requireRole, requirePermission } = require('../middleware/auth'); // ✅ NEW
+
+// ========== AUTHENTICATION ROUTES ========== ✅ NEW
+// Staff Login (Admin + TTE)
+router.post('/auth/staff/login',
+  validationMiddleware.sanitizeBody,
+  (req, res) => authController.staffLogin(req, res)
+);
+
+// Passenger Login
+router.post('/auth/passenger/login',
+  validationMiddleware.sanitizeBody,
+  (req, res) => authController.passengerLogin(req, res)
+);
+
+// Verify Token
+router.get('/auth/verify',
+  authMiddleware,
+  (req, res) => authController.verifyToken(req, res)
+);
+
+// Logout
+router.post('/auth/logout',
+  authMiddleware,
+  (req, res) => authController.logout(req, res)
+);
 
 // ========== TRAIN ROUTES ==========
 router.get('/trains', (req, res) => trainController.list(req, res));
