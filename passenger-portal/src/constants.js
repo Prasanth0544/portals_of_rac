@@ -59,7 +59,7 @@ export const BERTH_TYPE = {
 // Coach Classes
 export const COACH_CLASS = {
     SLEEPER: 'SL',
-    THREE_TIER_AC: '3A',
+    THREE_TIER_AC: 'AC_3_Tier',
     TWO_TIER_AC: '2A',
     FIRST_AC: '1A'
 };

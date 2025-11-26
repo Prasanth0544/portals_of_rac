@@ -6,6 +6,7 @@ import { CssBaseline, AppBar, Toolbar, Typography, Container, Box, Button } from
 import TrainIcon from '@mui/icons-material/Train';
 import LoginPage from './pages/LoginPage';
 import './App.css';
+import './UserMenu.css'; // ✅ 3-dot menu styling
 
 // Temporary Home Component (will be replaced with actual dashboard)
 function HomePage() {
@@ -48,11 +49,12 @@ const theme = createTheme({
 });
 
 function App() {
-    // ✅ NEW: Authentication state
+    // ✅ Authentication state
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState(null);
+    const [menuOpen, setMenuOpen] = useState(false); // ✅ 3-dot menu state
 
-    // ✅ NEW: Check for existing auth token on mount
+    // ✅ Check for existing auth token on mount
     useEffect(() => {
         const token = localStorage.getItem('token');
         const userData = localStorage.getItem('user');
@@ -63,10 +65,20 @@ function App() {
         }
     }, []);
 
-    // ✅ NEW: Show login page if not authenticated
+    // ✅ Logout handler
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setIsAuthenticated(false);
+        setUser(null);
+        setMenuOpen(false);
+    };
+
+    // ✅ Show login page if not authenticated
     if (!isAuthenticated) {
         return <LoginPage />;
     }
+
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
@@ -81,6 +93,24 @@ function App() {
                             <Button color="inherit" component={Link} to="/">
                                 Home
                             </Button>
+                            {/* ✅ 3-dot menu */}
+                            <div className="user-menu">
+                                <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)}>
+                                    ⋮
+                                </button>
+                                {menuOpen && (
+                                    <div className="menu-dropdown">
+                                        <div className="menu-user-info">
+                                            <p><strong>{user?.name || 'Passenger'}</strong></p>
+                                            <p className="user-role">{user?.role || 'PASSENGER'}</p>
+                                        </div>
+                                        <hr />
+                                        <button onClick={handleLogout} className="menu-item logout">
+                                            🚪 Logout
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </Toolbar>
                     </AppBar>
 

@@ -29,6 +29,10 @@ class TrainState {
     };
 
     this.eventLogs = [];
+
+    // TTE Boarding Verification
+    this.boardingVerificationQueue = new Map(); // PNR → VerificationData
+    this.autoConfirmTimeout = null; // Timer for auto-confirmation
   }
 
   /**
@@ -52,9 +56,9 @@ class TrainState {
     // 3-Tier AC coaches (B1..Bn) - 64 berths with updated mapping
     for (let i = 1; i <= threeAcCount; i++) {
       const coachNo = `B${i}`;
-      const coach = { coachNo, class: '3A', capacity: 64, berths: [] };
+      const coach = { coachNo, class: 'AC_3_Tier', capacity: 64, berths: [] };
       for (let j = 1; j <= 64; j++) {
-        const berthType = this.getBerthType(j, '3A');
+        const berthType = this.getBerthType(j, 'AC_3_Tier');
         coach.berths.push(new Berth(coachNo, j, berthType, totalSegments));
       }
       this.coaches.push(coach);
@@ -70,7 +74,7 @@ class TrainState {
    */
   getBerthType(seatNo, coachClass = 'SL') {
     // Three_Tier_AC (3A) coaches use 64 berths with different mapping
-    if (coachClass === '3A') {
+    if (coachClass === 'AC_3_Tier') {
       return this.getBerthType3A(seatNo);
     }
 
@@ -293,6 +297,161 @@ class TrainState {
     });
 
     return passengers;
+  }
+
+  /**
+   * ========================================
+   * TTE BOARDING VERIFICATION METHODS
+   * ========================================
+   */
+
+  /**
+   * Prepare boarding verification queue when train arrives at station
+   */
+  prepareForBoardingVerification() {
+    const currentIdx = this.currentStationIdx;
+
+    // Clear previous queue
+    this.boardingVerificationQueue.clear();
+    if (this.autoConfirmTimeout) {
+      clearTimeout(this.autoConfirmTimeout);
+    }
+
+    // Find all passengers scheduled to board at current station
+    const scheduled = this.getAllPassengers().filter(
+      p => p.fromIdx === currentIdx && !p.boarded && !p.noShow
+    );
+
+    // Add to queue
+    scheduled.forEach(p => {
+      this.boardingVerificationQueue.set(p.pnr, {
+        pnr: p.pnr,
+        name: p.name,
+        pnrStatus: p.pnrStatus,
+        racStatus: p.racStatus,
+        from: p.from,
+        to: p.to,
+        coach: p.coach,
+        berth: p.berth,
+        verificationStatus: 'PENDING',
+        timestamp: new Date()
+      });
+    });
+
+    console.log(`📋 Boarding Verification: ${scheduled.length} passengers pending`);
+
+    // Schedule auto-confirmation after 5 minutes
+    this.autoConfirmTimeout = setTimeout(() => {
+      if (this.boardingVerificationQueue.size > 0) {
+        console.warn('⚠️ Auto-confirming boarding (TTE timeout)');
+        this.confirmAllBoarded();
+      }
+    }, 5 * 60 * 1000);
+
+    return scheduled.length;
+  }
+
+  /**
+   * Confirm all passengers in queue as boarded
+   */
+  async confirmAllBoarded() {
+    const passengers = Array.from(this.boardingVerificationQueue.keys());
+
+    if (passengers.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    console.log(`✅ Confirming ${passengers.length} passengers boarded`);
+
+    const db = require('../config/db');
+
+    for (const pnr of passengers) {
+      const result = this.findPassenger(pnr);
+      if (result) {
+        const { passenger } = result;
+        passenger.boarded = true;
+
+        try {
+          const passengersCollection = await db.getPassengersCollection();
+          await passengersCollection.updateOne(
+            { PNR_Number: pnr },
+            { $set: { Boarded: true } }
+          );
+        } catch (error) {
+          console.error(`Error updating passenger ${pnr}:`, error);
+        }
+      }
+    }
+
+    this.boardingVerificationQueue.clear();
+
+    if (this.autoConfirmTimeout) {
+      clearTimeout(this.autoConfirmTimeout);
+      this.autoConfirmTimeout = null;
+    }
+
+    this.updateStats();
+
+    this.logEvent('BOARDING_CONFIRMED', `All ${passengers.length} passengers confirmed`, {
+      count: passengers.length,
+      station: this.getCurrentStation()?.name
+    });
+
+    return { success: true, count: passengers.length };
+  }
+
+  /**
+   * Mark individual passenger as NO_SHOW
+   */
+  async markNoShowFromQueue(pnr) {
+    if (!this.boardingVerificationQueue.has(pnr)) {
+      throw new Error(`PNR ${pnr} not found in verification queue`);
+    }
+
+    const queuedPassenger = this.boardingVerificationQueue.get(pnr);
+    console.log(`❌ Marking ${pnr} as NO_SHOW`);
+
+    const result = this.findPassenger(pnr);
+    if (result) {
+      const { passenger } = result;
+      passenger.noShow = true;
+      passenger.boarded = false;
+
+      const db = require('../config/db');
+      try {
+        const passengersCollection = await db.getPassengersCollection();
+        await passengersCollection.updateOne(
+          { PNR_Number: pnr },
+          { $set: { NO_show: true, Boarded: false } }
+        );
+      } catch (error) {
+        console.error(`Error updating NO_SHOW for ${pnr}:`, error);
+      }
+    }
+
+    this.boardingVerificationQueue.delete(pnr);
+    this.updateStats();
+
+    this.logEvent('NO_SHOW_MARKED', `Passenger marked NO_SHOW`, {
+      pnr: pnr,
+      station: this.getCurrentStation()?.name
+    });
+
+    return { success: true, pnr: pnr };
+  }
+
+  /**
+   * Get boarding verification statistics
+   */
+  getVerificationStats() {
+    const queue = Array.from(this.boardingVerificationQueue.values());
+
+    return {
+      total: queue.length,
+      pending: queue.filter(p => p.verificationStatus === 'PENDING').length,
+      currentStation: this.getCurrentStation()?.name || 'Unknown',
+      hasQueue: queue.length > 0
+    };
   }
 }
 

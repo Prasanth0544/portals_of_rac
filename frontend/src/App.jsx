@@ -13,6 +13,7 @@ import AllocationDiagnosticsPage from './pages/AllocationDiagnosticsPage';
 import PhaseOnePage from './pages/PhaseOnePage';
 import ConfigPage from './pages/ConfigPage';
 import './App.css';
+import './UserMenu.css'; // ✅ NEW - 3-dot menu styles
 
 function App() {
   // ✅ NEW: Authentication state
@@ -260,13 +261,20 @@ function App() {
     localStorage.removeItem('user');
     setIsAuthenticated(false);
     setUser(null);
-    window.location.reload();
+    setMenuOpen(false);
+    // Reset train data
+    setTrainData(null);
+    setJourneyStarted(false);
+    setCurrentPage('config');
   };
 
   const handleClosePage = () => {
     setCurrentPage('home');
     loadTrainState(); // Reload stats after closing pages (e.g., after add passenger)
   };
+
+  // ✅ NEW: Menu state
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Show login page if not authenticated
   if (!isAuthenticated) {
@@ -280,6 +288,24 @@ function App() {
           <div className="header-content">
             <h1>🚂 RAC Reallocation System</h1>
             <h2>Loading Train Configuration...</h2>
+          </div>
+          {/* ✅ NEW: 3-dot menu */}
+          <div className="user-menu">
+            <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)}>
+              ⋮
+            </button>
+            {menuOpen && (
+              <div className="menu-dropdown">
+                <div className="menu-user-info">
+                  <p><strong>{user?.username || 'Admin'}</strong></p>
+                  <p className="user-role">{user?.role || 'ADMIN'}</p>
+                </div>
+                <hr />
+                <button onClick={handleLogout} className="menu-item logout">
+                  🚪 Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <div className="app-content">
@@ -341,10 +367,28 @@ function App() {
       <div className="app-header">
         <div className="header-content">
           <h1>🚂 RAC Reallocation System</h1>
-          <h2>Train {trainData?.trainNo} - {trainData?.trainName}</h2>
+          <h2>{trainData.trainName} (#{trainData.trainNo}) | {trainData.journeyDate}</h2>
           <p className="route">
             {trainData?.stations[0]?.name} → {trainData?.stations[trainData.stations.length - 1]?.name}
           </p>
+        </div>
+        {/* ✅ NEW: 3-dot menu */}
+        <div className="user-menu">
+          <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)}>
+            ⋮
+          </button>
+          {menuOpen && (
+            <div className="menu-dropdown">
+              <div className="menu-user-info">
+                <p><strong>{user?.username || 'Admin'}</strong></p>
+                <p className="user-role">{user?.role || 'ADMIN'}</p>
+              </div>
+              <hr />
+              <button onClick={handleLogout} className="menu-item logout">
+                🚪 Logout
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

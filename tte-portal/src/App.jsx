@@ -9,7 +9,9 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 
 // Pages/Components
 import LoginPage from './pages/LoginPage'; // ✅ NEW
+import BoardingVerificationPage from './pages/BoardingVerificationPage'; // ✅ NEW - Boarding Verification
 import './App.css';
+import './UserMenu.css'; // ✅ 3-dot menu styling
 
 // Temporary Placeholder Components (until features are implemented)
 function Dashboard() {
@@ -75,6 +77,7 @@ function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState(null);
     const [currentTab, setCurrentTab] = useState(0);
+    const [menuOpen, setMenuOpen] = useState(false); // ✅ 3-dot menu state
     const { isConnected, pendingUpgrades } = useTteSocket();
 
     // ✅ NEW: Check for existing auth token on mount
@@ -97,21 +100,49 @@ function App() {
         setCurrentTab(newValue);
     };
 
+    // ✅ Logout handler
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setIsAuthenticated(false);
+        setUser(null);
+        setMenuOpen(false);
+    };
+
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
                 <AppBar position="static" elevation={3}>
                     <Toolbar>
-                        <TrainIcon sx={{ mr: 2, fontSize: 32 }} />
-                        <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="h6" component="div">
-                                TTE Control Portal
-                            </Typography>
-                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                                Dynamic RAC Reallocation System {isConnected && '🟢 Live'}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TrainIcon sx={{ fontSize: 32 }} />
+                            <Typography variant="h5" component="div" sx={{ fontWeight: 700 }}>
+                                TTE Portal
                             </Typography>
                         </Box>
+                        <Box sx={{ flexGrow: 1 }} />
+                        <Typography variant="body2" sx={{ mr: 2, opacity: 0.9 }}>
+                            Welcome, {user?.username || 'TTE'}
+                        </Typography>
+                        {/* ✅ 3-dot menu */}
+                        <div className="user-menu">
+                            <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)}>
+                                ⋮
+                            </button>
+                            {menuOpen && (
+                                <div className="menu-dropdown">
+                                    <div className="menu-user-info">
+                                        <p><strong>{user?.username || 'TTE'}</strong></p>
+                                        <p className="user-role">{user?.role || 'TTE'}</p>
+                                    </div>
+                                    <hr />
+                                    <button onClick={handleLogout} className="menu-item logout">
+                                        🚪 Logout
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </Toolbar>
                     <Tabs value={currentTab} onChange={handleTabChange} sx={{ bgcolor: 'primary.dark' }} textColor="inherit">
                         <Tab icon={<DashboardIcon />} label="Dashboard" />

@@ -34,7 +34,7 @@ module.exports = {
   // Class Types
   CLASS_TYPES: {
     SLEEPER: 'SL',
-    AC_3_TIER: '3A',
+    AC_3_TIER: 'AC_3_Tier',
     AC_2_TIER: '2A',
     AC_1_TIER: '1A',
     CHAIR_CAR: 'CC',

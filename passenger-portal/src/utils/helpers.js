@@ -172,7 +172,7 @@ export const getBerthTypeDisplayName = (berthType) => {
 export const getCoachClassDisplayName = (coachClass) => {
     const classMap = {
         'SL': 'Sleeper',
-        '3A': '3-Tier AC',
+        'AC_3_Tier': '3-Tier AC',
         '2A': '2-Tier AC',
         '1A': 'First AC'
     };
@@ -236,7 +236,7 @@ export const debounce = (func, wait = 300) => {
  */
 export const throttle = (func, limit = 300) => {
     let inThrottle;
-    return function(...args) {
+    return function (...args) {
         if (!inThrottle) {
             func.apply(this, args);
             inThrottle = true;

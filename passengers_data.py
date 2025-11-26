@@ -171,6 +171,10 @@ def gen_pnr():
     used_pnrs.add(p)
     return p
 
+def gen_irctc_id(sequence_number):
+    """Generate IRCTC_ID in format IR_0001 to IR_1500"""
+    return f"IR_{sequence_number:04d}"
+
 # ----------------------------
 # CORRECT BERTH ALLOCATOR
 # ----------------------------
@@ -326,9 +330,11 @@ print(f"✅ Selected {len(rac_passenger_indices)} passengers for RAC pairing\n")
 print("PHASE 3: Correct berth allocation...")
 
 passengers = []
+irctc_counter = 1  # Counter for IRCTC_ID generation
 
 def allocate_rac_pairs():
     """Allocate RAC passengers in pairs to side lower berths"""
+    global irctc_counter
     rac_list = sorted(list(rac_passenger_indices))
     rac_pairs = []
     
@@ -358,6 +364,7 @@ def allocate_rac_pairs():
                         passenger_status = "Online" if passenger_idx < 5 else "Offline"
                         
                         passenger_data = {
+                            "IRCTC_ID": gen_irctc_id(irctc_counter),
                             "PNR_Number": gen_pnr(),
                             "Train_Number": TRAIN_NUMBER,
                             "Train_Name": TRAIN_NAME,
@@ -379,6 +386,7 @@ def allocate_rac_pairs():
                             "NO_show": False
                         }
                         passengers.append(passenger_data)
+                        irctc_counter += 1
                     
                     rac_global_counter += 2
                     successful_pairs += 1
@@ -399,6 +407,7 @@ def allocate_rac_pairs():
                             passenger_status = "Online" if passenger_idx < 5 else "Offline"
                             
                             passenger_data = {
+                                "IRCTC_ID": gen_irctc_id(irctc_counter),
                                 "PNR_Number": gen_pnr(),
                                 "Train_Number": TRAIN_NUMBER,
                                 "Train_Name": TRAIN_NAME,
@@ -420,6 +429,7 @@ def allocate_rac_pairs():
                                 "NO_show": False
                             }
                             passengers.append(passenger_data)
+                            irctc_counter += 1
                         
                         rac_global_counter += 2
                         successful_pairs += 1
@@ -432,6 +442,7 @@ def allocate_rac_pairs():
 
 def allocate_cnf_passengers():
     """Allocate CNF passengers to available berths - NO overlaps allowed"""
+    global irctc_counter
     cnf_indices = [i for i in range(len(pairs)) if i not in rac_passenger_indices]
     allocated_cnf = 0
     
@@ -455,6 +466,7 @@ def allocate_cnf_passengers():
                             coach_class = "Sleeper" if coach.startswith("S") else "3A"
                             
                             passenger_data = {
+                                "IRCTC_ID": gen_irctc_id(irctc_counter),
                                 "PNR_Number": gen_pnr(),
                                 "Train_Number": TRAIN_NUMBER,
                                 "Train_Name": TRAIN_NAME,
@@ -476,6 +488,7 @@ def allocate_cnf_passengers():
                                 "NO_show": False
                             }
                             passengers.append(passenger_data)
+                            irctc_counter += 1
                             allocated_cnf += 1
                             allocated = True
                             break
@@ -490,6 +503,7 @@ def allocate_cnf_passengers():
             # Create WL passenger
             name = gen_name()
             passenger_data = {
+                "IRCTC_ID": gen_irctc_id(irctc_counter),
                 "PNR_Number": gen_pnr(),
                 "Train_Number": TRAIN_NUMBER,
                 "Train_Name": TRAIN_NAME,
@@ -511,6 +525,7 @@ def allocate_cnf_passengers():
                 "NO_show": False
             }
             passengers.append(passenger_data)
+            irctc_counter += 1
         
         if len(passengers) % 200 == 0:
             print(f"  Progress: {len(passengers)}/{TOTAL_PASSENGERS}")
@@ -650,6 +665,12 @@ print(f"Capacity: {'✅ WITHIN' if peak <= MAX_ONBOARD_CAPACITY else '❌ EXCEED
 print(f"Passenger Status - Online: {online_count}, Offline: {offline_count}")
 print(f"Class Distribution - Sleeper: {sleeper_count}, 3A: {threeA_count}")
 
+# Show IRCTC_ID range
+if passengers:
+    first_irctc = passengers[0]["IRCTC_ID"]
+    last_irctc = passengers[-1]["IRCTC_ID"]
+    print(f"IRCTC_ID Range: {first_irctc} to {last_irctc}")
+
 # Show RAC pairs
 print(f"\n📋 SAMPLE RAC PAIRS (first 5):")
 shown = 0
@@ -666,8 +687,8 @@ for key, plist in rac_berths_used.items():
         overlap_stations = overlap_end - overlap_start
         
         print(f"  Berth {key[0]}-{key[1]} (Side Lower):")
-        print(f"    RAC {p1['Rac_status']}: {p1['Boarding_Station']} → {p1['Deboarding_Station']}")
-        print(f"    RAC {p2['Rac_status']}: {p2['Boarding_Station']} → {p2['Deboarding_Station']}")
+        print(f"    {p1['IRCTC_ID']} - RAC {p1['Rac_status']}: {p1['Boarding_Station']} → {p1['Deboarding_Station']}")
+        print(f"    {p2['IRCTC_ID']} - RAC {p2['Rac_status']}: {p2['Boarding_Station']} → {p2['Deboarding_Station']}")
         print(f"    Overlap: {overlap_stations} stations ({stations[overlap_start][0]} to {stations[overlap_end][0]})")
         shown += 1
 
@@ -676,7 +697,7 @@ print(f"\n✅ ONLINE PASSENGERS (Mandatory RAC):")
 online_passengers = [p for p in passengers if p["Passenger_Status"] == "Online"]
 for i, p in enumerate(online_passengers[:10]):
     status = f"RAC {p['Rac_status']}" if p['Rac_status'] != "-" else "CNF"
-    print(f"  {i+1}. {p['Name']} | {p['Boarding_Station']} → {p['Deboarding_Station']} | {status} | Class: {p['Class']}")
+    print(f"  {i+1}. {p['IRCTC_ID']} - {p['Name']} | {p['Boarding_Station']} → {p['Deboarding_Station']} | {status} | Class: {p['Class']}")
 
 print("="*80)
 
@@ -699,7 +720,7 @@ print(f"✅ Exported: {json_file}")
 try:
     client = MongoClient('mongodb://localhost:27017/', serverSelectionTimeoutMS=2000)
     db = client['PassengersDB']
-    coll = db['P_1']
+    coll = db['P_2']
     coll.delete_many({})
     coll.insert_many(passengers)
     print(f"✅ MongoDB: PassengersDB.P_3")

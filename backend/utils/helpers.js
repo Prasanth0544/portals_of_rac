@@ -107,7 +107,7 @@ class Helpers {
     if (!classCode) return "Unknown";
     const classNames = {
       SL: "Sleeper",
-      "3A": "AC 3-Tier",
+      "AC_3_Tier": "AC 3-Tier",
       "3-TierAC": "AC 3-Tier",
       "2A": "AC 2-Tier",
       "2-TierAC": "AC 2-Tier",

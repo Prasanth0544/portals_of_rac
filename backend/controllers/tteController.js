@@ -357,6 +357,130 @@ class TTEController {
             });
         }
     }
+
+    /**
+     * ========================================
+     * BOARDING VERIFICATION METHODS
+     * ========================================
+     */
+
+    /**
+     * Get boarding verification queue
+     * GET /api/tte/boarding-queue
+     */
+    getBoardingQueue(req, res) {
+        try {
+            const trainState = trainController.getGlobalTrainState();
+
+            if (!trainState) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Train not initialized'
+                });
+            }
+
+            const queue = Array.from(
+                trainState.boardingVerificationQueue.values()
+            );
+
+            const stats = trainState.getVerificationStats();
+
+            res.json({
+                success: true,
+                data: {
+                    station: stats.currentStation,
+                    stats: stats,
+                    passengers: queue
+                }
+            });
+        } catch (error) {
+            console.error('❌ Error getting boarding queue:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
+    /**
+     * Confirm all passengers boarded
+     * POST /api/tte/confirm-all-boarded
+     */
+    async confirmAllBoarded(req, res) {
+        try {
+            const trainState = trainController.getGlobalTrainState();
+
+            if (!trainState) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Train not initialized'
+                });
+            }
+
+            const result = await trainState.confirmAllBoarded();
+
+            res.json({
+                success: true,
+                message: `${result.count} passengers confirmed boarded`,
+                count: result.count
+            });
+        } catch (error) {
+            console.error('❌ Error confirming boarding:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
+    /**
+     * Mark individual passenger as NO_SHOW
+     * POST /api/tte/mark-no-show
+     * Body: { pnr: "PNR_NUMBER" }
+     */
+    async markNoShow(req, res) {
+        try {
+            const { pnr } = req.body;
+
+            if (!pnr) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'PNR is required'
+                });
+            }
+
+            const trainState = trainController.getGlobalTrainState();
+
+            if (!trainState) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Train not initialized'
+                });
+            }
+
+            const result = await trainState.markNoShowFromQueue(pnr);
+
+            res.json({
+                success: true,
+                message: `Passenger ${pnr} marked as NO_SHOW`,
+                pnr: result.pnr
+            });
+        } catch (error) {
+            console.error('❌ Error marking no-show:', error);
+
+            if (error.message.includes('not found in verification queue')) {
+                return res.status(404).json({
+                    success: false,
+                    message: error.message
+                });
+            }
+
+            res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
 }
 
 module.exports = new TTEController();

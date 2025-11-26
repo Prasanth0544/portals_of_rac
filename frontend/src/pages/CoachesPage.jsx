@@ -54,7 +54,7 @@ function CoachesPage({ trainData, onClose }) {
 
   const filteredCoaches = selectedCoachType === "sleeper"
     ? trainData.coaches.filter((c) => c.class === "SL")
-    : trainData.coaches.filter((c) => c.class === "3A");
+    : trainData.coaches.filter((c) => c.class === "AC_3_Tier");
 
   return (
     <div className="coaches-page">

@@ -8,6 +8,7 @@ const passengerController = require('../controllers/passengerController');
 const visualizationController = require('../controllers/visualizationController');
 const configController = require('../controllers/configController');
 const authController = require('../controllers/authController'); // ✅ NEW
+const tteController = require('../controllers/tteController'); // ✅ NEW - TTE operations
 const validationMiddleware = require('../middleware/validation');
 const { authMiddleware, requireRole, requirePermission } = require('../middleware/auth'); // ✅ NEW
 
@@ -226,7 +227,6 @@ router.post('/passenger/deny-upgrade',
 );
 
 // ========== TTE/ADMIN PORTAL ROUTES ==========
-const tteController = require('../controllers/tteController');
 
 // Get all passengers with filters
 router.get('/tte/passengers',
@@ -262,6 +262,34 @@ router.post('/tte/confirm-upgrade',
 router.get('/tte/statistics',
   validationMiddleware.checkTrainInitialized,
   (req, res) => tteController.getStatistics(req, res)
+);
+
+// ========== TTE BOARDING VERIFICATION ROUTES ========== ✅ NEW
+// Get boarding verification queue
+router.get('/tte/boarding-queue',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  validationMiddleware.checkTrainInitialized,
+  (req, res) => tteController.getBoardingQueue(req, res)
+);
+
+// Confirm all passengers boarded (bulk action)
+router.post('/tte/confirm-all-boarded',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
+  (req, res) => tteController.confirmAllBoarded(req, res)
+);
+
+// Mark individual passenger as NO_SHOW
+router.post('/tte/mark-no-show',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
+  (req, res) => tteController.markNoShow(req, res)
 );
 
 module.exports = router;

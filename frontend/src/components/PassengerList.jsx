@@ -286,7 +286,7 @@ function PassengerList({ currentStationIdx, stations }) {
           >
             <option value="all">All</option>
             <option value="SL">Sleeper (SL)</option>
-            <option value="3A">AC 3-Tier (3A)</option>
+            <option value="AC_3_Tier">AC 3-Tier (AC_3_Tier)</option>
             <option value="2A">AC 2-Tier (2A)</option>
           </select>
         </div>

@@ -5,7 +5,7 @@ class BerthAllocator {
    * Get all side lower berth numbers for Sleeper (SL) coaches - 72 berths
    */
   static getSideLowerBerths(coachClass = 'SL') {
-    if (coachClass === '3A') {
+    if (coachClass === 'AC_3_Tier') {
       // Three_Tier_AC coaches - 64 berths, RAC berths are side lower
       return [7, 15, 23, 31, 39, 47, 55, 63];
     }
@@ -62,8 +62,8 @@ class BerthAllocator {
    */
   static getAvailableRACBerths(coach) {
     const sideLowerBerths = this.getSideLowerBerths(coach.class);
-    return coach.berths.filter(berth => 
-      sideLowerBerths.includes(berth.berthNo) && 
+    return coach.berths.filter(berth =>
+      sideLowerBerths.includes(berth.berthNo) &&
       (berth.status === 'VACANT' || berth.status === 'OCCUPIED')
     );
   }
@@ -73,7 +73,7 @@ class BerthAllocator {
    */
   static getBerthTypeFromSeatNo(seatNo, coachClass = 'SL') {
     // Three_Tier_AC (3A) coaches use 64 berths
-    if (coachClass === '3A') {
+    if (coachClass === 'AC_3_Tier') {
       const berthMapping3A = {
         lowerBerths: [1, 4, 9, 12, 17, 20, 25, 28, 33, 36, 41, 44, 49, 52, 57, 60],
         middleBerths: [2, 5, 10, 13, 18, 21, 26, 29, 34, 37, 42, 45, 50, 53, 58, 61],
@@ -87,7 +87,7 @@ class BerthAllocator {
       if (berthMapping3A.upperBerths.includes(seatNo)) return "Upper Berth";
       if (berthMapping3A.sideLower.includes(seatNo)) return "Side Lower";
       if (berthMapping3A.sideUpper.includes(seatNo)) return "Side Upper";
-      
+
       return "Lower Berth";
     }
 
@@ -105,14 +105,14 @@ class BerthAllocator {
     if (berthMapping.upperBerths.includes(seatNo)) return "Upper Berth";
     if (berthMapping.sideLower.includes(seatNo)) return "Side Lower";
     if (berthMapping.sideUpper.includes(seatNo)) return "Side Upper";
-    
+
     return "Lower Berth";
   }
 
   /**
    * Check if berth can accommodate RAC
    * @param {Object} berth - Berth object
-   * @param {String} coachClass - Coach class ('SL' or '3A'), required parameter
+   * @param {String} coachClass - Coach class ('SL' or 'AC_3_Tier'), required parameter
    */
   static canAccommodateRAC(berth, coachClass = 'SL') {
     return this.isSideLowerBerth(berth.berthNo, coachClass) && berth.passengers.length < 2;
@@ -151,7 +151,7 @@ class BerthAllocator {
   static validateBerthAllocation(berth, passenger, trainState) {
     // Get coach class from trainState
     const coachClass = trainState.getCoachClassFromBerth(berth);
-    
+
     // Check class match
     if (coachClass !== passenger.class) {
       return {
