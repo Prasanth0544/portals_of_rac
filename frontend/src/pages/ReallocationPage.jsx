@@ -46,10 +46,11 @@ const ReallocationPage = ({ trainData, loadTrainState, onClose }) => {
     };
 
     /**
-     * Apply upgrade for a specific matrix item
-     * Sends allocation to backend and shows toast notification
+     * Send upgrade offer to passenger (instead of auto-applying)
+     * For online passengers: Send WebSocket notification
+     * For offline passengers: Add to TTE offline upgrades queue
      */
-    const applyUpgrade = async (matrixItem, index) => {
+    const sendUpgradeOffer = async (matrixItem, index) => {
         // Validate top candidate exists
         if (!matrixItem?.topCandidate && !matrixItem?.topEligible) {
             toast.error('No eligible candidate for this berth');
@@ -57,48 +58,60 @@ const ReallocationPage = ({ trainData, loadTrainState, onClose }) => {
         }
 
         const candidate = matrixItem.topCandidate || matrixItem.topEligible;
-        const allocation = {
-            pnr: candidate.pnr,
-            coach: matrixItem.coach,
-            berth: matrixItem.berthNo
-        };
+        const isOnline = candidate.passengerStatus === 'Online';
 
         setApplying(index); // Set loading state for this specific card
 
-        // Use toast.promise for elegant loading/success/error handling
-        toast.promise(
-            api.post('/reallocation/apply', {
-                allocations: [allocation]
-            }),
-            {
-                loading: `Upgrading ${candidate.name}...`,
-                success: (res) => {
-                    setApplying(null);
-                    // Refresh matrix after 1 second
+        try {
+            if (isOnline) {
+                // Send upgrade offer to online passenger
+                const res = await api.post('/reallocation/send-offer', {
+                    pnr: candidate.pnr,
+                    berthDetails: {
+                        coach: matrixItem.coach,
+                        berthNo: matrixItem.berthNo,
+                        type: matrixItem.type || matrixItem.berthType
+                    }
+                });
+
+                if (res.data.success) {
+                    toast.success(
+                        `📤 Upgrade offer sent to ${candidate.name}! Waiting for acceptance...`,
+                        { duration: 4000, icon: '🔔' }
+                    );
+
+                    // Refresh matrix after a delay
                     setTimeout(() => {
                         fetchEligibilityMatrix();
                     }, 1000);
-                    return `✅ ${candidate.name} successfully upgraded to ${matrixItem.coach}-${matrixItem.berthNo}`;
-                },
-                error: (err) => {
-                    setApplying(null);
-                    return err.response?.data?.message || 'Upgrade failed. Please try again.';
                 }
-            },
-            {
-                success: {
-                    duration: 5000,
-                    icon: '🎉',
-                },
-                error: {
-                    duration: 4000,
-                    icon: '❌',
-                },
-                loading: {
-                    icon: '⏳',
+            } else {
+                // Add to offline upgrades queue for TTE
+                const res = await api.post('/tte/offline-upgrades/add', {
+                    pnr: candidate.pnr,
+                    berthDetails: {
+                        coach: matrixItem.coach,
+                        berthNo: matrixItem.berthNo,
+                        type: matrixItem.type || matrixItem.berthType
+                    }
+                });
+
+                if (res.data.success) {
+                    toast.info(
+                        `📋 ${candidate.name} added to TTE offline upgrades. TTE confirmation required.`,
+                        { duration: 4000, icon: 'ℹ️' }
+                    );
+
+                    setTimeout(() => {
+                        fetchEligibilityMatrix();
+                    }, 1000);
                 }
             }
-        );
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to send upgrade offer');
+        } finally {
+            setApplying(null);
+        }
     };
 
     if (loading) {
@@ -243,20 +256,20 @@ const ReallocationPage = ({ trainData, loadTrainState, onClose }) => {
                                                 </div>
                                             </div>
 
-                                            {/* Apply Upgrade Button */}
+                                            {/* Send Offer Button */}
                                             <button
                                                 className={`btn-apply ${applying === index ? 'applying' : ''}`}
-                                                onClick={() => applyUpgrade(item, index)}
+                                                onClick={() => sendUpgradeOffer(item, index)}
                                                 disabled={applying === index}
                                             >
                                                 {applying === index ? (
                                                     <>
                                                         <div className="btn-spinner"></div>
-                                                        Upgrading...
+                                                        Sending...
                                                     </>
                                                 ) : (
                                                     <>
-                                                        ⬆️ Apply Upgrade
+                                                        📤 Send Offer
                                                     </>
                                                 )}
                                             </button>

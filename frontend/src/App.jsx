@@ -159,7 +159,11 @@ function App() {
 
       if (response.success) {
         setTrainData(response.data);
-        setJourneyStarted(response.data.journeyStarted);
+        // Only update journeyStarted from API if we don't already have it set to true
+        // This prevents overwriting when journey has started but API might not reflect it yet
+        if (typeof response.data.journeyStarted !== 'undefined') {
+          setJourneyStarted(prev => prev || response.data.journeyStarted);
+        }
       }
     } catch (err) {
       setError(err.message || 'Failed to load train state');

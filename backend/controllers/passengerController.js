@@ -39,6 +39,48 @@ class PassengerController {
   }
 
   /**
+   * Get passenger details by IRCTC_ID (for passenger portal)
+   */
+  async getPassengerByIRCTC(req, res) {
+    try {
+      const { irctcId } = req.params;
+
+      if (!irctcId) {
+        return res.status(400).json({
+          success: false,
+          message: "IRCTC ID is required",
+        });
+      }
+
+      // Find passenger in database by IRCTC_ID
+      const passenger = await db.getPassengersCollection().findOne({
+        IRCTC_ID: irctcId
+      });
+
+      if (!passenger) {
+        return res.status(404).json({
+          success: false,
+          message: "No booking found for this IRCTC ID"
+        });
+      }
+
+      // Passenger already has Train_Name, Train_Number, Booking_Date, etc. from database
+      // No need to enrich with train state data
+
+      res.json({
+        success: true,
+        data: passenger
+      });
+    } catch (error) {
+      console.error("❌ Error getting passenger by IRCTC ID:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  /**
    * Mark passenger as no-show (self-cancellation)
    */
   async markNoShow(req, res) {

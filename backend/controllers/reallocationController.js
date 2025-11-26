@@ -231,25 +231,54 @@ class ReallocationController {
       if (!trainState) {
         return res.status(400).json({
           success: false,
-          message: "Train not initialized"
+          message: "Train state not initialized"
         });
       }
 
       const matrix = ReallocationService.getEligibilityMatrix(trainState);
 
+      // ✅ NEW: Get all boarded RAC passengers (not just eligible ones)
+      const boardedRACPassengers = trainState.racQueue.filter(r =>
+        r.pnrStatus === 'RAC' &&
+        r.passengerStatus === 'Online' &&
+        r.boarded === true
+      ).map(r => ({
+        pnr: r.pnr,
+        name: r.name,
+        racNumber: r.racStatus,
+        boarded: r.boarded,
+        from: r.from,
+        to: r.to,
+        fromIdx: r.fromIdx,
+        toIdx: r.toIdx,
+        class: r.class,
+        age: r.age,
+        gender: r.gender
+      }));
+
+      // ✅ Calculate vacancy summary
+      const totalVacancies = matrix.length;
+      const vacanciesWithEligible = matrix.filter(m => m.eligibleCount > 0).length;
+
       res.json({
         success: true,
         data: {
-          total: matrix.length,
-          eligibility: matrix
+          eligibility: matrix,
+          // ✅ NEW: Summary for admin dashboard
+          summary: {
+            totalVacantBerths: totalVacancies,
+            vacanciesWithEligible: vacanciesWithEligible,
+            vacanciesWithoutEligible: totalVacancies - vacanciesWithEligible,
+            totalBoardedRAC: boardedRACPassengers.length,
+            racPassengers: boardedRACPassengers
+          }
         }
       });
-
     } catch (error) {
-      console.error("❌ Error getting eligibility matrix:", error);
+      console.error("Error getting eligibility matrix:", error);
       res.status(500).json({
         success: false,
-        error: error.message
+        message: "Failed to generate eligibility matrix"
       });
     }
   }
@@ -303,6 +332,90 @@ class ReallocationController {
       console.error("❌ Error applying reallocation:", error);
       res.status(500).json({
         success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Send upgrade offer to passenger (instead of auto-applying)
+   * For online passengers: Send WebSocket notification
+   * For offline passengers: Should use addOfflineUpgrade instead
+   */
+  async sendUpgradeOffer(req, res) {
+    try {
+      const { pnr, berthDetails } = req.body;
+
+      if (!pnr || !berthDetails) {
+        return res.status(400).json({
+          success: false,
+          message: "PNR and berth details are required"
+        });
+      }
+
+      const trainState = trainController.getGlobalTrainState();
+
+      if (!trainState) {
+        return res.status(400).json({
+          success: false,
+          message: "Train state not initialized"
+        });
+      }
+
+      // Find passenger
+      const passenger = trainState.racQueue.find(p => p.pnr === pnr);
+
+      if (!passenger) {
+        return res.status(404).json({
+          success: false,
+          message: "Passenger not found in RAC queue"
+        });
+      }
+
+      // Check if passenger is online
+      const isOnline = passenger.passengerStatus === 'Online' || passenger.Online_Status === 'online';
+
+      if (!isOnline) {
+        return res.status(400).json({
+          success: false,
+          message: "Passenger is offline. Use offline upgrade endpoint instead."
+        });
+      }
+
+      // Send WebSocket upgrade offer
+      const PushNotificationService = require('../services/PushNotificationService');
+      const offerResult = await PushNotificationService.sendUpgradeOffer(
+        passenger.irctcId || passenger.IRCTC_ID,
+        {
+          pnr: pnr,
+          currentStatus: passenger.pnrStatus,
+          offeredBerth: `${berthDetails.coach}-${berthDetails.berthNo}`,
+          coach: berthDetails.coach,
+          berthNo: berthDetails.berthNo,
+          berthType: berthDetails.type || 'Lower',
+          expiresIn: 300 // 5 minutes
+        }
+      );
+
+      console.log(`📤 Upgrade offer sent to ${passenger.name} (${pnr})`);
+
+      res.json({
+        success: true,
+        message: `Upgrade offer sent to ${passenger.name}`,
+        data: {
+          pnr: pnr,
+          passengerName: passenger.name,
+          offeredBerth: `${berthDetails.coach}-${berthDetails.berthNo}`,
+          offerSent: true,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+        }
+      });
+
+    } catch (error) {
+      console.error("❌ Error sending upgrade offer:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to send upgrade offer",
         error: error.message
       });
     }

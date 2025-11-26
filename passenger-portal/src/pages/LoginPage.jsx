@@ -5,7 +5,7 @@ import { Box, TextField, Button, Typography, Paper, Alert, CircularProgress, Tab
 import TrainIcon from '@mui/icons-material/Train';
 
 function LoginPage({ onLoginSuccess }) {
-    const [loginType, setLoginType] = useState(0); // 0 = IRCTC ID, 1 = Email
+    const [loginType, setLoginType] = useState(0);
     const [irctcId, setIrctcId] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -26,17 +26,14 @@ function LoginPage({ onLoginSuccess }) {
             const response = await axios.post('http://localhost:5000/api/auth/passenger/login', payload);
 
             if (response.data.success) {
-                // Store token, user info, and tickets
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('user', JSON.stringify(response.data.user));
                 localStorage.setItem('tickets', JSON.stringify(response.data.tickets));
 
-                // Call parent callback
                 if (onLoginSuccess) {
                     onLoginSuccess(response.data.user, response.data.tickets);
                 }
 
-                // Reload to update app state
                 window.location.reload();
             }
         } catch (err) {
@@ -54,16 +51,24 @@ function LoginPage({ onLoginSuccess }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
-                padding: 2
+                padding: 0
             }}
         >
-            <Paper elevation={10} sx={{ maxWidth: 450, width: '100%', borderRadius: 3 }}>
-                <Box sx={{ p: 4, textAlign: 'center', bgcolor: '#1976d2', color: 'white', borderRadius: '12px 12px 0 0' }}>
-                    <TrainIcon sx={{ fontSize: 48, mb: 1 }} />
-                    <Typography variant="h5" fontWeight={600}>
+            <Paper
+                elevation={0}
+                sx={{
+                    maxWidth: 500,
+                    width: '100%',
+                    margin: '0 auto',
+                    borderRadius: 0
+                }}
+            >
+                <Box sx={{ p: 5, textAlign: 'center', bgcolor: '#1976d2', color: 'white' }}>
+                    <TrainIcon sx={{ fontSize: 56, mb: 2 }} />
+                    <Typography variant="h4" fontWeight={700}>
                         Passenger Portal
                     </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
+                    <Typography variant="body1" sx={{ opacity: 0.9, mt: 1.5 }}>
                         Check your RAC status & bookings
                     </Typography>
                 </Box>
@@ -78,7 +83,7 @@ function LoginPage({ onLoginSuccess }) {
                     <Tab label="Email" />
                 </Tabs>
 
-                <Box component="form" onSubmit={handleLogin} sx={{ p: 4 }}>
+                <Box component="form" onSubmit={handleLogin} sx={{ p: 5 }}>
                     {loginType === 0 ? (
                         <TextField
                             fullWidth
@@ -86,7 +91,7 @@ function LoginPage({ onLoginSuccess }) {
                             variant="outlined"
                             value={irctcId}
                             onChange={(e) => setIrctcId(e.target.value)}
-                            placeholder="e.g., IR_8001"
+                            placeholder="e.g., IR_0001"
                             required
                             disabled={loading}
                             sx={{ mb: 3 }}
@@ -133,19 +138,23 @@ function LoginPage({ onLoginSuccess }) {
                         size="large"
                         disabled={loading}
                         sx={{
-                            py: 1.5,
+                            py: 1.8,
                             textTransform: 'none',
-                            fontSize: 16,
+                            fontSize: 17,
                             fontWeight: 600,
-                            background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)'
+                            background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+                            borderRadius: 0
                         }}
                     >
                         {loading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
                     </Button>
 
-                    <Box sx={{ mt: 3, textAlign: 'center' }}>
-                        <Typography variant="caption" color="text.secondary">
-                            Test: IR_8001 / Prasanth@123
+                    <Box sx={{ mt: 4, textAlign: 'center', py: 2, bgcolor: '#f5f5f5', borderRadius: 0 }}>
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                            Test Credentials
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            IR_0001 / Prasanth@123
                         </Typography>
                     </Box>
                 </Box>

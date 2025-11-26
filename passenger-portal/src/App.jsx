@@ -5,6 +5,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline, AppBar, Toolbar, Typography, Container, Box, Button } from '@mui/material';
 import TrainIcon from '@mui/icons-material/Train';
 import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage'; // ✅ NEW - Replace placeholder
 import './App.css';
 import './UserMenu.css'; // ✅ 3-dot menu styling
 
@@ -49,9 +50,9 @@ const theme = createTheme({
 });
 
 function App() {
-    // ✅ Authentication state
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [authenticated, setAuthenticated] = useState(false);
     const [user, setUser] = useState(null);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 960);
     const [menuOpen, setMenuOpen] = useState(false); // ✅ 3-dot menu state
 
     // ✅ Check for existing auth token on mount
@@ -60,22 +61,29 @@ function App() {
         const userData = localStorage.getItem('user');
 
         if (token && userData) {
-            setIsAuthenticated(true);
+            setAuthenticated(true);
             setUser(JSON.parse(userData));
         }
+
+        // Handle window resize for mobile detection
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 960);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     // ✅ Logout handler
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        setIsAuthenticated(false);
+        setAuthenticated(false);
         setUser(null);
         setMenuOpen(false);
     };
 
     // ✅ Show login page if not authenticated
-    if (!isAuthenticated) {
+    if (!authenticated) {
         return <LoginPage />;
     }
 
@@ -87,7 +95,7 @@ function App() {
                     <AppBar position="static" elevation={2}>
                         <Toolbar>
                             <TrainIcon sx={{ mr: 2 }} />
-                            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                            <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ flexGrow: 1 }}>
                                 Indian Railways - Passenger Portal
                             </Typography>
                             <Button color="inherit" component={Link} to="/">
@@ -114,11 +122,11 @@ function App() {
                         </Toolbar>
                     </AppBar>
 
-                    <Container maxWidth="lg" sx={{ flex: 1, py: 4 }}>
+                    <Box sx={{ flex: 1 }}>
                         <Routes>
-                            <Route path="/" element={<HomePage />} />
+                            <Route path="/" element={<DashboardPage />} />
                         </Routes>
-                    </Container>
+                    </Box>
 
                     <Box component="footer" sx={{ bgcolor: 'background.paper', py: 3, borderTop: '1px solid #e0e0e0' }}>
                         <Container maxWidth="lg">

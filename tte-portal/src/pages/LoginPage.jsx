@@ -22,16 +22,13 @@ function LoginPage({ onLoginSuccess }) {
             });
 
             if (response.data.success) {
-                // Store token and user info
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('user', JSON.stringify(response.data.user));
 
-                // Call parent callback
                 if (onLoginSuccess) {
                     onLoginSuccess(response.data.user);
                 }
 
-                // Reload to update app state
                 window.location.reload();
             }
         } catch (err) {
@@ -49,21 +46,29 @@ function LoginPage({ onLoginSuccess }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 background: 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)',
-                padding: 2
+                padding: 0
             }}
         >
-            <Paper elevation={10} sx={{ maxWidth: 400, width: '100%', borderRadius: 3 }}>
-                <Box sx={{ p: 4, textAlign: 'center', bgcolor: '#1565c0', color: 'white', borderRadius: '12px 12px 0 0' }}>
-                    <TrainIcon sx={{ fontSize: 48, mb: 1 }} />
-                    <Typography variant="h5" fontWeight={600}>
+            <Paper
+                elevation={0}
+                sx={{
+                    maxWidth: 500,
+                    width: '100%',
+                    margin: '0 auto',
+                    borderRadius: 0
+                }}
+            >
+                <Box sx={{ p: 5, textAlign: 'center', bgcolor: '#1565c0', color: 'white' }}>
+                    <TrainIcon sx={{ fontSize: 56, mb: 2 }} />
+                    <Typography variant="h4" fontWeight={700}>
                         TTE Portal
                     </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
+                    <Typography variant="body1" sx={{ opacity: 0.9, mt: 1.5 }}>
                         Dynamic RAC Reallocation System
                     </Typography>
                 </Box>
 
-                <Box component="form" onSubmit={handleLogin} sx={{ p: 4 }}>
+                <Box component="form" onSubmit={handleLogin} sx={{ p: 5 }}>
                     <TextField
                         fullWidth
                         label="Employee ID"
@@ -101,19 +106,23 @@ function LoginPage({ onLoginSuccess }) {
                         size="large"
                         disabled={loading}
                         sx={{
-                            py: 1.5,
+                            py: 1.8,
                             textTransform: 'none',
-                            fontSize: 16,
+                            fontSize: 17,
                             fontWeight: 600,
-                            background: 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)'
+                            background: 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)',
+                            borderRadius: 0
                         }}
                     >
                         {loading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
                     </Button>
 
-                    <Box sx={{ mt: 3, textAlign: 'center' }}>
-                        <Typography variant="caption" color="text.secondary">
-                            Test: TTE_01 / Prasanth@123
+                    <Box sx={{ mt: 4, textAlign: 'center', py: 2, bgcolor: '#f5f5f5', borderRadius: 0 }}>
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                            Test Credentials
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            TTE_01 / Prasanth@123
                         </Typography>
                     </Box>
                 </Box>

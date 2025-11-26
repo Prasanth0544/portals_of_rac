@@ -1,0 +1,124 @@
+// passenger-portal/src/pages/DashboardPage.jsx
+import React, { useState, useEffect } from 'react';
+import {
+    Container,
+    Box,
+    Typography,
+    Grid,
+    Card,
+    CardContent,
+    Alert,
+    CircularProgress
+} from '@mui/material';
+import BoardingPass from '../components/BoardingPass';
+import JourneyTimeline from '../components/JourneyTimeline'; // ✅ NEW
+import NotificationSettings from '../components/NotificationSettings'; // ✅ NEW - Push Notifications
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
+
+function DashboardPage() {
+    const [passenger, setPassenger] = useState(null);
+    const [trainState, setTrainState] = useState(null); // ✅ NEW
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Get logged-in user info
+            const userData = JSON.parse(localStorage.getItem('user') || '{}');
+            const irctcId = userData.irctcId || 'IR_8001';
+
+            // Fetch both passenger data and train state
+            const [passengerRes, trainRes] = await Promise.all([
+                axios.get(`${API_URL}/passengers/by-irctc/${irctcId}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                }),
+                axios.get(`${API_URL}/train/state`)
+            ]);
+
+            if (passengerRes.data.success && passengerRes.data.data) {
+                setPassenger(passengerRes.data.data);
+            } else {
+                setError('No booking found for your IRCTC ID');
+            }
+
+            if (trainRes.data.success && trainRes.data.data) {
+                setTrainState(trainRes.data.data);
+            }
+        } catch (err) {
+            console.error('Error fetching data:', err);
+            setError(err.response?.data?.message || 'Failed to load your booking details');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <Container maxWidth="md" sx={{ mt: 8, textAlign: 'center' }}>
+                <CircularProgress />
+                <Typography sx={{ mt: 2 }}>Loading your booking...</Typography>
+                            No Active Booking
+                        </Typography>
+                        <Typography color="text.secondary">
+                            You don't have any confirmed bookings at the moment.
+                            Please book a ticket through IRCTC to view your boarding pass.
+                        </Typography>
+                    </CardContent >
+                </Typography >
+            </Box >
+
+            {/* Journey Tracker */ }
+        {
+            trainState?.journey?.stations && (
+                <JourneyTimeline
+                    stations={trainState.journey.stations}
+                    currentStationIndex={trainState.currentStationIndex || 0}
+                />
+            )
+        }
+
+        {/* Boarding Pass */ }
+        <BoardingPass passenger={passenger} />
+                        <Typography variant="body2" color="text.secondary">
+                            <strong>Boarding Station:</strong> {passenger?.Boarding_Station}<br />
+                            <strong>Board at:</strong> {passenger?.journeyDate ? new Date(passenger.journeyDate).toLocaleString() : 'N/A'}
+                        </Typography>
+                    </CardContent >
+                </Card >
+            </Grid >
+
+            <Grid item xs={12} md={6}>
+                <Card elevation={2}>
+                    <CardContent>
+                        <Typography variant="h6" gutterBottom>
+                            🎟️ Ticket Status
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            <strong>Status:</strong> {passenger?.PNR_Status}<br />
+                            <strong>Last Updated:</strong> {new Date().toLocaleDateString()}
+                        </Typography>
+                    </CardContent>
+                </Card>
+            </Grid>
+        </Grid >
+
+            {/* Tips */ }
+            < Alert severity = "info" sx = {{ mt: 3 }
+    }>
+        <strong>Tip:</strong> Save this page or take a screenshot for offline access.
+            You can also print your boarding pass for easy verification.
+        </Alert >
+        </Container >
+    );
+}
+
+export default DashboardPage;

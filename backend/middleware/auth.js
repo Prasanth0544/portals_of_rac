@@ -77,7 +77,10 @@ const requireRole = (...allowedRoles) => {
             });
         }
 
-        if (!allowedRoles.includes(req.user.role)) {
+        // Support both requireRole(['TTE', 'ADMIN']) and requireRole('TTE', 'ADMIN')
+        const roles = Array.isArray(allowedRoles[0]) ? allowedRoles[0] : allowedRoles;
+
+        if (!roles.includes(req.user.role)) {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Insufficient permissions.'

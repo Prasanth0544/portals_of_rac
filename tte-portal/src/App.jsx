@@ -1,40 +1,24 @@
 // tte-portal/src/App.jsx
 import React, { useState } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { CssBaseline, AppBar, Toolbar, Typography, Container, Box, Tabs, Tab, Badge } from '@mui/material';
+import { CssBaseline, AppBar, Toolbar, Typography, Container, Box, Tabs, Tab } from '@mui/material';
 import TrainIcon from '@mui/icons-material/Train';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import PeopleIcon from '@mui/icons-material/People';
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 
 // Pages/Components
 import LoginPage from './pages/LoginPage'; // ✅ NEW
+import DashboardPage from './pages/DashboardPage'; // ✅ Real dashboard
 import BoardingVerificationPage from './pages/BoardingVerificationPage'; // ✅ NEW - Boarding Verification
+import ActionHistoryPage from './pages/ActionHistoryPage'; // ✅ NEW
+import OfflineUpgradesPage from './pages/OfflineUpgradesPage'; // ✅ NEW
+import PassengersPage from './pages/PassengersPage'; // ✅ UNIFIED - Same as admin portal
+import BoardedPassengersPage from './pages/BoardedPassengersPage'; // ✅ NEW
 import './App.css';
 import './UserMenu.css'; // ✅ 3-dot menu styling
 
 // Temporary Placeholder Components (until features are implemented)
-function Dashboard() {
-    return (
-        <Box sx={{ textAlign: 'center', mt: 8 }}>
-            <Typography variant="h4" gutterBottom>TTE Dashboard</Typography>
-            <Typography variant="body1" color="text.secondary">
-                Dashboard functionality will be available after authentication is implemented.
-            </Typography>
-        </Box>
-    );
-}
+// REMOVED: Placeholder Dashboard - using real component from ./pages/DashboardPage
 
-function PassengerManagement() {
-    return (
-        <Box sx={{ textAlign: 'center', mt: 8 }}>
-            <Typography variant="h4" gutterBottom>Passenger Management</Typography>
-            <Typography variant="body1" color="text.secondary">
-                Passenger management features coming soon...
-            </Typography>
-        </Box>
-    );
-}
+// REMOVED: Placeholder PassengerManagement - using real component from ./components/PassengerManagement
 
 function OfflineUpgradeVerification() {
     return (
@@ -77,6 +61,7 @@ function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState(null);
     const [currentTab, setCurrentTab] = useState(0);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 960); // ✅ NEW: Mobile detection state
     const [menuOpen, setMenuOpen] = useState(false); // ✅ 3-dot menu state
     const { isConnected, pendingUpgrades } = useTteSocket();
 
@@ -89,6 +74,13 @@ function App() {
             setIsAuthenticated(true);
             setUser(JSON.parse(userData));
         }
+
+        // Handle window resize for mobile detection
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 960);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     // ✅ NEW: Show login page if not authenticated
@@ -144,25 +136,48 @@ function App() {
                             )}
                         </div>
                     </Toolbar>
-                    <Tabs value={currentTab} onChange={handleTabChange} sx={{ bgcolor: 'primary.dark' }} textColor="inherit">
-                        <Tab icon={<DashboardIcon />} label="Dashboard" />
-                        <Tab icon={<PeopleIcon />} label="Passenger Management" />
-                        <Tab
-                            icon={
-                                <Badge badgeContent={pendingUpgrades.length} color="error">
-                                    <VerifiedUserIcon />
-                                </Badge>
+                    <Tabs
+                        value={currentTab}
+                        onChange={handleTabChange}
+                        sx={{
+                            bgcolor: '#0d47a1',
+                            '& .MuiTab-root': {
+                                color: 'rgba(255,255,255,0.7)',
+                                fontWeight: 500,
+                                fontSize: '0.875rem',
+                                textTransform: 'none',
+                                minHeight: 48,
+                                '&.Mui-selected': {
+                                    color: '#ffffff',
+                                    fontWeight: 600
+                                }
+                            },
+                            '& .MuiTabs-indicator': {
+                                backgroundColor: '#ffffff',
+                                height: 3
                             }
-                            label="Offline Upgrades"
-                        />
+                        }}
+                        textColor="inherit"
+                        variant={isMobile ? "scrollable" : "standard"}
+                        scrollButtons={isMobile ? "auto" : false}
+                        allowScrollButtonsMobile
+                    >
+                        <Tab label="Dashboard" />
+                        <Tab label="Passenger List" />
+                        <Tab label="Boarded Passengers" />
+                        <Tab label="RAC Upgrades" />
+                        <Tab label="Action History" />
                     </Tabs>
                 </AppBar>
 
-                <Container maxWidth="xl" sx={{ flex: 1, py: 4 }}>
-                    {currentTab === 0 && <Dashboard />}
-                    {currentTab === 1 && <PassengerManagement />}
-                    {currentTab === 2 && <OfflineUpgradeVerification />}
-                </Container>
+                {/* Tab Content */}
+                <Box sx={{ flex: 1, py: 2 }}>
+                    {currentTab === 0 && <DashboardPage />}
+                    {currentTab === 1 && <PassengersPage />}
+                    {currentTab === 2 && <BoardedPassengersPage />}
+                    {currentTab === 3 && <OfflineUpgradesPage />}
+                    {currentTab === 4 && <ActionHistoryPage />}
+                </Box>
 
                 <Box component="footer" sx={{ bgcolor: 'background.paper', py: 2, borderTop: '1px solid #e0e0e0' }}>
                     <Container maxWidth="xl">

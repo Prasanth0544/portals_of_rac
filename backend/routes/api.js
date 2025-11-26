@@ -37,6 +37,79 @@ router.post('/auth/logout',
   (req, res) => authController.logout(req, res)
 );
 
+// Mark passenger as NO_SHOW
+router.post('/tte/mark-no-show',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  (req, res) => tteController.markNoShowFromQueue(req, res)
+);
+
+// Get eligibility matrix
+router.get('/reallocation/eligibility',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  (req, res) => reallocationController.getEligibilityMatrix(req, res)
+);
+
+// ✅ NEW: Send upgrade offer (online passengers)
+router.post('/reallocation/send-offer',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  (req, res) => reallocationController.sendUpgradeOffer(req, res)
+);
+
+// Apply reallocation manually
+router.post('/reallocation/apply',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  (req, res) => reallocationController.applyReallocation(req, res)
+);
+
+// ===== OFFLINE UPGRADE ROUTES =====
+
+// ✅ NEW: Add offline upgrade to queue
+router.post('/tte/offline-upgrades/add',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  (req, res) => tteController.addOfflineUpgrade(req, res)
+);
+
+// ✅ NEW: Get pending offline upgrades
+router.get('/tte/offline-upgrades',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  (req, res) => tteController.getOfflineUpgrades(req, res)
+);
+
+// ✅ NEW: Confirm offline upgrade
+router.post('/tte/offline-upgrades/confirm',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  (req, res) => tteController.confirmOfflineUpgrade(req, res)
+);
+
+// ✅ NEW: Reject offline upgrade
+router.post('/tte/offline-upgrades/reject',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  (req, res) => tteController.rejectOfflineUpgrade(req, res)
+);
+
+// ========== ACTION HISTORY & UNDO ROUTES ========== ✅ NEW
+// Get action history
+router.get('/tte/action-history',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  (req, res) => tteController.getActionHistory(req, res)
+);
+
+// Undo action
+router.post('/tte/undo',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  (req, res) => tteController.undoAction(req, res)
+);
+
 // ========== TRAIN ROUTES ==========
 router.get('/trains', (req, res) => trainController.list(req, res));
 // Dynamic configuration setup (from frontend)
@@ -190,6 +263,13 @@ router.get('/passenger/pnr/:pnr',
   (req, res) => passengerController.getPNRDetails(req, res)
 );
 
+// Get passenger by IRCTC ID (for boarding pass)
+router.get('/passengers/by-irctc/:irctcId',
+  authMiddleware,
+  requireRole(['PASSENGER']),
+  (req, res) => passengerController.getPassengerByIRCTC(req, res)
+);
+
 // Self-cancellation (mark no-show)
 router.post('/passenger/cancel',
   validationMiddleware.sanitizeBody,
@@ -233,6 +313,20 @@ router.get('/tte/passengers',
   validationMiddleware.checkTrainInitialized,
   validationMiddleware.checkJourneyStarted,
   (req, res) => tteController.getAllPassengersFiltered(req, res)
+);
+
+// Get only currently boarded passengers
+router.get('/tte/boarded-passengers',
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
+  (req, res) => tteController.getCurrentlyBoardedPassengers(req, res)
+);
+
+// Get currently boarded RAC passengers (for offline upgrades)
+router.get('/tte/boarded-rac-passengers',
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
+  (req, res) => tteController.getBoardedRACPassengers(req, res)
 );
 
 // Manual passenger operations

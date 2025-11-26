@@ -20,6 +20,18 @@ export const tteAPI = {
         return response.data;
     },
 
+    // Get currently boarded passengers
+    getBoardedPassengers: async () => {
+        const response = await api.get('/tte/boarded-passengers');
+        return response.data;
+    },
+
+    // Get currently boarded RAC passengers (for offline upgrades)
+    getBoardedRACPassengers: async () => {
+        const response = await api.get('/tte/boarded-rac-passengers');
+        return response.data;
+    },
+
     // Manual mark boarded
     markBoarded: async (pnr) => {
         const response = await api.post('/tte/mark-boarded', { pnr });
@@ -29,6 +41,12 @@ export const tteAPI = {
     // Manual mark deboarded
     markDeboarded: async (pnr) => {
         const response = await api.post('/tte/mark-deboarded', { pnr });
+        return response.data;
+    },
+
+    // Mark passenger as no-show
+    markNoShow: async (pnr) => {
+        const response = await api.post('/tte/mark-no-show', { pnr });
         return response.data;
     },
 
@@ -56,6 +74,33 @@ export const tteAPI = {
     getTrainState: async () => {
         const response = await api.get('/train/state');
         return response.data;
+    },
+
+    // Offline upgrades management
+    getOfflineUpgrades: async () => {
+        const token = localStorage.getItem('token');
+        const response = await api.get('/tte/offline-upgrades', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response;
+    },
+
+    confirmOfflineUpgrade: async (upgradeId) => {
+        const token = localStorage.getItem('token');
+        const response = await api.post('/tte/offline-upgrades/confirm',
+            { upgradeId },
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+        return response;
+    },
+
+    rejectOfflineUpgrade: async (upgradeId) => {
+        const token = localStorage.getItem('token');
+        const response = await api.post('/tte/offline-upgrades/reject',
+            { upgradeId },
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+        return response;
     }
 };
 

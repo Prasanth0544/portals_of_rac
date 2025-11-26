@@ -32,6 +32,8 @@ class TrainState {
 
     // TTE Boarding Verification
     this.boardingVerificationQueue = new Map(); // PNR → VerificationData
+    this.actionHistory = []; // Action history for undo
+    this.MAX_HISTORY_SIZE = 10; // Keep last 10 actions
     this.autoConfirmTimeout = null; // Timer for auto-confirmation
   }
 
@@ -452,6 +454,195 @@ class TrainState {
       currentStation: this.getCurrentStation()?.name || 'Unknown',
       hasQueue: queue.length > 0
     };
+  }
+
+  /**
+   * ========== ACTION HISTORY & UNDO ==========
+   * Record actions for undo functionality
+   */
+  recordAction(actionType, targetPNR, previousState, newState, performedBy = 'SYSTEM') {
+    const { v4: uuidv4 } = require('uuid');
+
+    const action = {
+      actionId: uuidv4(),
+      action: actionType,
+      timestamp: new Date(),
+      performedBy: performedBy,
+      station: this.stations[this.currentStationIdx]?.name || 'Unknown',
+      target: {
+        pnr: targetPNR,
+        name: this.findPassengerByPNR(targetPNR)?.Name || 'Unknown'
+      },
+      previousState: previousState,
+      newState: newState,
+      canUndo: true,
+      undoneAt: null
+    };
+
+    // Add to stack
+    this.actionHistory.push(action);
+
+    // Limit stack size
+    if (this.actionHistory.length > this.MAX_HISTORY_SIZE) {
+      this.actionHistory.shift(); // Remove oldest
+    }
+
+    console.log(`📝 Recorded action: ${actionType} for ${targetPNR}`);
+
+    return action;
+  }
+
+  /**
+   * Undo the last action
+   */
+  async undoLastAction(actionId) {
+    const db = require('../config/db');
+
+    // Find the action by ID
+    const action = this.actionHistory.find(a => a.actionId === actionId);
+
+    if (!action) {
+      throw new Error('Action not found');
+    }
+
+    // Check if can undo
+    if (!action.canUndo) {
+      throw new Error('This action can no longer be undone');
+    }
+
+    if (action.undoneAt) {
+      throw new Error('Action already undone');
+    }
+
+    // Time limit: 30 minutes
+    const timeDiff = Date.now() - new Date(action.timestamp).getTime();
+    if (timeDiff > 30 * 60 * 1000) {
+      throw new Error('Action is too old to undo (>30 minutes)');
+    }
+
+    // Station check
+    if (action.station !== this.stations[this.currentStationIdx]?.name) {
+      throw new Error('Cannot undo actions from previous stations');
+    }
+
+    // Execute undo based on action type
+    switch (action.action) {
+      case 'MARK_NO_SHOW':
+        await this._undoNoShow(action);
+        break;
+
+      case 'CONFIRM_BOARDING':
+        await this._undoBoarding(action);
+        break;
+
+      default:
+        throw new Error(`Unknown action type: ${action.action}`);
+    }
+
+    // Mark as undone
+    action.undoneAt = new Date();
+    action.canUndo = false;
+
+    // Log event
+    this.logEvent('ACTION_UNDONE', `Undone ${action.action} for PNR ${action.target.pnr}`);
+
+    return {
+      success: true,
+      action: action
+    };
+  }
+
+  /**
+   * Undo NO_SHOW marking
+   */
+  async _undoNoShow(action) {
+    const db = require('../config/db');
+    const passenger = this.findPassengerByPNR(action.target.pnr);
+
+    if (!passenger) {
+      throw new Error(`Passenger ${action.target.pnr} not found`);
+    }
+
+    // Restore previous state
+    passenger.NO_show = action.previousState.noShow;
+    passenger.Boarded = action.previousState.boarded;
+
+    // Update database
+    await db.getPassengersCollection().updateOne(
+      { PNR_Number: action.target.pnr },
+      {
+        $set: {
+          NO_show: action.previousState.noShow,
+          Boarded: action.previousState.boarded
+        }
+      }
+    );
+
+    // Update stats
+    if (action.previousState.noShow === false && action.newState.noShow === true) {
+      this.stats.totalNoShows--;
+    }
+
+    console.log(`↩️ Undone NO_SHOW for ${action.target.pnr}`);
+  }
+
+  /**
+   * Undo boarding confirmation
+   */
+  async _undoBoarding(action) {
+    const db = require('../config/db');
+    const passenger = this.findPassengerByPNR(action.target.pnr);
+
+    if (!passenger) {
+      throw new Error(`Passenger ${action.target.pnr} not found`);
+    }
+
+    // Restore to not boarded
+    passenger.Boarded = false;
+
+    // Update database
+    await db.getPassengersCollection().updateOne(
+      { PNR_Number: action.target.pnr },
+      { $set: { Boarded: false } }
+    );
+
+    // Add back to verification queue
+    this.boardingVerificationQueue.set(action.target.pnr, {
+      pnr: action.target.pnr,
+      name: passenger.Name,
+      seat: `${passenger.Coach}-${passenger.Seat_Number}`,
+      verificationStatus: 'PENDING'
+    });
+
+    // Update stats
+    if (action.previousState.boarded === false && action.newState.boarded === true) {
+      this.stats.totalBoarded--;
+    }
+
+    console.log(`↩️ Undone boarding for ${action.target.pnr}`);
+  }
+
+  /**
+   * Disable undo for actions from previous stations
+   */
+  onStationChange() {
+    const currentStation = this.stations[this.currentStationIdx]?.name;
+
+    this.actionHistory.forEach(action => {
+      if (action.station !== currentStation) {
+        action.canUndo = false; // Can't undo actions from previous stations
+      }
+    });
+
+    console.log(`🚫 Disabled undo for actions from previous stations`);
+  }
+
+  /**
+   * Get action history (last 10 actions)
+   */
+  getActionHistory() {
+    // Return most recent first
+    return [...this.actionHistory].reverse();
   }
 }
 

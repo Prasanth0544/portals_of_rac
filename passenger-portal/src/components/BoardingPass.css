@@ -1,0 +1,75 @@
+/* passenger-portal/src/components/BoardingPass.css */
+
+.boarding-pass-card {
+    max-width: 700px;
+    margin: 20px auto;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+.boarding-pass-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.qr-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 0;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8eef3 100%);
+    border-radius: 12px;
+    margin: 10px 0;
+}
+
+.passenger-details {
+    margin: 16px 0;
+}
+
+.action-buttons {
+    margin-top: 16px;
+}
+
+.instructions {
+    margin-top: 16px;
+}
+
+/* Print Styles */
+@media print {
+    .action-buttons {
+        display: none !important;
+    }
+
+    .boarding-pass-card {
+        box-shadow: none !important;
+        border: 2px solid #333;
+        page-break-inside: avoid;
+    }
+
+    .qr-section {
+        background: white !important;
+    }
+
+    /* Hide navigation and other UI */
+    .MuiAppBar-root,
+    .MuiButton-root,
+    footer {
+        display: none !important;
+    }
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+    .boarding-pass-card {
+        margin: 10px;
+        border-radius: 12px !important;
+    }
+
+    .qr-section svg {
+        width: 180px !important;
+        height: 180px !important;
+    }
+}

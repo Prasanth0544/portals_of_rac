@@ -962,20 +962,38 @@ class ReallocationService {
       trainState.stats.totalRACUpgraded++;
       trainState.updateStats();
 
+      // Step 5: Record action and log success
+      this.recordUpgradeAction(racPassenger, newBerth, coPassenger, trainState);
+
+      console.log(`✅ Upgrade complete: ${racPassenger.name} → ${newBerth.fullBerthNo}`);
+
+      // ✅ NEW: Send multi-channel notifications
+      try {
+        const NotificationService = require('./NotificationService');
+        const notificationResults = await NotificationService.sendUpgradeNotification(
+          {
+            pnr: racPassenger.pnr,
+            name: racPassenger.name,
+            email: racPassenger.email,
+            mobile: racPassenger.mobile
+          },
+          'RAC',
+          newBerth
+        );
+        console.log('📧 Notifications sent:', notificationResults);
+      } catch (notifError) {
+        console.error('❌ Notification error (non-critical):', notifError.message);
+        // Don't fail the upgrade if notifications fail
+      }
+
       const result = {
         success: true,
-        mainPassenger: {
-          pnr: racPNR,
-          name: racPassenger.name,
-          oldBerth: `${oldCoachNo}-${oldBerthNo}`,
-          newBerth: newBerth.fullBerthNo,
-          status: 'CNF'
-        },
+        upgradedPassenger: racPassenger,
+        newBerth: newBerth.fullBerthNo,
         coPassenger: coPassenger ? {
           pnr: coPassengerPNR,
           name: coPassengerName,
-          berth: oldBerth.fullBerthNo,
-          status: 'CNF'
+          upgraded: true
         } : null
       };
 
