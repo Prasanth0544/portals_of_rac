@@ -401,7 +401,7 @@ function PassengersPage() {
         <div className="vacant-berths-section" style={{ marginTop: '30px' }}>
           <div className="section-header">
             <h3>
-              🛏️ Vacant Berths at{" "}
+              Vacant Berths at{" "}
               {trainData.stations[trainData.currentStationIdx]?.name}
             </h3>
             <span className="badge-count">{vacantBerths.length} vacant</span>
@@ -414,14 +414,14 @@ function PassengersPage() {
               <div className="vacant-filter-inputs">
                 <input
                   type="text"
-                  placeholder="From Station: (Enter: station code/name)"
+                  placeholder="From Station: (Enter: Station Name/Code)"
                   value={vacantFromStation}
                   onChange={(e) => setVacantFromStation(e.target.value)}
                   className="vacant-filter-input"
                 />
                 <input
                   type="text"
-                  placeholder="To Station: (Enter: station code/name)"
+                  placeholder="To Station: (Enter: Station Name/Code)"
                   value={vacantToStation}
                   onChange={(e) => setVacantToStation(e.target.value)}
                   className="vacant-filter-input"

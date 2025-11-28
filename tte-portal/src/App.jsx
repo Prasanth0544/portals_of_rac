@@ -31,14 +31,6 @@ function OfflineUpgradeVerification() {
     );
 }
 
-// Placeholder hook
-function useTteSocket() {
-    return {
-        isConnected: false,
-        pendingUpgrades: []
-    };
-}
-
 const theme = createTheme({
     palette: {
         primary: {
@@ -63,7 +55,6 @@ function App() {
     const [currentTab, setCurrentTab] = useState(0);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 960); // ✅ NEW: Mobile detection state
     const [menuOpen, setMenuOpen] = useState(false); // ✅ 3-dot menu state
-    const { isConnected, pendingUpgrades } = useTteSocket();
 
     // ✅ NEW: Check for existing auth token on mount
     React.useEffect(() => {
