@@ -67,18 +67,37 @@ const useTteSocket = () => {
     }, []);
 
     /**
-     * Disconnect from WebSocket
+     * Disconnect from WebSocket and cleanup
      */
     const disconnect = useCallback(() => {
+        // Clear reconnect timeout
         if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = null;
         }
 
+        // Close and cleanup socket
         if (socketRef.current) {
-            socketRef.current.close();
-            socketRef.current = null;
+            try {
+                // Remove all event listeners
+                socketRef.current.onopen = null;
+                socketRef.current.onmessage = null;
+                socketRef.current.onclose = null;
+                socketRef.current.onerror = null;
+
+                // Close connection
+                if (socketRef.current.readyState === WebSocket.OPEN) {
+                    socketRef.current.close(1000, 'Component unmount');
+                }
+            } catch (error) {
+                console.error('Error disconnecting socket:', error);
+            } finally {
+                socketRef.current = null;
+            }
         }
 
+        // Clear listeners map
+        listenersRef.current.clear();
         setIsConnected(false);
     }, []);
 

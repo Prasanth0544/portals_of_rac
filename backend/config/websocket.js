@@ -68,22 +68,41 @@ class WebSocketManager {
 
       // Heartbeat - ping every 30s
       ws.isAlive = true;
-      ws.on("pong", () => {
+      const pongHandler = () => {
         ws.isAlive = true;
-      });
+      };
+      ws.on("pong", pongHandler);
 
       const pingInterval = setInterval(() => {
         if (!ws.isAlive) {
           clearInterval(pingInterval);
-          return ws.terminate();
+          try {
+            ws.terminate();
+          } catch (err) {
+            console.error('Error terminating dead connection:', err);
+          }
+          return;
         }
         ws.isAlive = false;
         if (ws.readyState === WebSocket.OPEN) {
-          ws.ping();
+          try {
+            ws.ping();
+          } catch (err) {
+            console.error('Error sending ping:', err);
+          }
         }
       }, 30000);
 
-      ws.on("close", () => clearInterval(pingInterval));
+      // Store interval reference for cleanup
+      ws.pingInterval = pingInterval;
+      ws.pongHandler = pongHandler;
+
+      ws.on("close", () => {
+        if (ws.pingInterval) {
+          clearInterval(ws.pingInterval);
+          ws.pingInterval = null;
+        }
+      });
     });
 
     console.log("");
@@ -192,12 +211,10 @@ class WebSocketManager {
   }
 
   /**
-   * Handle client disconnect - cleanup subscriptions
+   * Handle client disconnect - cleanup subscriptions and prevent memory leaks
    */
   handleClientDisconnect(ws) {
-    this.clients.delete(ws);
-
-    // Remove from all PNR subscriptions
+    // Remove from all PNR subscriptions FIRST
     ws.subscribedPNRs.forEach((pnr) => {
       const subscribers = this.pnrSubscriptions.get(pnr);
       if (subscribers) {
@@ -207,6 +224,27 @@ class WebSocketManager {
         }
       }
     });
+
+    // Clear the subscribed PNRs set
+    ws.subscribedPNRs.clear();
+
+    // Remove from all clients
+    this.clients.delete(ws);
+
+    // Remove event listeners to prevent memory leaks
+    ws.removeAllListeners('message');
+    ws.removeAllListeners('close');
+    ws.removeAllListeners('error');
+    ws.removeAllListeners('pong');
+
+    // Terminate the connection
+    try {
+      if (ws.readyState !== WebSocket.CLOSED) {
+        ws.terminate();
+      }
+    } catch (err) {
+      console.error('Error terminating WebSocket:', err);
+    }
   }
 
   /**
@@ -464,20 +502,51 @@ class WebSocketManager {
   }
 
   /**
-   * Close all connections
+   * Close all connections and cleanup memory
    */
   closeAll() {
+    // Close and cleanup each client
     this.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.close(1000, "Server shutdown");
+      try {
+        // Remove all event listeners
+        client.removeAllListeners('message');
+        client.removeAllListeners('close');
+        client.removeAllListeners('error');
+        client.removeAllListeners('pong');
+
+        // Clear subscriptions
+        client.subscribedPNRs.clear();
+
+        // Clear ping interval
+        if (client.pingInterval) {
+          clearInterval(client.pingInterval);
+          client.pingInterval = null;
+        }
+
+        // Close connection
+        if (client.readyState === WebSocket.OPEN) {
+          client.close(1000, 'Server shutdown');
+        }
+      } catch (err) {
+        console.error('Error closing client:', err);
       }
     });
+
+    // Clear all collections
     this.clients.clear();
     this.pnrSubscriptions.clear();
+
+    // Close server
     if (this.wss) {
-      this.wss.close();
+      try {
+        this.wss.close();
+      } catch (err) {
+        console.error('Error closing WebSocket server:', err);
+      }
+      this.wss = null;
     }
-    console.log("🔌 All WebSocket connections closed");
+
+    console.log('🔌 All WebSocket connections closed and memory cleared');
   }
 }
 

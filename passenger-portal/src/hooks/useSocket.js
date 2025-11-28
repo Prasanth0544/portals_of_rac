@@ -212,23 +212,40 @@ const useSocket = (pnr, options = {}) => {
         // Stop heartbeat
         stopHeartbeat();
 
-        // Close socket
+        // Close socket and cleanup
         if (socketRef.current) {
-            // Unsubscribe from offers
-            if (pnr) {
-                try {
-                    socketRef.current.send(JSON.stringify({
-                        type: WS_EVENTS.UNSUBSCRIBE_OFFERS,
-                        payload: { pnr }
-                    }));
-                } catch (err) {
-                    // Ignore errors when unsubscribing
+            try {
+                // Unsubscribe from offers
+                if (pnr) {
+                    try {
+                        socketRef.current.send(JSON.stringify({
+                            type: WS_EVENTS.UNSUBSCRIBE_OFFERS,
+                            payload: { pnr }
+                        }));
+                    } catch (err) {
+                        // Ignore errors when unsubscribing
+                    }
                 }
-            }
 
-            socketRef.current.close(1000, 'Client disconnect');
-            socketRef.current = null;
+                // Remove all event listeners
+                socketRef.current.onopen = null;
+                socketRef.current.onclose = null;
+                socketRef.current.onerror = null;
+                socketRef.current.onmessage = null;
+
+                // Close connection
+                if (socketRef.current.readyState === WebSocket.OPEN) {
+                    socketRef.current.close(1000, 'Client disconnect');
+                }
+            } catch (err) {
+                console.error('Error during disconnect:', err);
+            } finally {
+                socketRef.current = null;
+            }
         }
+
+        // Clear listeners
+        listenersRef.current.clear();
 
         setIsConnected(false);
         setIsConnecting(false);

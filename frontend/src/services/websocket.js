@@ -59,10 +59,12 @@ class WebSocketService {
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++;
         console.log(`🔄 Reconnecting... (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-        setTimeout(() => this.connect(url), this.reconnectDelay);
+        this.reconnectTimeoutId = setTimeout(() => this.connect(url), this.reconnectDelay);
       } else {
         console.error('❌ Max reconnection attempts reached');
         this.emit('max_reconnect_reached');
+        // Clear websocket reference
+        this.ws = null;
       }
     };
   }
@@ -162,14 +164,36 @@ class WebSocketService {
   }
 
   /**
-   * Disconnect from WebSocket
+   * Disconnect from WebSocket and cleanup
    */
   disconnect() {
     if (this.ws) {
-      this.send({ type: 'UNSUBSCRIBE' });
-      this.ws.close();
-      this.ws = null;
-      this.connected = false;
+      try {
+        // Remove all event listeners
+        if (this.ws.onopen) this.ws.removeEventListener('open', this.ws.onopen);
+        if (this.ws.onmessage) this.ws.removeEventListener('message', this.ws.onmessage);
+        if (this.ws.onclose) this.ws.removeEventListener('close', this.ws.onclose);
+        if (this.ws.onerror) this.ws.removeEventListener('error', this.ws.onerror);
+
+        // Send unsubscribe if connected
+        if (this.ws.readyState === WebSocket.OPEN) {
+          this.send({ type: 'UNSUBSCRIBE' });
+          this.ws.close(1000, 'Client disconnect');
+        }
+      } catch (error) {
+        console.error('Error during WebSocket disconnect:', error);
+      } finally {
+        // Clear references
+        this.ws = null;
+        this.connected = false;
+        this.listeners = {};
+
+        // Clear reconnect timeout
+        if (this.reconnectTimeoutId) {
+          clearTimeout(this.reconnectTimeoutId);
+          this.reconnectTimeoutId = null;
+        }
+      }
     }
   }
 
