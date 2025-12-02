@@ -8,8 +8,8 @@ const webPush = require('web-push');
 const PushSubscriptionService = require('./PushSubscriptionService');
 
 // VAPID keys (generated with: npx web-push generate-vapid-keys)
-const VAPID_PUBLIC_KEY = 'BNPYGoqQvOgIhpDiJqMjf9OL9rGTjmwd62OgA-5igY_pOeQaBGdkUHQqRtikLAXFn1LgWAXk-DUmnKaM60h4nVI';
-const VAPID_PRIVATE_KEY = 'p9sjJDzkxRHQQmTIAM2cViDRamVmi99_G3t4dmpD4Z4';
+const VAPID_PUBLIC_KEY = 'BDhughPM_m3I7tBaCjTi0HYcaFI8o9jSDLTLGizLXFF7iE16_i1wfxXuo36m4MF2GE2YkVeBSrOk-dauMETi98c';
+const VAPID_PRIVATE_KEY = 'KHEcVQEhhay_aPNDTMtQpXWuBjRjDPV06p-jog2veZk';
 
 // Configure VAPID
 webPush.setVapidDetails(
@@ -141,6 +141,36 @@ class WebPushService {
      */
     getVapidPublicKey() {
         return VAPID_PUBLIC_KEY;
+    }
+
+    /**
+     * Send push to ALL TTE portals (for offline passenger upgrades)
+     */
+    async sendPushToAllTTEs(payload) {
+        const subscriptions = PushSubscriptionService.getAllTTESubscriptions();
+
+        if (subscriptions.length === 0) {
+            console.log('⚠️  No TTE subscriptions');
+            return { sent: 0, failed: 0 };
+        }
+
+        console.log(`📡 Broadcasting to ${subscriptions.length} TTE devices`);
+
+        const promises = subscriptions.map(async (sub) => {
+            try {
+                await webPush.sendNotification(sub, JSON.stringify(payload));
+                return { success: true };
+            } catch (err) {
+                console.error('❌ TTE push failed:', err.message);
+                return { success: false };
+            }
+        });
+
+        const results = await Promise.allSettled(promises);
+        const sent = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+
+        console.log(`📊 TTE Push: ${sent}/${subscriptions.length} sent`);
+        return { sent, failed: subscriptions.length - sent };
     }
 }
 

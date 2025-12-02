@@ -137,6 +137,34 @@ class ReallocationService {
                   message: `Upgrade offer available: ${vacantBerthInfo.fullBerthNo}`
                 }
               );
+
+
+              // Send browser push notification
+              const WebPushService = require('./WebPushService');
+
+              if (racPassenger.passengerStatus === 'Online') {
+                // Online passenger -> send to passenger portal
+                await WebPushService.sendPushNotification(
+                  racPassenger.irctcId,
+                  {
+                    title: '🎉 Upgrade Offer Available!',
+                    body: `Berth ${vacantBerthInfo.fullBerthNo} in ${vacantBerthInfo.coachNo} is available!`,
+                    url: 'http://localhost:5175/#/upgrade-offers',
+                    tag: `upgrade-${racPassenger.pnr}`
+                  }
+                );
+                console.log(`   📲 Push sent to Online passenger ${racPassenger.pnr}`);
+              } else {
+                // Offline passenger -> broadcast to all TTEs
+                await WebPushService.sendPushToAllTTEs({
+                  title: '📋 Offline Passenger Upgrade',
+                  body: `${racPassenger.name} (PNR: ${racPassenger.pnr}) - ${vacantBerthInfo.fullBerthNo}`,
+                  url: 'http://localhost:5173/#/upgrade-notifications',
+                  tag: `tte-upgrade-${racPassenger.pnr}`
+                });
+                console.log(`   📲 Push to TTE for offline ${racPassenger.pnr}`);
+              }
+
             }
           }
         } catch (notifError) {

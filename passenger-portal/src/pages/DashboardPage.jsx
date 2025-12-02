@@ -34,6 +34,12 @@ function DashboardPage() {
         fetchData();
 
         const userData = JSON.parse(localStorage.getItem('user') || '{}');
+
+        // Request push notification permission
+        if (userData.irctcId) {
+            requestPushPermission(userData.irctcId);
+        }
+
         const ws = new WebSocket('ws://localhost:5000');
 
         ws.onopen = () => {
@@ -53,8 +59,14 @@ function DashboardPage() {
             }
         };
 
+        // Auto-refresh every 10 seconds
+        const refreshInterval = setInterval(() => {
+            fetchData();
+        }, 10000);
+
         return () => {
             ws.close();
+            clearInterval(refreshInterval);
         };
     }, []);
 

@@ -96,6 +96,16 @@ class ReallocationController {
           await NotificationService.sendNoShowMarkedNotification(pnr, fullPassenger);
           console.log(`📧 NO-SHOW notification sent to passenger ${pnr}`);
 
+          // Send browser push notification
+          const WebPushService = require('../services/WebPushService');
+          if (fullPassenger.irctcId) {
+            await WebPushService.sendNoShowAlert(fullPassenger.irctcId, {
+              pnr: pnr,
+              berth: `${fullPassenger.coach}-${fullPassenger.berth}`
+            });
+            console.log(`📲 Browser push for NO-SHOW sent to ${pnr}`);
+          }
+
           // Create in-app notification
           if (fullPassenger.irctcId) {
             InAppNotificationService.createNotification(

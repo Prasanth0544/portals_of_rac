@@ -601,6 +601,19 @@ class TTEController {
             // Mark as no-show
             const result = await trainState.markBoardedPassengerNoShow(pnr);
 
+            // Store timestamp in MongoDB for 30-minute revert limit
+            try {
+                const db = require('../config/db');
+                const passengersCollection = db.getPassengersCollection();
+                await passengersCollection.updateOne(
+                    { PNR_Number: pnr },
+                    { $set: { NO_show_timestamp: new Date() } }
+                );
+                console.log(`⏰ NO-SHOW timestamp stored for ${pnr}`);
+            } catch (timestampError) {
+                console.error('⚠️ Failed to store NO-SHOW timestamp:', timestampError);
+            }
+
             // Send notification to the no-show passenger
             const NotificationService = require('../services/NotificationService');
             const InAppNotificationService = require('../services/InAppNotificationService');
@@ -631,6 +644,22 @@ class TTEController {
                     // Send email/SMS
                     await NotificationService.sendNoShowMarkedNotification(pnr, fullPassenger);
                     console.log(`📧 NO-SHOW notification sent to passenger ${pnr}`);
+
+                    // Send browser push notification
+                    const WebPushService = require('../services/WebPushService');
+                    console.log(`🔍 DEBUG: fullPassenger.irctcId = "${fullPassenger.irctcId}"`);
+
+                    if (fullPassenger.irctcId) {
+                        console.log(`📲 Attempting to send browser push to ${fullPassenger.irctcId}...`);
+                        const pushResult = await WebPushService.sendNoShowAlert(fullPassenger.irctcId, {
+                            pnr: pnr,
+                            berth: `${fullPassenger.coach}-${fullPassenger.berth}`
+                        });
+                        console.log(`📲 Browser push result:`, pushResult);
+                        console.log(`📲 Browser push sent for NO-SHOW to ${pnr}`);
+                    } else {
+                        console.log(`⚠️ No IRCTC ID found - browser push skipped`);
+                    }
 
                     // Create in-app notification
                     if (fullPassenger.irctcId) {
@@ -726,6 +755,39 @@ class TTEController {
                     success: false,
                     message: 'Train not initialized'
                 });
+            }
+
+            // Check 30-minute time limit
+            try {
+                const db = require('../config/db');
+                const passengersCollection = db.getPassengersCollection();
+                const passenger = await passengersCollection.findOne({ PNR_Number: pnr });
+
+                if (!passenger) {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Passenger not found'
+                    });
+                }
+
+                if (passenger.NO_show_timestamp) {
+                    const noShowTime = new Date(passenger.NO_show_timestamp);
+                    const now = new Date();
+                    const elapsedMinutes = (now - noShowTime) / (1000 * 60);
+
+                    if (elapsedMinutes > 30) {
+                        return res.status(403).json({
+                            success: false,
+                            message: '30-minute revert window has expired. Please contact TTE for assistance.',
+                            elapsedMinutes: Math.floor(elapsedMinutes)
+                        });
+                    }
+
+                    console.log(`✅ Revert allowed: ${Math.floor(elapsedMinutes)} minutes elapsed`);
+                }
+            } catch (timeCheckError) {
+                console.error('⚠️ Error checking NO-SHOW timestamp:', timeCheckError);
+                // Continue with revert if timestamp check fails (backward compatibility)
             }
 
             const result = await trainState.revertBoardedPassengerNoShow(pnr);

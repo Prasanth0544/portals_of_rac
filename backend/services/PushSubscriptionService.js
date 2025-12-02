@@ -6,8 +6,12 @@
 
 class PushSubscriptionService {
     constructor() {
-        // Store subscriptions by IRCTC ID
+        // Store subscriptions by IRCTC ID (passengers)
         this.subscriptions = new Map(); // irctcId -> [subscription objects]
+
+        // Store TTE subscriptions by TTE ID
+        this.tteSubscriptions = new Map(); // tteId -> [subscription objects]
+
         console.log('📱 PushSubscriptionService initialized');
     }
 
@@ -106,6 +110,90 @@ class PushSubscriptionService {
             totalUsers: this.subscriptions.size,
             totalSubscriptions: this.getTotalCount()
         };
+    }
+
+    // ============ TTE SUBSCRIPTION METHODS ============
+
+    /**
+     * Add a push subscription for a TTE
+     */
+    addTTESubscription(tteId, subscription) {
+        if (!tteId) {
+            throw new Error('TTE ID is required');
+        }
+
+        if (!subscription || !subscription.endpoint) {
+            throw new Error('Invalid subscription object');
+        }
+
+        if (!this.tteSubscriptions.has(tteId)) {
+            this.tteSubscriptions.set(tteId, []);
+        }
+
+        const existing = this.tteSubscriptions.get(tteId);
+        const isDuplicate = existing.some(sub => sub.endpoint === subscription.endpoint);
+
+        if (!isDuplicate) {
+            this.tteSubscriptions.get(tteId).push(subscription);
+            console.log(`✅ Added TTE push subscription for ${tteId}`);
+        } else {
+            console.log(`ℹ️  TTE subscription already exists for ${tteId}`);
+        }
+
+        return true;
+    }
+
+    /**
+     * Get all subscriptions for a TTE
+     */
+    getTTESubscriptions(tteId) {
+        return this.tteSubscriptions.get(tteId) || [];
+    }
+
+    /**
+     * Get ALL TTE subscriptions (for broadcasting to all TTEs)
+     */
+    getAllTTESubscriptions() {
+        const allSubs = [];
+        for (const subs of this.tteSubscriptions.values()) {
+            allSubs.push(...subs);
+        }
+        return allSubs;
+    }
+
+    /**
+     * Remove a TTE subscription
+     */
+    removeTTESubscription(tteId, endpoint) {
+        const subs = this.tteSubscriptions.get(tteId);
+
+        if (!subs) return false;
+
+        const index = subs.findIndex(sub => sub.endpoint === endpoint);
+
+        if (index !== -1) {
+            subs.splice(index, 1);
+            console.log(`🗑️  Removed TTE subscription for ${tteId}`);
+
+            if (subs.length === 0) {
+                this.tteSubscriptions.delete(tteId);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Clear all TTE subscriptions
+     */
+    clearTTESubscriptions(tteId) {
+        const deleted = this.tteSubscriptions.delete(tteId);
+        if (deleted) {
+            console.log(`🗑️  Cleared all TTE subscriptions for ${tteId}`);
+        }
+        return deleted;
     }
 }
 

@@ -335,14 +335,44 @@ router.post('/passenger/notifications/mark-all-read',
 router.post('/passenger/push-subscribe',
   (req, res) => passengerController.subscribeToPush(req, res)
 );
-
 router.post('/passenger/push-unsubscribe',
   (req, res) => passengerController.unsubscribeFromPush(req, res)
 );
 
+// VAPID public key endpoint for push subscriptions
+router.get('/push/vapid-public-key', (req, res) => {
+  try {
+    const WebPushService = require('../services/WebPushService');
+    const publicKey = WebPushService.getVapidPublicKey();
+    res.json({ success: true, publicKey });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 router.get('/passenger/vapid-public-key',
   (req, res) => passengerController.getVapidPublicKey(req, res)
 );
+
+// TTE Push Subscription
+router.post('/tte/push-subscribe', async (req, res) => {
+  try {
+    const { tteId, subscription } = req.body;
+
+    if (!tteId || !subscription) {
+      return res.status(400).json({ success: false, error: 'TTE ID and subscription required' });
+    }
+
+    const PushSubscriptionService = require('../services/PushSubscriptionService');
+    PushSubscriptionService.addTTESubscription(tteId, subscription);
+
+    console.log(`✅ TTE ${tteId} subscribed to push`);
+    res.json({ success: true, message: 'TTE subscribed to push notifications' });
+  } catch (error) {
+    console.error('❌ TTE push subscribe error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // ========== TTE/ADMIN PORTAL ROUTES ==========
 

@@ -1,6 +1,7 @@
 // tte-portal/src/pages/DashboardPage.jsx
 import React, { useState, useEffect } from 'react';
 import { tteAPI } from '../api';
+import { subscribeTTEToPush } from '../utils/pushManager';
 import './DashboardPage.css';
 
 function DashboardPage() {
@@ -9,6 +10,12 @@ function DashboardPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Request TTE push notification permission
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user && user.userId) {
+            subscribeTTEToPush(user.userId);
+        }
+
         loadData();
         // Refresh every 30 seconds
         const interval = setInterval(loadData, 30000);
