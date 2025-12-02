@@ -40,7 +40,9 @@ class ConfigController {
       // If DB was previously connected, close and reconnect with new config
       try {
         await db.close();
-      } catch (_) {}
+      } catch (error) {
+        console.warn('Database was not connected or close failed:', error.message);
+      }
 
       await db.connect(global.RAC_CONFIG);
 

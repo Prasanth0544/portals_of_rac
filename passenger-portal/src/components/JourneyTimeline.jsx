@@ -66,7 +66,7 @@ function JourneyTimeline({ stations, currentStationIndex }) {
                         const isLast = index === stations.length - 1;
 
                         return (
-                            <Box key={index} className={`station-item ${status}`}>
+                            <Box key={station.code || station.idx || station.name || `station-${index}`} className={`station-item ${status}`}>
                                 {/* Station Marker */}
                                 <Box className="station-marker">
                                     {getStationIcon(status)}

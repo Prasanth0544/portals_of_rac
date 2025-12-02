@@ -148,7 +148,7 @@ const UpgradeOffersPage = () => {
                 <div className="offers-grid">
                     {offers.map((offer, index) => (
                         <div
-                            key={index}
+                            key={offer.offerId || offer.id || `offer-${index}`}
                             className={`offer-card ${offer.status === 'expired' ? 'expired' : ''}`}
                         >
                             <div className="offer-header">

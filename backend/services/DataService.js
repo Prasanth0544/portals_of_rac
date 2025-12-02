@@ -448,7 +448,9 @@ class DataService {
       const detailsCol = db.getTrainDetailsCollection();
       const doc = await detailsCol.findOne({ Train_No: parseInt(trainNo) });
       if (doc && doc.Train_Name) return doc.Train_Name;
-    } catch (_) { }
+    } catch (error) {
+      console.warn('Could not fetch train name from Train_Details collection:', error.message);
+    }
 
     // Try to get from stations collection metadata if available
     try {

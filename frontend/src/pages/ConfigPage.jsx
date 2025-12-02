@@ -23,7 +23,9 @@ function ConfigPage({ onClose, loadTrainState }) {
       try {
         const res = await getTrains();
         if (res.success) setTrainList(res.data || []);
-      } catch (_) { }
+      } catch (error) {
+        console.warn('Could not load train list:', error.message);
+      }
     })();
   }, []);
 
@@ -71,9 +73,9 @@ function ConfigPage({ onClose, loadTrainState }) {
 
       // Wait a moment for backend to fully initialize
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       await loadTrainState();
-      
+
       // Wait for parent component to update state
       await new Promise(resolve => setTimeout(resolve, 300));
       onClose();

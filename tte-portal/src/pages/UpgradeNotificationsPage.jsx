@@ -123,7 +123,7 @@ const UpgradeNotificationsPage = () => {
                             {sentOffers.map((offer, index) => {
                                 const statusBadge = getStatusBadge(offer.status);
                                 return (
-                                    <tr key={index} className={`row-${offer.status}`}>
+                                    <tr key={offer.pnr || offer.id || `offer-${index}`} className={`row-${offer.status}`}>
                                         <td>{index + 1}</td>
                                         <td className="pnr-cell">{offer.pnr}</td>
                                         <td className="name-cell">{offer.passengerName}</td>

@@ -169,7 +169,7 @@ const TrainControls = () => {
                     <Typography variant="h6" gutterBottom>All Stations</Typography>
                     <List>
                         {trainState.stations.map((station, index) => (
-                            <React.Fragment key={index}>
+                            <React.Fragment key={station.code || station.idx || `station-${index}`}>
                                 {index > 0 && <Divider />}
                                 <ListItem>
                                     <ListItemText
