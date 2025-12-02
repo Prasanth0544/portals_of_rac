@@ -29,6 +29,7 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "twilio": "^5.10.6",
+    "web-push": "^3.6.7",
     "ws": "^8.14.2"
   },
   "devDependencies": {

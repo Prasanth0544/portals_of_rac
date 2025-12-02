@@ -261,7 +261,7 @@ function App() {
 
       if (response.success) {
         await loadTrainState();
-        alert(`✅ ${response.data.name} marked as NO-SHOW\n\nBerth: ${response.data.berth}\nFrom: ${response.data.from} → ${response.data.to}`);
+        alert(`✅ ${response.data.name} marked as NO-SHOW\n\nBerth: ${response.data.berth}\nFrom: ${response.data.Boarding_Station} → ${response.data.Deboarding_Station}`);
       } else {
         alert(`❌ Error: ${response.error}`);
       }
@@ -394,7 +394,7 @@ function App() {
             <>
               <h2>{trainData.trainName || 'Unknown'} (#{trainData.trainNo}) | {trainData.journeyDate || 'N/A'}</h2>
               <p className="route">
-                {trainData?.stations && trainData.stations.length > 0 
+                {trainData?.stations && trainData.stations.length > 0
                   ? `${trainData.stations[0]?.name || 'Start'} → ${trainData.stations[trainData.stations.length - 1]?.name || 'End'}`
                   : 'Loading stations...'}
               </p>

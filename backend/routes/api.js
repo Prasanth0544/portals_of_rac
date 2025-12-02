@@ -264,6 +264,13 @@ router.get('/passenger/pnr/:pnr',
   (req, res) => passengerController.getPNRDetails(req, res)
 );
 
+// Public endpoint to get PNR by IRCTC ID (for passenger portal)
+router.get('/passenger/pnr-by-irctc/:irctcId',
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
+  (req, res) => passengerController.getPassengerByIRCTC(req, res)
+);
+
 // Get passenger by IRCTC ID (for boarding pass)
 router.get('/passengers/by-irctc/:irctcId',
   authMiddleware,
@@ -305,6 +312,36 @@ router.post('/passenger/deny-upgrade',
   validationMiddleware.checkTrainInitialized,
   validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.denyUpgrade(req, res)
+);
+
+// In-app notification endpoints
+router.get('/passenger/notifications',
+  (req, res) => passengerController.getInAppNotifications(req, res)
+);
+
+router.get('/passenger/notifications/unread-count',
+  (req, res) => passengerController.getUnreadCount(req, res)
+);
+
+router.post('/passenger/notifications/:id/read',
+  (req, res) => passengerController.markNotificationRead(req, res)
+);
+
+router.post('/passenger/notifications/mark-all-read',
+  (req, res) => passengerController.markAllNotificationsRead(req, res)
+);
+
+// Push notification endpoints
+router.post('/passenger/push-subscribe',
+  (req, res) => passengerController.subscribeToPush(req, res)
+);
+
+router.post('/passenger/push-unsubscribe',
+  (req, res) => passengerController.unsubscribeFromPush(req, res)
+);
+
+router.get('/passenger/vapid-public-key',
+  (req, res) => passengerController.getVapidPublicKey(req, res)
 );
 
 // ========== TTE/ADMIN PORTAL ROUTES ==========

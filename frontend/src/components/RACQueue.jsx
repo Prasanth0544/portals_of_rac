@@ -48,7 +48,7 @@ function RACQueue({ racQueue = [] }) {
                 <td className="class">{p.class}</td>
                 <td className="berth-type">{p.berthType || "-"}</td>
                 <td className="journey">
-                  {p.from} → {p.to}
+                  {p.Boarding_Station} → {p.Deboarding_Station}
                 </td>
               </tr>
             ))}

@@ -326,6 +326,201 @@
 
 .boarding-rate-value {
     font-size: 32px;
+    color: #e74c3c;
+}
+
+.stat-label {
+    font-size: 10px;
+    color: #5a6c7d;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-weight: 500;
+}
+
+/* Main Content Grid */
+.dashboard-content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+/* Journey Status Card */
+.journey-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 20px;
+    border-radius: 6px;
+    border: 1px solid #e1e8ed;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+}
+
+.journey-card h3 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.card-divider {
+    height: 1px;
+    background: #e1e8ed;
+    margin: 15px 0;
+}
+
+.journey-status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.status-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #d5f4e6;
+    color: #27ae60;
+}
+
+.status-chip.warning {
+    background: #fdebd0;
+    color: #e67e22;
+}
+
+.journey-progress-text {
+    font-size: 12px;
+    color: #5a6c7d;
+}
+
+.current-station-row {
+    background: #e3f2fd;
+    padding: 10px 12px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.current-station-label {
+    font-size: 11px;
+    color: #5a6c7d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.current-station-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2980b9;
+}
+
+.journey-route {
+    font-size: 13px;
+    color: #5a6c7d;
+    margin-bottom: 15px;
+}
+
+.stations-covered-box {
+    background: #ecf0f1;
+    padding: 12px;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+.stations-covered-label {
+    font-size: 11px;
+    color: #5a6c7d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.stations-covered-list {
+    font-size: 14px;
+    color: #2c3e50;
+    font-weight: 500;
+    margin: 0;
+}
+
+.journey-not-started {
+    text-align: center;
+    padding: 30px 0;
+}
+
+.journey-not-started p {
+    font-size: 14px;
+    color: #5a6c7d;
+    margin: 8px 0;
+}
+
+.journey-not-started p:first-child {
+    font-size: 15px;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+/* Passenger Status Card */
+.passenger-status-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 20px;
+    border-radius: 6px;
+    border: 1px solid #e1e8ed;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+}
+
+.passenger-status-card h3 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.status-row-label {
+    font-size: 13px;
+    color: #2c3e50;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #d5f4e6;
+    color: #27ae60;
+}
+
+.status-badge.neutral {
+    background: #ecf0f1;
+    color: #5a6c7d;
+}
+
+.boarding-rate-section {
+    margin-top: 20px;
+}
+
+.boarding-rate-label {
+    font-size: 11px;
+    color: #5a6c7d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.boarding-rate-value {
+    font-size: 32px;
     font-weight: 700;
     color: #2c3e50;
     margin: 0 0 4px 0;
@@ -335,6 +530,55 @@
     font-size: 11px;
     color: #5a6c7d;
     margin: 0;
+}
+
+/* Action Cards Section - Matching Homepage */
+.action-cards-section {
+    margin-bottom: 30px;
+}
+
+.section-title {
+    font-size: 18px;
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.stats-action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.nav-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 20px 15px;
+    border-radius: 8px;
+    border: 1px solid #e1e8ed;
+    box-shadow: 0 2px 6px rgba(44, 62, 80, 0.08);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+}
+
+.nav-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(44, 62, 80, 0.15);
+    border-color: #3498db;
+}
+
+.nav-icon {
+    font-size: 32px;
+}
+
+.nav-text {
+    font-size: 13px;
+    color: #2c3e50;
+    font-weight: 500;
 }
 
 /* Quick Tip Box */
@@ -384,6 +628,10 @@
     .dashboard-content-grid {
         grid-template-columns: 1fr;
     }
+
+    .stats-action-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 @media (max-width: 768px) {
@@ -394,6 +642,10 @@
     .train-status-item {
         flex-direction: column;
         text-align: center;
+    }
+
+    .stats-action-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -408,5 +660,9 @@
 
     .stat-value {
         font-size: 18px;
+    }
+
+    .stats-action-grid {
+        grid-template-columns: 1fr;
     }
 }

@@ -1,102 +1,51 @@
 /**
  * EligibilityService.js
- * Handles all 11 eligibility rule checking for RAC upgrade
- * Extracted from ReallocationService.js
+ * Handles two-stage eligibility checking for RAC upgrade
+ * Stage 1: Hard constraints (Rules 0, 2, 3, 4, 10, 11)
+ * Stage 2: Refinement filters (Rules 5, 6, 7, 8, 9)
  */
 
 const CONSTANTS = require("../../constants/reallocationConstants");
 
+// Look-ahead window for Rule 5 co-passenger check
+const LOOK_AHEAD_SEGMENTS = 2;
+
 class EligibilityService {
   /**
-   * Check if RAC passenger is eligible for a vacant segment
-   * Applies all 11 eligibility rules
-   * @returns {Object} - {eligible: boolean, reason: string}
+   * Check Stage 1 eligibility - Hard constraints
+   * Must pass ALL rules: 0, 2, 3, 4, 10, 11
+   * @returns {Object} - {eligible: boolean, reason: string, stage: 1}
    */
-  isEligibleForSegment(racPassenger, vacantSegment, currentStationIdx, trainState, vacancyId = null) {
+  checkStage1Eligibility(racPassenger, vacantSegment, currentStationIdx, trainState) {
     try {
-      console.log(`\n🔍 Checking eligibility for ${racPassenger.name} (${racPassenger.pnr})`);
-      console.log(`   Vacant: ${vacantSegment.coachNo}-${vacantSegment.berthNo} (${vacantSegment.fromIdx}→${vacantSegment.toIdx})`);
+      console.log(`\n🔍 Stage 1 Check: ${racPassenger.name} (${racPassenger.pnr})`);
 
       // Rule 0: Must be RAC status
       if (racPassenger.pnrStatus !== 'RAC') {
-        console.log(`   ❌ Rule 0 FAILED: Not RAC status (${racPassenger.pnrStatus})`);
-        return { eligible: false, reason: 'Not RAC status' };
+        return { eligible: false, reason: 'Not RAC status', failedRule: 'Rule 0' };
       }
-      console.log(`   ✅ Rule 0 PASSED: RAC status`);
-
-      // Rule 1: Must be ONLINE
-      if (racPassenger.passengerStatus !== 'online') {
-        console.log(`   ❌ Rule 1 FAILED: Not online (${racPassenger.passengerStatus || 'undefined'})`);
-        return { eligible: false, reason: 'Not online' };
-      }
-      console.log(`   ✅ Rule 1 PASSED: Online`);
 
       // Rule 2: Must be boarded
       if (!racPassenger.boarded) {
-        console.log(`   ❌ Rule 2 FAILED: Not boarded (${racPassenger.boarded})`);
-        return { eligible: false, reason: 'Not boarded' };
+        return { eligible: false, reason: 'Not boarded', failedRule: 'Rule 2' };
       }
-      console.log(`   ✅ Rule 2 PASSED: Boarded`);
 
       // Rule 3: Full journey coverage
       const remainingFromIdx = Math.max(racPassenger.fromIdx, currentStationIdx);
-      console.log(`   Rule 3 Check: RAC Journey ${racPassenger.fromIdx}→${racPassenger.toIdx}, Vacant ${vacantSegment.fromIdx}→${vacantSegment.toIdx}, Current: ${currentStationIdx}`);
       if (vacantSegment.fromIdx > remainingFromIdx || vacantSegment.toIdx < racPassenger.toIdx) {
-        console.log(`   ❌ Rule 3 FAILED: Insufficient journey coverage`);
-        return { eligible: false, reason: 'Insufficient journey coverage' };
+        return { eligible: false, reason: 'Insufficient journey coverage', failedRule: 'Rule 3' };
       }
-      console.log(`   ✅ Rule 3 PASSED: Journey coverage OK`);
 
       // Rule 4: Class match
       if (racPassenger.class !== vacantSegment.class) {
-        console.log(`   ❌ Rule 4 FAILED: Class mismatch (RAC: ${racPassenger.class}, Vacant: ${vacantSegment.class})`);
-        return { eligible: false, reason: 'Class mismatch' };
+        return { eligible: false, reason: 'Class mismatch', failedRule: 'Rule 4' };
       }
-      console.log(`   ✅ Rule 4 PASSED: Class match`);
-
-      // Rule 5: Solo RAC constraint - DISABLED
-      // REASON: This rule was preventing valid upgrades from happening.
-      // ORIGINAL LOGIC: Only allow RAC passengers who are currently sharing a berth to be upgraded.
-      //                 This blocked solo RAC passengers from getting upgrades.
-      // DECISION: Disabled to allow all eligible RAC passengers (solo or sharing) to receive upgrade offers.
-      //           If both passengers sharing a RAC berth are eligible, both can be offered different vacant berths.
-      //
-      // ORIGINAL CODE (kept for reference):
-      // const sharingStatus = this.checkSharingStatus(racPassenger, trainState, currentStationIdx);
-      // if (!sharingStatus) {
-      //   return { eligible: false, reason: 'Not sharing or will share berth' };
-      // }
-      //
-      console.log(`   ✅ Rule 5 SKIPPED: Sharing constraint disabled`);
-
-      // Rule 6: No conflicting CNF passenger
-      if (this.checkConflictingCNFPassenger(vacantSegment, currentStationIdx, trainState)) {
-        console.log(`   ❌ Rule 6 FAILED: Conflicting CNF passenger`);
-        return { eligible: false, reason: 'Conflicting CNF passenger' };
-      }
-      console.log(`   ✅ Rule 6 PASSED: No conflicts`);
-
-      // Rule 7: Not already offered this vacancy
-      if (racPassenger.vacancyIdLastOffered === vacancyId) {
-        console.log(`   ❌ Rule 7 FAILED: Already offered this vacancy`);
-        return { eligible: false, reason: 'Already offered this vacancy' };
-      }
-      console.log(`   ✅ Rule 7 PASSED: Not yet offered`);
-
-      // Rule 8: Not already accepted another offer
-      if (racPassenger.offerStatus === 'accepted') {
-        console.log(`   ❌ Rule 8 FAILED: Already accepted another offer`);
-        return { eligible: false, reason: 'Already accepted another offer' };
-      }
-      console.log(`   ✅ Rule 8 PASSED: No accepted offers`);
 
       // Rule 10: Sufficient time remaining
       const segmentsRemaining = vacantSegment.toIdx - currentStationIdx;
       if (segmentsRemaining < 1) {
-        console.log(`   ❌ Rule 10 FAILED: Insufficient time remaining (${segmentsRemaining} segments)`);
-        return { eligible: false, reason: 'Insufficient time remaining' };
+        return { eligible: false, reason: 'Insufficient time remaining', failedRule: 'Rule 10' };
       }
-      console.log(`   ✅ Rule 10 PASSED: Time remaining OK`);
 
       // Rule 11: Minimum 70km journey
       const distance = this.calculateJourneyDistance(
@@ -105,36 +54,118 @@ class EligibilityService {
         trainState
       );
       if (distance < CONSTANTS.ELIGIBILITY_RULES.MIN_JOURNEY_DISTANCE) {
-        console.log(`   ❌ Rule 11 FAILED: Journey too short (${distance}km < 70km)`);
-        return { eligible: false, reason: 'Journey too short (<70km)' };
+        return { eligible: false, reason: `Journey too short (${distance}km < 70km)`, failedRule: 'Rule 11' };
       }
-      console.log(`   ✅ Rule 11 PASSED: Distance OK (${distance}km)`);
 
-      // All rules passed
-      console.log(`   ✅✅✅ ALL RULES PASSED! ${racPassenger.name} is ELIGIBLE!`);
-      return { eligible: true, reason: 'All criteria met' };
+      console.log(`   ✅ Stage 1 PASSED for ${racPassenger.name}`);
+      return { eligible: true, reason: 'Stage 1 passed', stage: 1 };
     } catch (error) {
-      console.error('❌ Error checking eligibility:', error.message);
-      return { eligible: false, reason: `Error: ${error.message}` };
+      console.error('❌ Stage 1 Error:', error.message);
+      return { eligible: false, reason: `Error: ${error.message}`, failedRule: 'Error' };
     }
   }
 
   /**
-   * Check if passenger is sharing or will share berth (Rule 5)
+   * Check Stage 2 eligibility - Refinement filters
+   * Must pass Rules: 5, 6, 7, 8 (Rule 9 is for sorting)
+   * @returns {Object} - {eligible: boolean, reason: string, stage: 2, failedRule?: string}
    */
-  checkSharingStatus(racPassenger, trainState, currentStationIdx) {
+  checkStage2Eligibility(racPassenger, vacantSegment, currentStationIdx, trainState, vacancyId = null) {
+    try {
+      console.log(`\n🔍 Stage 2 Check: ${racPassenger.name} (${racPassenger.pnr})`);
+
+      // Rule 5: Solo RAC constraint (WITH EXCEPTION)
+      const soloCheck = this.checkSoloRACConstraint(racPassenger, trainState, currentStationIdx);
+      if (!soloCheck.eligible) {
+        console.log(`   ❌ Rule 5 FAILED: ${soloCheck.reason}`);
+        return {
+          eligible: false,
+          reason: soloCheck.reason,
+          failedRule: 'Rule 5: Solo RAC'
+        };
+      }
+      console.log(`   ✅ Rule 5 PASSED: ${soloCheck.reason}`);
+
+      // Rule 6: No conflicting CNF passenger
+      if (this.checkConflictingCNFPassenger(vacantSegment, currentStationIdx, trainState)) {
+        return {
+          eligible: false,
+          reason: 'Conflicting CNF passenger',
+          failedRule: 'Rule 6: Conflicting CNF'
+        };
+      }
+
+      // Rule 7: Not already offered this vacancy
+      if (racPassenger.vacancyIdLastOffered === vacancyId) {
+        return {
+          eligible: false,
+          reason: 'Already offered this vacancy',
+          failedRule: 'Rule 7: Already Offered'
+        };
+      }
+
+      // Rule 8: Not already accepted another offer
+      if (racPassenger.offerStatus === 'accepted') {
+        return {
+          eligible: false,
+          reason: 'Already accepted another offer',
+          failedRule: 'Rule 8: Already Accepted'
+        };
+      }
+
+      console.log(`   ✅✅✅ Stage 2 PASSED! ${racPassenger.name} is FULLY ELIGIBLE!`);
+      return { eligible: true, reason: 'All criteria met', stage: 2 };
+    } catch (error) {
+      console.error('❌ Stage 2 Error:', error.message);
+      return { eligible: false, reason: `Error: ${error.message}`, failedRule: 'Error' };
+    }
+  }
+
+  /**
+   * Rule 5: Check Solo RAC Constraint with 2-segment exception
+   * LOGIC:
+   * - IF passenger is ALONE on berth:
+   *     - IF co-passenger will board within next 2 segments: ELIGIBLE (exception)
+   *     - ELSE: NOT ELIGIBLE (already has full berth)
+   * - ELSE (sharing): ELIGIBLE
+   */
+  checkSoloRACConstraint(racPassenger, trainState, currentStationIdx) {
     // Check if currently sharing
     if (racPassenger.coPassenger) {
-      return true; // Currently sharing
+      return { eligible: true, reason: 'Currently sharing berth' };
     }
 
-    // Check if co-passenger will board later
+    // Find co-passenger
     const coPassenger = this.findCoPassenger(racPassenger, trainState);
-    if (coPassenger && coPassenger.fromIdx >= currentStationIdx) {
-      return true; // Will share when co-passenger boards
+
+    if (!coPassenger) {
+      // Solo passenger with no co-passenger at all
+      return {
+        eligible: false,
+        reason: 'Solo RAC with no co-passenger scheduled'
+      };
     }
 
-    return false; // Solo passenger
+    // Check if co-passenger boards within next N segments
+    const boardingGap = coPassenger.fromIdx - currentStationIdx;
+
+    if (boardingGap > 0 && boardingGap <= LOOK_AHEAD_SEGMENTS) {
+      return {
+        eligible: true,
+        reason: `Co-passenger boards in ${boardingGap} segment(s) (exception)`
+      };
+    }
+
+    // Co-passenger boards too far in future or already boarded
+    if (boardingGap > LOOK_AHEAD_SEGMENTS) {
+      return {
+        eligible: false,
+        reason: `Solo RAC, co-passenger boards in ${boardingGap} segments (>${LOOK_AHEAD_SEGMENTS})`
+      };
+    }
+
+    // Co-passenger already on train (boardingGap <= 0)
+    return { eligible: true, reason: 'Sharing or will share soon' };
   }
 
   /**
@@ -208,32 +239,31 @@ class EligibilityService {
   }
 
   /**
-   * Get eligible RAC passengers for a vacant segment
-   * Sorted by RAC priority
+   * Get Stage 1 eligible RAC passengers for a vacant segment
+   * Returns passengers who pass basic constraints
    */
-  getEligibleRACForVacantSegment(vacantSegment, currentStationIdx, trainState, vacancyId = null) {
+  getStage1EligibleRAC(vacantSegment, currentStationIdx, trainState) {
     try {
       const racQueue = trainState.getBoardedRACPassengers();
       const eligible = [];
 
       racQueue.forEach(rac => {
-        const result = this.isEligibleForSegment(
+        const result = this.checkStage1Eligibility(
           rac,
           vacantSegment,
           currentStationIdx,
-          trainState,
-          vacancyId
+          trainState
         );
 
         if (result.eligible) {
           eligible.push({
             ...rac,
-            eligibilityReason: result.reason,
+            stage1Passed: true,
           });
         }
       });
 
-      // Sort by RAC priority (RAC 1 > RAC 2 > RAC 3)
+      // Sort by RAC priority (RAC 1 > RAC 2 > RAC 3) - Rule 9
       eligible.sort((a, b) => {
         const getRACNum = (status) => {
           const match = status?.match(/RAC\s*(\d+)/i);
@@ -244,9 +274,57 @@ class EligibilityService {
 
       return eligible;
     } catch (error) {
-      console.error('Error getting eligible RAC:', error.message);
+      console.error('Error getting Stage 1 eligible:', error.message);
       return [];
     }
+  }
+
+  /**
+   * Get Stage 2 results (three lists: online eligible, offline eligible, not eligible)
+   */
+  getStage2Results(stage1Eligible, vacantSegment, currentStationIdx, trainState, vacancyId = null) {
+    const onlineEligible = [];
+    const offlineEligible = [];
+    const notEligible = [];
+
+    stage1Eligible.forEach(rac => {
+      const result = this.checkStage2Eligibility(
+        rac,
+        vacantSegment,
+        currentStationIdx,
+        trainState,
+        vacancyId
+      );
+
+      if (result.eligible) {
+        // Separate by online/offline status
+        if (rac.passengerStatus?.toLowerCase() === 'online') {
+          onlineEligible.push({
+            ...rac,
+            stage2Passed: true,
+          });
+        } else {
+          offlineEligible.push({
+            ...rac,
+            stage2Passed: true,
+          });
+        }
+      } else {
+        // Failed Stage 2
+        notEligible.push({
+          ...rac,
+          stage2Passed: false,
+          failedRule: result.failedRule,
+          failureReason: result.reason,
+        });
+      }
+    });
+
+    return {
+      onlineEligible,
+      offlineEligible,
+      notEligible,
+    };
   }
 }
 

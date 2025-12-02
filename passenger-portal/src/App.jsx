@@ -6,6 +6,8 @@ import { CssBaseline, AppBar, Toolbar, Typography, Container, Box, Button } from
 import TrainIcon from '@mui/icons-material/Train';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage'; // ✅ NEW - Replace placeholder
+import UpgradeOffersPage from './pages/UpgradeOffersPage'; // ✅ Upgrade offers
+import NotificationBell from './components/NotificationBell'; // ✅ Notifications
 import './App.css';
 import './UserMenu.css'; // ✅ 3-dot menu styling
 
@@ -101,6 +103,11 @@ function App() {
                             <Button color="inherit" component={Link} to="/">
                                 Home
                             </Button>
+                            <Button color="inherit" component={Link} to="/upgrades">
+                                ⬆️ Upgrades
+                            </Button>
+                            {/* ✅ Notification Bell */}
+                            <NotificationBell irctcId={user?.IRCTC_ID} />
                             {/* ✅ 3-dot menu */}
                             <div className="user-menu">
                                 <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)}>
@@ -125,6 +132,7 @@ function App() {
                     <Box sx={{ flex: 1 }}>
                         <Routes>
                             <Route path="/" element={<DashboardPage />} />
+                            <Route path="/upgrades" element={<UpgradeOffersPage />} />
                         </Routes>
                     </Box>
 

@@ -29,7 +29,8 @@ class TTEController {
                         passengers = passengers.filter(p => p.boarded);
                         break;
                     case 'pending':
-                        passengers = passengers.filter(p => !p.boarded && !p.noShow && p.fromIdx >= trainState.currentStationIdx);
+                        // ✅ FIXED: No-show passengers should remain visible
+                        passengers = passengers.filter(p => !p.boarded && p.fromIdx >= trainState.currentStationIdx);
                         break;
                     case 'deboarded':
                         passengers = passengers.filter(p => p.toIdx < trainState.currentStationIdx);
@@ -86,12 +87,11 @@ class TTEController {
             let passengers = trainState.getAllPassengers();
 
             // Filter for currently boarded passengers only
-            // Excludes passengers deboarding at current station
+            // ✅ FIXED: No-show passengers should remain visible throughout journey
             passengers = passengers.filter(p => {
                 return p.boarded === true &&        // Must be boarded
                     p.fromIdx <= currentIdx &&   // Must have boarded by now
-                    p.toIdx > currentIdx &&      // Haven't deboarded yet (excludes current station deboarding)
-                    !p.noShow;                   // Not a no-show
+                    p.toIdx > currentIdx;        // Haven't deboarded yet
             });
 
             res.json({
@@ -132,12 +132,12 @@ class TTEController {
             let passengers = trainState.getAllPassengers();
 
             // Filter for currently boarded RAC passengers only
+            // ✅ FIXED: No-show RAC passengers should remain visible
             passengers = passengers.filter(p => {
                 return p.pnrStatus === 'RAC' &&      // Must be RAC status
                     p.boarded === true &&         // Must be boarded
                     p.fromIdx <= currentIdx &&    // Must have boarded by now
-                    p.toIdx > currentIdx &&       // Haven't deboarded yet
-                    !p.noShow;                    // Not a no-show
+                    p.toIdx > currentIdx;         // Haven't deboarded yet
             });
 
             // Separate by Online/Offline status
@@ -444,7 +444,8 @@ class TTEController {
                     rac: trainState.stats.racPassengers,
                     racUpgraded: trainState.stats.totalRACUpgraded || 0,
                     boarded: allPassengers.filter(p => p.boarded).length,
-                    pending: allPassengers.filter(p => !p.boarded && !p.noShow && p.fromIdx >= trainState.currentStationIdx).length,
+                    // ✅ FIXED: No-show passengers should be shown in pending
+                    pending: allPassengers.filter(p => !p.boarded && p.fromIdx >= trainState.currentStationIdx).length,
                     deboarded: trainState.stats.totalDeboarded,
                     noShows: trainState.stats.totalNoShows,
                     currentOnboard: trainState.stats.currentOnboard
@@ -581,8 +582,97 @@ class TTEController {
                 });
             }
 
-            // Use the new method for boarded passengers
+            // CRITICAL: Capture berth info BEFORE marking no-show
+            const location = trainState.findPassenger(pnr);
+            let vacantBerthInfo = null;
+
+            if (location) {
+                vacantBerthInfo = {
+                    berth: location.berth,
+                    coachNo: location.coachNo,
+                    berthNo: location.berth.berthNo,
+                    fullBerthNo: location.berth.fullBerthNo,
+                    type: location.berth.type,
+                    class: location.coach?.class || 'SL',
+                    coachName: location.coach?.coach_name || location.coachNo
+                };
+            }
+
+            // Mark as no-show
             const result = await trainState.markBoardedPassengerNoShow(pnr);
+
+            // Send notification to the no-show passenger
+            const NotificationService = require('../services/NotificationService');
+            const InAppNotificationService = require('../services/InAppNotificationService');
+            try {
+                const result = trainState.findPassenger(pnr);
+                if (result && result.passenger) {
+                    const passenger = result.passenger;
+
+                    // Fetch Email from MongoDB (trainState doesn't include it)
+                    const db = require('../config/db');
+                    const passengersCollection = db.getPassengersCollection();
+                    const passengerFromDB = await passengersCollection.findOne({ PNR_Number: pnr });
+
+                    console.log(`🔍 DEBUG MongoDB passenger:`, {
+                        found: !!passengerFromDB,
+                        Email: passengerFromDB?.Email,
+                        IRCTC_ID: passengerFromDB?.IRCTC_ID
+                    });
+
+                    // Merge MongoDB data with in-memory data
+                    const fullPassenger = {
+                        ...passenger,
+                        Email: passengerFromDB?.Email,
+                        Mobile: passengerFromDB?.Mobile,
+                        irctcId: passengerFromDB?.IRCTC_ID
+                    };
+
+                    // Send email/SMS
+                    await NotificationService.sendNoShowMarkedNotification(pnr, fullPassenger);
+                    console.log(`📧 NO-SHOW notification sent to passenger ${pnr}`);
+
+                    // Create in-app notification
+                    if (fullPassenger.irctcId) {
+                        InAppNotificationService.createNotification(
+                            fullPassenger.irctcId,
+                            'NO_SHOW_MARKED',
+                            {
+                                pnr,
+                                berth: `${passenger.coach}-${passenger.berth}`,
+                                coach: passenger.coach,
+                                message: 'You have been marked as NO-SHOW by TTE'
+                            }
+                        );
+                    }
+                }
+            } catch (notifError) {
+                console.error('❌ Failed to send no-show notification:', notifError);
+            }
+
+            // Process vacancy for upgrade offers if berth info was captured
+            if (vacantBerthInfo) {
+                const currentStation = trainState.getCurrentStation();
+                const ReallocationService = require('../services/ReallocationService');
+
+                try {
+                    const offerResult = await ReallocationService.processVacancyForUpgrade(
+                        trainState,
+                        vacantBerthInfo,
+                        currentStation
+                    );
+
+                    if (offerResult.error) {
+                        console.warn(`⚠️  Vacancy processing had errors: ${offerResult.error}`);
+                    } else if (offerResult.offersCreated > 0) {
+                        console.log(`✅ Created ${offerResult.offersCreated} upgrade offer(s)`);
+                    }
+                } catch (vacancyError) {
+                    console.error('❌ Error processing vacancy for upgrades:', vacancyError);
+                }
+            } else {
+                console.warn('⚠️  Could not capture berth info for vacancy processing');
+            }
 
             res.json({
                 success: true,
@@ -1037,6 +1127,37 @@ class TTEController {
             res.status(500).json({
                 success: false,
                 message: "Failed to reject offline upgrade",
+                error: error.message
+            });
+        }
+    }
+
+    /**
+     * Get all sent upgrade offers (for TTE portal tracking)
+     * Shows all upgrade offers sent to online passengers via Passenger Portal
+     */
+    getSentUpgradeOffers(req, res) {
+        try {
+            const UpgradeNotificationService = require('../services/UpgradeNotificationService');
+
+            const sentOffers = UpgradeNotificationService.getAllSentNotifications();
+
+            res.json({
+                success: true,
+                data: sentOffers,
+                count: sentOffers.length,
+                stats: {
+                    total: sentOffers.length,
+                    pending: sentOffers.filter(o => o.status === 'pending').length,
+                    accepted: sentOffers.filter(o => o.status === 'accepted').length,
+                    denied: sentOffers.filter(o => o.status === 'denied').length
+                }
+            });
+        } catch (error) {
+            console.error("Error fetching sent upgrade offers:", error);
+            res.status(500).json({
+                success: false,
+                message: "Failed to fetch sent upgrade offers",
                 error: error.message
             });
         }

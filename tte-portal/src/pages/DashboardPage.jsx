@@ -215,6 +215,44 @@ function DashboardPage() {
                 </div>
             </div>
 
+            {/* Quick Actions & Navigation - Matching Homepage Style */}
+            <div className="action-cards-section">
+                <h3 className="section-title">📊 Quick Statistics & Navigation</h3>
+
+                <div className="stats-action-grid">
+                    {/* Navigation Cards matching homepage */}
+                    <div className="nav-card" onClick={() => window.location.href = '#/passengers'}>
+                        <span className="nav-icon">👤➕</span>
+                        <span className="nav-text">Add Passenger</span>
+                    </div>
+
+                    <div className="nav-card" onClick={() => window.location.href = '#/passengers'}>
+                        <span className="nav-icon">🚂</span>
+                        <span className="nav-text">Coaches & Berths</span>
+                    </div>
+
+                    <div className="nav-card" onClick={() => window.location.href = '#/passengers'}>
+                        <span className="nav-icon">👥</span>
+                        <span className="nav-text">Passenger List & Vacant Positions</span>
+                    </div>
+
+                    <div className="nav-card" onClick={() => window.location.href = '#/offline-upgrades'}>
+                        <span className="nav-icon">📊</span>
+                        <span className="nav-text">Segment View</span>
+                    </div>
+
+                    <div className="nav-card" onClick={() => window.location.href = '#/action-history'}>
+                        <span className="nav-icon">⚙️</span>
+                        <span className="nav-text">Update Config</span>
+                    </div>
+
+                    <div className="nav-card" onClick={() => window.location.href = '#/action-history'}>
+                        <span className="nav-icon">🔍</span>
+                        <span className="nav-text">Allocation Diagnostics</span>
+                    </div>
+                </div>
+            </div>
+
             {/* Quick Tip */}
             <div className="quick-tip-box">
                 <p>

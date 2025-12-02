@@ -71,6 +71,49 @@ class ReallocationController {
 
       const result = await ReallocationService.markNoShow(trainState, pnr);
 
+      // Send notification to the no-show passenger
+      const NotificationService = require('../services/NotificationService');
+      const InAppNotificationService = require('../services/InAppNotificationService');
+      try {
+        const result = trainState.findPassenger(pnr);
+        if (result && result.passenger) {
+          const passenger = result.passenger;
+
+          // Fetch Email from MongoDB (trainState doesn't include it)
+          const db = require('../config/db');
+          const passengersCollection = db.getPassengersCollection();
+          const passengerFromDB = await passengersCollection.findOne({ PNR_Number: pnr });
+
+          // Merge MongoDB data with in-memory data
+          const fullPassenger = {
+            ...passenger,
+            Email: passengerFromDB?.Email,
+            Mobile: passengerFromDB?.Mobile,
+            irctcId: passengerFromDB?.IRCTC_ID
+          };
+
+          // Send email/SMS
+          await NotificationService.sendNoShowMarkedNotification(pnr, fullPassenger);
+          console.log(`📧 NO-SHOW notification sent to passenger ${pnr}`);
+
+          // Create in-app notification
+          if (fullPassenger.irctcId) {
+            InAppNotificationService.createNotification(
+              fullPassenger.irctcId,
+              'NO_SHOW_MARKED',
+              {
+                pnr,
+                berth: `${passenger.coach}-${passenger.berth}`,
+                coach: passenger.coach,
+                message: 'You have been marked as NO-SHOW'
+              }
+            );
+          }
+        }
+      } catch (notifError) {
+        console.error('❌ Failed to send no-show notification:', notifError);
+      }
+
       // Process vacancy for upgrade offers if berth info was captured
       if (vacantBerthInfo) {
         const currentStation = trainState.getCurrentStation();
@@ -265,7 +308,81 @@ class ReallocationController {
   }
 
   /**
-   * Get eligibility matrix
+   * Get Stage 1 eligible passengers (basic constraints)
+   */
+  getStage1Eligible(req, res) {
+    try {
+      const trainState = trainController.getGlobalTrainState();
+
+      if (!trainState) {
+        return res.status(400).json({
+          success: false,
+          message: "Train state not initialized"
+        });
+      }
+
+      const stage1Matrix = ReallocationService.getStage1Eligible(trainState);
+
+      res.json({
+        success: true,
+        data: {
+          stage1Matrix: stage1Matrix,
+          totalVacantBerths: stage1Matrix.length,
+          currentStation: trainState.stations?.[trainState.currentStationIdx]?.name || 'Unknown'
+        }
+      });
+    } catch (error) {
+      console.error("Error getting Stage 1 eligible:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to get Stage 1 eligible passengers"
+      });
+    }
+  }
+
+  /**
+   * Get Stage 2 results for specific berth (online/offline/not eligible lists)
+   */
+  getStage2Results(req, res) {
+    try {
+      const { coach, berthNo } = req.query;
+
+      if (!coach || !berthNo) {
+        return res.status(400).json({
+          success: false,
+          message: "Coach and berthNo are required"
+        });
+      }
+
+      const trainState = trainController.getGlobalTrainState();
+
+      if (!trainState) {
+        return res.status(400).json({
+          success: false,
+          message: "Train state not initialized"
+        });
+      }
+
+      const stage2Results = ReallocationService.getStage2Results(trainState, {
+        coach,
+        berthNo
+      });
+
+      res.json({
+        success: true,
+        data: stage2Results
+      });
+    } catch (error) {
+      console.error("Error getting Stage 2 results:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to get Stage 2 results"
+      });
+    }
+  }
+
+  /**
+   * Get eligibility matrix (LEGACY - uses Stage 1 only now)
    */
   getEligibilityMatrix(req, res) {
     try {

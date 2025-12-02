@@ -213,7 +213,7 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations, journe
                       {p.pnrStatus}
                     </span>
                   </div>
-                  <div className="journey-info">🚉 {p.from} → {p.to}</div>
+                  <div className="journey-info">🚉 {p.Boarding_Station} → {p.Deboarding_Station}</div>
                   <div className="passenger-status">
                     {p.noShow ? (
                       <span className="status-icon no-show">❌ No-Show</span>

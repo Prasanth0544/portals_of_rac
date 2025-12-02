@@ -146,6 +146,40 @@ class UpgradeNotificationService {
             n.offeredBerth === berthNo && n.status === 'DENIED'
         );
     }
+
+    /**
+     * Get all sent notifications (for TTE portal tracking)
+     * Returns all upgrade offers sent to passengers with their status
+     */
+    getAllSentNotifications() {
+        const allNotifications = [];
+
+        for (const [pnr, notifications] of this.pendingNotifications.entries()) {
+            notifications.forEach(notification => {
+                allNotifications.push({
+                    pnr: notification.pnr,
+                    passengerName: notification.name,
+                    offeredBerth: notification.offeredBerth,
+                    coach: notification.offeredCoach,
+                    berthNo: notification.offeredSeatNo,
+                    berthType: notification.offeredBerthType,
+                    sentAt: notification.timestamp,
+                    expiresAt: null, // Can add expiry logic if needed
+                    status: notification.status.toLowerCase(),
+                    respondedAt: notification.acceptedAt || notification.deniedAt || null,
+                    offerId: notification.id
+                });
+            });
+        }
+
+        // Sort by most recent first
+        allNotifications.sort((a, b) =>
+            new Date(b.sentAt) - new Date(a.sentAt)
+        );
+
+        return allNotifications;
+    }
 }
+
 
 module.exports = new UpgradeNotificationService();

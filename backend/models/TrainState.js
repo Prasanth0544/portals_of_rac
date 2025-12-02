@@ -191,31 +191,18 @@ class TrainState {
 
     this.coaches.forEach(coach => {
       coach.berths.forEach(berth => {
-        // For vacant berth calculation: check if berth can accommodate more passengers 
-        // from current station onwards (i.e., for segments starting at currentIdx)
-        let berthCanAccommodateMore = false;
-
-        // Check all segments from current station onwards
-        for (let segIdx = currentIdx; segIdx < this.stations.length - 1; segIdx++) {
-          const passengersInSegment = berth.segmentOccupancy[segIdx] || [];
-          const berthCapacity = berth.type === 'Side Lower' ? 2 : 1;
-
-          // If berth has space in ANY upcoming segment, count as vacant
-          if (passengersInSegment.length < berthCapacity) {
-            berthCanAccommodateMore = true;
-            break;
-          }
-        }
-
-        if (berthCanAccommodateMore) {
-          vacant++;  // Berth has available capacity
-        } else {
-          occupied++;  // Berth is fully booked for all remaining segments
-        }
-
-        // Count boarded passengers (actual people, not berths)
+        // Count boarded passengers (actual people)
         const boardedPassengers = berth.getBoardedPassengers();
-        totalOnboard += boardedPassengers.length;  // Counts 2 if 2 RAC passengers are boarded
+        totalOnboard += boardedPassengers.length;
+
+        // Count BERTHS (not passengers)
+        // Occupied = berth has at least 1 boarded passenger
+        // Vacant = berth has NO boarded passengers
+        if (boardedPassengers.length > 0) {
+          occupied++;  // This berth is occupied (1 or 2 passengers, still 1 berth)
+        } else {
+          vacant++;    // This berth is empty
+        }
       });
     });
 

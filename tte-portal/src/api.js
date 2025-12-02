@@ -11,6 +11,35 @@ const api = axios.create({
     }
 });
 
+// Add request interceptor to attach token to all requests
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Add response interceptor to handle token expiration
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Token expired or invalid
+            localStorage.removeItem('token');
+            localStorage.removeItem('tteId');
+            alert('⚠️ Session expired. Please login again.');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
 // TTE Portal API
 export const tteAPI = {
     // Get filtered passengers
@@ -44,23 +73,15 @@ export const tteAPI = {
         return response.data;
     },
 
-    // Mark passenger as no-show (requires auth)
+    // Mark passenger as no-show (auth handled by interceptor)
     markNoShow: async (pnr) => {
-        const token = localStorage.getItem('token');
-        const response = await api.post('/tte/mark-no-show',
-            { pnr },
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const response = await api.post('/tte/mark-no-show', { pnr });
         return response.data;
     },
 
-    // Revert no-show status (requires auth)
+    // Revert no-show status (auth handled by interceptor)
     revertNoShow: async (pnr) => {
-        const token = localStorage.getItem('token');
-        const response = await api.post('/tte/revert-no-show',
-            { pnr },
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const response = await api.post('/tte/revert-no-show', { pnr });
         return response.data;
     },
 
@@ -90,30 +111,19 @@ export const tteAPI = {
         return response.data;
     },
 
-    // Offline upgrades management
+    // Offline upgrades management (auth handled by interceptor)
     getOfflineUpgrades: async () => {
-        const token = localStorage.getItem('token');
-        const response = await api.get('/tte/offline-upgrades', {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/tte/offline-upgrades');
         return response;
     },
 
     confirmOfflineUpgrade: async (upgradeId) => {
-        const token = localStorage.getItem('token');
-        const response = await api.post('/tte/offline-upgrades/confirm',
-            { upgradeId },
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const response = await api.post('/tte/offline-upgrades/confirm', { upgradeId });
         return response;
     },
 
     rejectOfflineUpgrade: async (upgradeId) => {
-        const token = localStorage.getItem('token');
-        const response = await api.post('/tte/offline-upgrades/reject',
-            { upgradeId },
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const response = await api.post('/tte/offline-upgrades/reject', { upgradeId });
         return response;
     }
 };

@@ -164,12 +164,16 @@ class NotificationService {
 
         console.log(`📢 Sending NO-SHOW notification for PNR: ${pnr} (${passenger.passengerStatus})`);
 
+        // Get email (handle both 'Email' and 'email' field names from MongoDB)
+        const passengerEmail = passenger.Email || passenger.email;
+        console.log(`🔍 DEBUG: Email="${passengerEmail}" | Configured="${process.env.EMAIL_USER}"`);
+
         // Send Email (for both online and offline)
-        if (passenger.email && process.env.EMAIL_USER) {
+        if (passengerEmail && process.env.EMAIL_USER) {
             try {
                 const mailOptions = {
                     from: `"Indian Railways Alert" <${process.env.EMAIL_USER}>`,
-                    to: passenger.email,
+                    to: passengerEmail,
                     subject: '⚠️ NO-SHOW Alert - Immediate Action Required',
                     html: `
                         <!DOCTYPE html>
@@ -245,7 +249,7 @@ class NotificationService {
 
                 await this.emailTransporter.sendMail(mailOptions);
                 results.email.sent = true;
-                console.log(`📧 NO-SHOW email sent to ${passenger.email}`);
+                console.log(`📧 NO-SHOW email sent to ${passengerEmail}`);
             } catch (error) {
                 results.email.error = error.message;
                 console.error('❌ NO-SHOW email failed:', error.message);

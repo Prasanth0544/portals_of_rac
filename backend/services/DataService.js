@@ -297,6 +297,8 @@ class DataService {
           fromIdx: fromStation.idx,
           to: toStation.code,
           toIdx: toStation.idx,
+          Boarding_Station: fromStation.name,  // Full station name
+          Deboarding_Station: toStation.name,  // Full station name
           pnrStatus: p.PNR_Status,
           class: p.Class,
           racStatus:
@@ -353,6 +355,8 @@ class DataService {
           fromIdx: fromStation ? fromStation.idx : 0,
           to: toStation ? toStation.code : p.Deboarding_Station,
           toIdx: toStation ? toStation.idx : trainState.stations.length - 1,
+          Boarding_Station: fromStation ? fromStation.name : p.Boarding_Station,  // Full station name
+          Deboarding_Station: toStation ? toStation.name : p.Deboarding_Station,  // Full station name
           pnrStatus: p.PNR_Status,
           racStatus: p.Rac_status ? `RAC ${p.Rac_status}` : "RAC",
           coach: p.Assigned_Coach,

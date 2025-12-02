@@ -147,6 +147,15 @@ class VacancyService {
       .sort((a, b) => (b.toIdx - b.fromIdx) - (a.toIdx - a.fromIdx))
       .slice(0, limit);
   }
+
+  /**
+   * Alias for getVacantBerths - for backward compatibility
+   * Returns vacant segments (same as vacant berths)
+   */
+  getVacantSegments(trainState) {
+    return this.getVacantBerths(trainState);
+  }
 }
 
 module.exports = new VacancyService();
+
