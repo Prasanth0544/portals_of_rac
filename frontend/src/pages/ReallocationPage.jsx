@@ -208,11 +208,10 @@ const ReallocationPage = ({ trainData, loadTrainState, onClose }) => {
                         {eligibilityMatrix.map((item, index) => {
                             const candidate = item.topCandidate || item.topEligible;
                             const hasCandidate = !!candidate;
-                            const uniqueKey = `${item.coach}-${item.berthNo}` || `berth-${index}`;
 
                             return (
                                 <div
-                                    key={uniqueKey}
+                                    key={index}
                                     className={`matrix-card ${hasCandidate ? 'has-candidate' : 'no-candidate'}`}
                                 >
                                     {/* Card Header */}
