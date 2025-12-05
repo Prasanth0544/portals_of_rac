@@ -370,3 +370,78 @@
         width: 100%;
     }
 }
+/* Cancelled Ticket Notice */
+.cancelled-notice {
+    background: #ffeaea;
+    border: 2px solid #e74c3c;
+    color: #c0392b;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Action Buttons Row */
+.action-buttons-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.action-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.action-card h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 16px;
+}
+
+.action-card .info-text {
+    color: #7f8c8d;
+    font-size: 13px;
+    margin-bottom: 15px;
+}
+
+.action-card .notice-text {
+    color: #e67e22;
+    font-size: 13px;
+    margin: 0;
+}
+
+/* Cancel Ticket Button */
+.cancel-ticket-btn {
+    padding: 12px 25px;
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cancel-ticket-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+.cancel-ticket-btn:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    .action-buttons-row {
+        grid-template-columns: 1fr;
+    }
+}

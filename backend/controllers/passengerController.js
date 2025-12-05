@@ -1127,10 +1127,32 @@ class PassengerController {
         });
       }
 
-      // Get passenger from database
-      const passenger = await db.getPassengersCollection().findOne({
-        PNR_Number: pnr
+      // Get passenger from database first
+      let passenger = await db.getPassengersCollection().findOne({
+        $or: [
+          { PNR_Number: pnr },
+          { pnr: pnr }
+        ]
       });
+
+      // Fallback: Try in-memory state if DB lookup fails
+      if (!passenger) {
+        const trainState = trainController.getGlobalTrainState();
+        if (trainState) {
+          const memPassenger = trainState.findPassengerByPNR(pnr);
+          if (memPassenger) {
+            // Create a pseudo-passenger object from in-memory data
+            passenger = {
+              PNR_Number: memPassenger.pnr || pnr,
+              From: memPassenger.from,
+              To: memPassenger.to,
+              Boarding_Station: memPassenger.from,
+              Deboarding_Station: memPassenger.to,
+              boardingStationChanged: memPassenger.boardingStationChanged || false
+            };
+          }
+        }
+      }
 
       if (!passenger) {
         return res.status(404).json({
@@ -1151,20 +1173,39 @@ class PassengerController {
 
       // Get train state to access route
       const trainState = trainController.getGlobalTrainState();
-      if (!trainState || !trainState.journey || !trainState.journey.stations) {
+      if (!trainState || !trainState.stations || trainState.stations.length === 0) {
         return res.status(400).json({
           success: false,
           message: 'Train journey not initialized'
         });
       }
 
-      const stations = trainState.journey.stations;
+      const stations = trainState.stations;
 
       // Find current boarding station index
-      const currentFromCode = passenger.From;
-      const currentStationIdx = stations.findIndex(s => s.code === currentFromCode);
+      // Try to use From code first, fallback to matching Boarding_Station name
+      let currentFromCode = passenger.From;
+      let currentStationIdx = -1;
+
+      if (currentFromCode) {
+        currentStationIdx = stations.findIndex(s => s.code === currentFromCode);
+      }
+
+      // If not found by code, try matching by full station name
+      if (currentStationIdx === -1 && passenger.Boarding_Station) {
+        currentStationIdx = stations.findIndex(s =>
+          s.name.toLowerCase() === passenger.Boarding_Station.toLowerCase() ||
+          s.name.toLowerCase().includes(passenger.Boarding_Station.toLowerCase()) ||
+          passenger.Boarding_Station.toLowerCase().includes(s.name.toLowerCase())
+        );
+      }
 
       if (currentStationIdx === -1) {
+        console.error('Station lookup failed:', {
+          From: passenger.From,
+          Boarding_Station: passenger.Boarding_Station,
+          availableStations: stations.map(s => ({ code: s.code, name: s.name }))
+        });
         return res.status(400).json({
           success: false,
           message: 'Current boarding station not found in route'
@@ -1172,8 +1213,26 @@ class PassengerController {
       }
 
       // Get next 3 forward stations (excluding current and deboarding station)
-      const toCode = passenger.To;
-      const toIdx = stations.findIndex(s => s.code === toCode);
+      let toCode = passenger.To;
+      let toIdx = -1;
+
+      if (toCode) {
+        toIdx = stations.findIndex(s => s.code === toCode);
+      }
+
+      // If not found by code, try matching by deboarding station name
+      if (toIdx === -1 && passenger.Deboarding_Station) {
+        toIdx = stations.findIndex(s =>
+          s.name.toLowerCase() === passenger.Deboarding_Station.toLowerCase() ||
+          s.name.toLowerCase().includes(passenger.Deboarding_Station.toLowerCase()) ||
+          passenger.Deboarding_Station.toLowerCase().includes(s.name.toLowerCase())
+        );
+      }
+
+      // Default to last station if not found
+      if (toIdx === -1) {
+        toIdx = stations.length;
+      }
 
       const availableStations = [];
       for (let i = currentStationIdx + 1; i < Math.min(currentStationIdx + 4, toIdx); i++) {
@@ -1225,10 +1284,12 @@ class PassengerController {
         });
       }
 
-      // Get passenger from database
+      // Get passenger from database - try both PNR field names
       const passenger = await db.getPassengersCollection().findOne({
-        PNR_Number: pnr,
-        IRCTC_ID: irctcId
+        $or: [
+          { PNR_Number: pnr, IRCTC_ID: irctcId },
+          { pnr: pnr, IRCTC_ID: irctcId }
+        ]
       });
 
       if (!passenger) {
@@ -1248,14 +1309,14 @@ class PassengerController {
 
       // Get train state to validate new station
       const trainState = trainController.getGlobalTrainState();
-      if (!trainState || !trainState.journey || !trainState.journey.stations) {
+      if (!trainState || !trainState.stations || trainState.stations.length === 0) {
         return res.status(400).json({
           success: false,
           message: 'Train journey not initialized'
         });
       }
 
-      const stations = trainState.journey.stations;
+      const stations = trainState.stations;
       const currentFromCode = passenger.From;
       const currentStationIdx = stations.findIndex(s => s.code === currentFromCode);
       const newStationIdx = stations.findIndex(s => s.code === newStationCode);
@@ -1341,6 +1402,98 @@ class PassengerController {
 
     } catch (error) {
       console.error('❌ Error changing boarding station:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Self-cancel ticket (passenger marks themselves as NO-SHOW)
+   * POST /api/passenger/self-cancel
+   * Body: { pnr, irctcId }
+   */
+  async selfCancelTicket(req, res) {
+    try {
+      const { pnr, irctcId } = req.body;
+
+      if (!pnr || !irctcId) {
+        return res.status(400).json({
+          success: false,
+          message: 'PNR and IRCTC ID are required'
+        });
+      }
+
+      // Get passenger from database and verify IRCTC ID - try both PNR field names
+      const passenger = await db.getPassengersCollection().findOne({
+        $or: [
+          { PNR_Number: pnr, IRCTC_ID: irctcId },
+          { pnr: pnr, IRCTC_ID: irctcId }
+        ]
+      });
+
+      if (!passenger) {
+        return res.status(404).json({
+          success: false,
+          message: 'Passenger not found or IRCTC ID does not match'
+        });
+      }
+
+      // Check if already cancelled/no-show
+      if (passenger.NO_show) {
+        return res.status(400).json({
+          success: false,
+          message: 'Ticket is already cancelled'
+        });
+      }
+
+      // Update database - set NO_show to true
+      const result = await db.getPassengersCollection().updateOne(
+        { PNR_Number: pnr, IRCTC_ID: irctcId },
+        {
+          $set: {
+            NO_show: true,
+            NO_show_timestamp: new Date(),
+            selfCancelled: true,
+            selfCancelledAt: new Date()
+          }
+        }
+      );
+
+      if (result.modifiedCount === 0) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to cancel ticket'
+        });
+      }
+
+      // Update in-memory state if train is initialized
+      const trainState = trainController.getGlobalTrainState();
+      if (trainState) {
+        const memPassenger = trainState.findPassengerByPNR(pnr);
+        if (memPassenger) {
+          memPassenger.noShow = true;
+
+          // Free up the berth
+          const location = trainState.findPassenger(pnr);
+          if (location) {
+            location.berth.removePassenger(pnr);
+            location.berth.updateStatus();
+          }
+        }
+      }
+
+      console.log(`✅ Ticket self-cancelled for PNR: ${pnr}`);
+
+      res.json({
+        success: true,
+        message: 'Ticket cancelled successfully. Your berth will be made available for other passengers.',
+        pnr: pnr
+      });
+
+    } catch (error) {
+      console.error('❌ Error self-cancelling ticket:', error);
       res.status(500).json({
         success: false,
         error: error.message

@@ -10,6 +10,7 @@ const configController = require('../controllers/configController');
 const authController = require('../controllers/authController'); // ✅ NEW
 const tteController = require('../controllers/tteController'); // ✅ NEW - TTE operations
 const stationWiseApprovalController = require('../controllers/StationWiseApprovalController'); // ✅ NEW - Station-wise approval
+const otpController = require('../controllers/otpController'); // ✅ NEW - OTP verification
 const validationMiddleware = require('../middleware/validation');
 const { authMiddleware, requireRole, requirePermission } = require('../middleware/auth'); // ✅ NEW
 
@@ -67,6 +68,24 @@ router.get('/passenger/available-boarding-stations/:pnr',
 // Change boarding station (one-time only)
 router.post('/passenger/change-boarding-station',
   (req, res) => passengerController.changeBoardingStation(req, res)
+);
+
+// Self-cancel ticket (passenger marks as NO-SHOW)
+router.post('/passenger/self-cancel',
+  (req, res) => passengerController.selfCancelTicket(req, res)
+);
+
+// ========== OTP ROUTES ==========
+// Send OTP for verification
+router.post('/otp/send',
+  validationMiddleware.sanitizeBody,
+  (req, res) => otpController.sendOTP(req, res)
+);
+
+// Verify OTP
+router.post('/otp/verify',
+  validationMiddleware.sanitizeBody,
+  (req, res) => otpController.verifyOTP(req, res)
 );
 
 

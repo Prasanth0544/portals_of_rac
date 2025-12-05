@@ -96,42 +96,32 @@ function PNRSearchPage() {
                         <div className="detail-grid">
                             <div className="detail-item">
                                 <span className="detail-label">PNR Number</span>
-                                <span className="detail-value">{passenger.PNR_Number || passenger.pnr}</span>
+                                <span className="detail-value">{passenger.pnr}</span>
                             </div>
                             <div className="detail-item">
                                 <span className="detail-label">Passenger Name</span>
-                                <span className="detail-value">{passenger.Name || passenger.name}</span>
+                                <span className="detail-value">{passenger.name}</span>
                             </div>
-                            <div className="detail-item">
-                                <span className="detail-label">Age / Gender</span>
-                                <span className="detail-value">
-                                    {passenger.Age || passenger.age} yrs / {passenger.Gender || passenger.gender}
-                                </span>
-                            </div>
-                            <div className="detail-item">
-                                <span className="detail-label">Booking Status</span>
-                                <span className={`status-badge ${getStatusClass(passenger.PNR_Status || passenger.status)}`}>
-                                    {passenger.PNR_Status || passenger.status || 'N/A'}
-                                </span>
-                            </div>
+                            {/* Age and Booking Status Hidden as per request */}
+
                             <div className="detail-item">
                                 <span className="detail-label">Coach / Berth</span>
                                 <span className="detail-value">
-                                    {passenger.Assigned_Coach || passenger.coach || '-'} / {passenger.Assigned_berth || passenger.berth || '-'}
+                                    {passenger.coach || '-'} / {passenger.seatNo || '-'}
                                 </span>
                             </div>
                             <div className="detail-item">
                                 <span className="detail-label">Berth Type</span>
-                                <span className="detail-value">{passenger.Berth_Type || passenger.berthType || '-'}</span>
+                                <span className="detail-value">{passenger.berthType || '-'}</span>
                             </div>
                             <div className="detail-item">
                                 <span className="detail-label">Class</span>
-                                <span className="detail-value">{passenger.Class || passenger.class || 'Sleeper'}</span>
+                                <span className="detail-value">{passenger.class || 'Sleeper'}</span>
                             </div>
                             <div className="detail-item">
                                 <span className="detail-label">Train</span>
                                 <span className="detail-value">
-                                    {passenger.Train_Name || 'Train'} ({passenger.Train_Number || '-'})
+                                    {passenger.trainName} ({passenger.trainNo})
                                 </span>
                             </div>
                         </div>
@@ -139,13 +129,13 @@ function PNRSearchPage() {
                         <div className="journey-section">
                             <div className="journey-path">
                                 <div className="station-info">
-                                    <div className="station-code">{passenger.From || passenger.from || '-'}</div>
-                                    <div className="station-name">{passenger.Boarding_Station || 'Boarding Station'}</div>
+                                    <div className="station-code">{passenger.boardingStation || '-'}</div>
+                                    <div className="station-name">{passenger.boardingStationFull || 'Boarding Station'}</div>
                                 </div>
                                 <div className="journey-arrow">→</div>
                                 <div className="station-info">
-                                    <div className="station-code">{passenger.To || passenger.to || '-'}</div>
-                                    <div className="station-name">{passenger.Deboarding_Station || 'Destination'}</div>
+                                    <div className="station-code">{passenger.destinationStation || '-'}</div>
+                                    <div className="station-name">{passenger.destinationStationFull || 'Destination'}</div>
                                 </div>
                             </div>
                         </div>

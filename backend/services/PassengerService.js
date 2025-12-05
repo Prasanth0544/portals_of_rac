@@ -144,7 +144,9 @@ class PassengerService {
             destinationStationFull: passenger.Deboarding_Station,
             boarded: passenger.Boarded || false,
             passengerStatus: passenger.Passenger_Status || 'Offline',
-            noShow: passenger.NO_show || false
+            noShow: passenger.NO_show || false,
+            coach: passenger.Assigned_Coach,
+            seatNo: passenger.Assigned_berth
         };
     }
 

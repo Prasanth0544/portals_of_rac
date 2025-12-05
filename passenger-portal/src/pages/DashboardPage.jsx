@@ -17,7 +17,11 @@ import {
     IconButton,
     Menu,
     MenuItem,
-    Divider
+    Divider,
+    TextField,
+    Radio,
+    RadioGroup,
+    FormControlLabel
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -39,6 +43,24 @@ function DashboardPage() {
     const [reverting, setReverting] = useState(false);
     const [settingsAnchor, setSettingsAnchor] = useState(null);
     const [showSettings, setShowSettings] = useState(false);
+
+    // Boarding station change modal states
+    const [showChangeModal, setShowChangeModal] = useState(false);
+    const [changeStep, setChangeStep] = useState(1); // 1=verify, 2=OTP, 3=select station
+    const [verifyData, setVerifyData] = useState({ irctcId: '', pnr: '' });
+    const [changeOTP, setChangeOTP] = useState('');
+    const [changeOTPSent, setChangeOTPSent] = useState(false);
+    const [availableStations, setAvailableStations] = useState([]);
+    const [selectedStation, setSelectedStation] = useState(null);
+    const [processing, setProcessing] = useState(false);
+
+    // Cancel ticket modal states
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelStep, setCancelStep] = useState(1); // 1=verify, 2=OTP
+    const [cancelVerifyData, setCancelVerifyData] = useState({ irctcId: '', pnr: '' });
+    const [cancelOTP, setCancelOTP] = useState('');
+    const [cancelOTPSent, setCancelOTPSent] = useState(false);
+    const [cancelProcessing, setCancelProcessing] = useState(false);
 
     const handleSettingsClick = (event) => {
         setSettingsAnchor(event.currentTarget);
@@ -188,6 +210,226 @@ function DashboardPage() {
         }
     };
 
+    // ========== Boarding Station Change Handlers ==========
+    const handleOpenChangeModal = () => {
+        setShowChangeModal(true);
+        setChangeStep(1);
+        setVerifyData({ irctcId: '', pnr: '' });
+        setSelectedStation(null);
+        setAvailableStations([]);
+    };
+
+    const handleCloseChangeModal = () => {
+        setShowChangeModal(false);
+        setChangeStep(1);
+        setVerifyData({ irctcId: '', pnr: '' });
+        setSelectedStation(null);
+    };
+
+    const handleVerifyForChange = async () => {
+        if (!verifyData.irctcId || !verifyData.pnr) {
+            alert('Please enter both IRCTC ID and PNR Number');
+            return;
+        }
+
+        setProcessing(true);
+        try {
+            // Send OTP
+            const response = await axios.post(`${API_URL}/otp/send`, {
+                irctcId: verifyData.irctcId,
+                pnr: verifyData.pnr,
+                purpose: 'Change Boarding Station'
+            });
+
+            if (response.data.success) {
+                setChangeOTPSent(true);
+                setChangeStep(2); // Move to OTP entry step
+                alert(`✅ ${response.data.message}\n\nPlease check your email for the OTP.`);
+            }
+        } catch (err) {
+            console.error('Error sending OTP:', err);
+            alert(err.response?.data?.message || 'Failed to send OTP');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleVerifyOTPForChange = async () => {
+        if (!changeOTP || changeOTP.length !== 6) {
+            alert('Please enter the 6-digit OTP');
+            return;
+        }
+
+        setProcessing(true);
+        try {
+            // Verify OTP
+            const otpResponse = await axios.post(`${API_URL}/otp/verify`, {
+                irctcId: verifyData.irctcId,
+                pnr: verifyData.pnr,
+                otp: changeOTP
+            });
+
+            if (otpResponse.data.success) {
+                // OTP verified - now fetch available stations
+                const stationsResponse = await axios.get(`${API_URL}/passenger/available-boarding-stations/${verifyData.pnr}`);
+
+                if (stationsResponse.data.success) {
+                    if (stationsResponse.data.alreadyChanged) {
+                        alert('Boarding station has already been changed once for this booking.');
+                        handleCloseChangeModal();
+                        return;
+                    }
+
+                    setAvailableStations(stationsResponse.data.availableStations || []);
+
+                    if (stationsResponse.data.availableStations?.length === 0) {
+                        alert('No forward stations available for change.');
+                        handleCloseChangeModal();
+                        return;
+                    }
+
+                    setChangeStep(3); // Move to station selection
+                }
+            }
+        } catch (err) {
+            console.error('Error verifying OTP:', err);
+            alert(err.response?.data?.message || 'Failed to verify OTP');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleSelectStation = (station) => {
+        setSelectedStation(station);
+    };
+
+    const handleConfirmChange = async () => {
+        if (!selectedStation) {
+            alert('Please select a station');
+            return;
+        }
+
+        const confirmResult = window.confirm(
+            `Are you sure you want to change your boarding station to ${selectedStation.name} (${selectedStation.code})?\n\nThis action can only be done ONCE and cannot be undone.`
+        );
+
+        if (!confirmResult) return;
+
+        setProcessing(true);
+        try {
+            const response = await axios.post(`${API_URL}/passenger/change-boarding-station`, {
+                pnr: verifyData.pnr,
+                irctcId: verifyData.irctcId,
+                newStationCode: selectedStation.code
+            });
+
+            if (response.data.success) {
+                alert(`✅ Boarding station changed successfully to ${selectedStation.name}!`);
+                handleCloseChangeModal();
+                fetchData(); // Refresh passenger data
+            }
+        } catch (err) {
+            console.error('Error changing station:', err);
+            alert(err.response?.data?.message || 'Failed to change boarding station');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    // ========== Cancel Ticket Handlers ==========
+    const handleOpenCancelModal = () => {
+        setShowCancelModal(true);
+        setCancelVerifyData({ irctcId: '', pnr: '' });
+    };
+
+    const handleCloseCancelModal = () => {
+        setShowCancelModal(false);
+        setCancelStep(1);
+        setCancelVerifyData({ irctcId: '', pnr: '' });
+        setCancelOTP('');
+        setCancelOTPSent(false);
+    };
+
+    const handleSendCancelOTP = async () => {
+        if (!cancelVerifyData.irctcId || !cancelVerifyData.pnr) {
+            alert('Please enter both IRCTC ID and PNR Number');
+            return;
+        }
+
+        setCancelProcessing(true);
+        try {
+            const response = await axios.post(`${API_URL}/otp/send`, {
+                irctcId: cancelVerifyData.irctcId,
+                pnr: cancelVerifyData.pnr,
+                purpose: 'Cancel Ticket'
+            });
+
+            if (response.data.success) {
+                setCancelOTPSent(true);
+                setCancelStep(2);
+                alert(`✅ ${response.data.message}\n\nPlease check your email for the OTP.`);
+            }
+        } catch (err) {
+            console.error('Error sending OTP:', err);
+            alert(err.response?.data?.message || 'Failed to send OTP');
+        } finally {
+            setCancelProcessing(false);
+        }
+    };
+
+    const handleConfirmCancel = async () => {
+        if (!cancelOTP || cancelOTP.length !== 6) {
+            alert('Please enter the 6-digit OTP');
+            return;
+        }
+
+        setCancelProcessing(true);
+        try {
+            // VERIFY OTP FIRST (SECURITY FIX)
+            const otpResponse = await axios.post(`${API_URL}/otp/verify`, {
+                irctcId: cancelVerifyData.irctcId,
+                pnr: cancelVerifyData.pnr,
+                otp: cancelOTP
+            });
+
+            if (!otpResponse.data.success) {
+                alert(otpResponse.data.message || 'Invalid OTP');
+                setCancelProcessing(false);
+                return;
+            }
+
+            // OTP verified - now confirm
+            const confirmed = window.confirm(
+                '⚠️ Are you sure you want to CANCEL your ticket?\n\n' +
+                'This will mark you as NO-SHOW and your berth will be made available for other passengers.\n\n' +
+                'This action cannot be undone!'
+            );
+
+            if (!confirmed) {
+                setCancelProcessing(false);
+                return;
+            }
+
+            // Proceed with cancellation
+            const response = await axios.post(`${API_URL}/passenger/self-cancel`, {
+                pnr: cancelVerifyData.pnr,
+                irctcId: cancelVerifyData.irctcId
+            });
+
+            if (response.data.success) {
+                alert('✅ Ticket cancelled successfully. Your berth is now available for other passengers.');
+                handleCloseCancelModal();
+                fetchData(); // Refresh page data
+            } else {
+                throw new Error(response.data.message || 'Failed to cancel ticket');
+            }
+        } catch (err) {
+            alert('❌ ' + (err.response?.data?.message || err.message || 'Failed to cancel ticket'));
+        } finally {
+            setCancelProcessing(false);
+        }
+    };
+
     if (loading) {
         return (
             <Container maxWidth="md" sx={{ mt: 8, textAlign: 'center' }}>
@@ -334,42 +576,97 @@ function DashboardPage() {
             {/* Boarding Pass */}
             <BoardingPass passenger={passenger} />
 
-            {/* Additional Info Cards */}
-            <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mt: 2 }}>
-                <Grid item xs={12} md={6}>
-                    <Card elevation={2}>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                📍 Boarding Information
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                <strong>Boarding Station:</strong> {passenger?.Boarding_Station}<br />
-                                <strong>Board at:</strong> {passenger?.Journey_Date || 'N/A'}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
+            {/* Ticket Actions */}
+            {!passenger?.NO_show && (
+                <Box sx={{
+                    mt: 3,
+                    maxWidth: '900px',
+                    mx: 'auto',
+                    bgcolor: '#ffffff',
+                    borderRadius: '8px',
+                    border: '1px solid #e0e0e0',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                    overflow: 'hidden'
+                }}>
+                    <Box sx={{
+                        bgcolor: '#2c3e50',
+                        color: '#ffffff',
+                        p: 2,
+                        borderBottom: '1px solid #e0e0e0'
+                    }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px', m: 0 }}>
+                            🎫 Ticket Actions
+                        </Typography>
+                    </Box>
+                    <Box sx={{ p: 3 }}>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} md={6}>
+                                <Card elevation={0} sx={{
+                                    border: '1px solid #ecf0f1',
+                                    borderRadius: '6px',
+                                    height: '100%'
+                                }}>
+                                    <CardContent>
+                                        <Typography variant="h6" gutterBottom sx={{ fontSize: '15px', fontWeight: 600, color: '#2c3e50' }}>
+                                            📍 Change Boarding Station
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '13px' }}>
+                                            Change to any of the next 3 upcoming stations. <strong>One-time only.</strong>
+                                        </Typography>
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            fullWidth
+                                            sx={{
+                                                bgcolor: '#3498db',
+                                                '&:hover': { bgcolor: '#2980b9' },
+                                                textTransform: 'none',
+                                                fontWeight: 500,
+                                                py: 1.2
+                                            }}
+                                            onClick={handleOpenChangeModal}
+                                        >
+                                            🔄 Change Boarding Station
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <Card elevation={0} sx={{
+                                    border: '1px solid #ecf0f1',
+                                    borderRadius: '6px',
+                                    height: '100%'
+                                }}>
+                                    <CardContent>
+                                        <Typography variant="h6" gutterBottom sx={{ fontSize: '15px', fontWeight: 600, color: '#2c3e50' }}>
+                                            ❌ Cancel Ticket
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '13px' }}>
+                                            Cancel your ticket and free up your berth for other passengers.
+                                        </Typography>
+                                        <Button
+                                            variant="contained"
+                                            color="error"
+                                            fullWidth
+                                            sx={{
+                                                bgcolor: '#e74c3c',
+                                                '&:hover': { bgcolor: '#c0392b' },
+                                                textTransform: 'none',
+                                                fontWeight: 500,
+                                                py: 1.2
+                                            }}
+                                            onClick={handleOpenCancelModal}
+                                        >
+                                            ❌ Cancel Ticket
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        </Grid>
+                    </Box>
+                </Box>
+            )}
 
-                <Grid item xs={12} md={6}>
-                    <Card elevation={2}>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                🎟️ Ticket Status
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                <strong>Status:</strong> {passenger?.PNR_Status}<br />
-                                <strong>Last Updated:</strong> {new Date().toLocaleDateString()}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
-
-            {/* Tips */}
-            <Alert severity="info" sx={{ mt: 3 }}>
-                <strong>Tip:</strong> Save this page or take a screenshot for offline access.
-                You can also print your boarding pass for easy verification.
-            </Alert>
 
             {/* Upgrade Offer Dialog */}
             <Dialog open={Boolean(upgradeOffer)} maxWidth="sm" fullWidth>
@@ -428,6 +725,221 @@ function DashboardPage() {
                     >
                         Accept Upgrade
                     </Button>
+                </DialogActions>
+            </Dialog>
+
+
+            {/* Boarding Station Change Modal */}
+            <Dialog open={showChangeModal} onClose={handleCloseChangeModal} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ bgcolor: '#2c3e50', color: '#ffffff' }}>
+                    🔄 Change Boarding Station
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    {changeStep === 1 && (
+                        <Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                Please verify your IRCTC ID and PNR to proceed with changing your boarding station.
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                label="IRCTC ID"
+                                value={verifyData.irctcId}
+                                onChange={(e) => setVerifyData({ ...verifyData, irctcId: e.target.value })}
+                                sx={{ mb: 2 }}
+                            />
+                            <TextField
+                                fullWidth
+                                label="PNR Number"
+                                value={verifyData.pnr}
+                                onChange={(e) => setVerifyData({ ...verifyData, pnr: e.target.value })}
+                            />
+                        </Box>
+                    )}
+
+                    {/* Step 2: Enter OTP */}
+                    {changeStep === 2 && (
+                        <Box>
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                                📧 OTP has been sent to your registered email address.
+                            </Alert>
+                            <TextField
+                                fullWidth
+                                label="Enter 6-digit OTP"
+                                value={changeOTP}
+                                onChange={(e) => setChangeOTP(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                inputProps={{ maxLength: 6, pattern: '[0-9]*' }}
+                                placeholder="000000"
+                                autoFocus
+                            />
+                        </Box>
+                    )}
+
+                    {/* Step 3: Select Station */}
+                    {changeStep === 3 && (
+                        <Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Select your new boarding station from the next 3 upcoming stations:
+                            </Typography>
+                            <RadioGroup
+                                value={selectedStation?.code || ''}
+                                onChange={(e) => {
+                                    const station = availableStations.find(s => s.code === e.target.value);
+                                    handleSelectStation(station);
+                                }}
+                            >
+                                {availableStations.map((station, index) => (
+                                    <Box
+                                        key={station.code}
+                                        sx={{
+                                            border: '1px solid #ecf0f1',
+                                            borderRadius: '6px',
+                                            p: 2,
+                                            mb: 1.5,
+                                            bgcolor: selectedStation?.code === station.code ? '#e3f2fd' : '#ffffff',
+                                            cursor: 'pointer',
+                                            '&:hover': { bgcolor: '#f5f5f5' }
+                                        }}
+                                        onClick={() => handleSelectStation(station)}
+                                    >
+                                        <FormControlLabel
+                                            value={station.code}
+                                            control={<Radio />}
+                                            label={
+                                                <Box>
+                                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                                        {index + 1}. {station.name} ({station.code})
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Arrival: {station.arrivalTime || 'N/A'}
+                                                    </Typography>
+                                                </Box>
+                                            }
+                                            sx={{ width: '100%', m: 0 }}
+                                        />
+                                    </Box>
+                                ))}
+                            </RadioGroup>
+                            <Alert severity="warning" sx={{ mt: 2 }}>
+                                <Typography variant="body2">
+                                    <strong>Important:</strong> This change can only be made ONCE and cannot be undone.
+                                </Typography>
+                            </Alert>
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={handleCloseChangeModal} disabled={processing}>
+                        Cancel
+                    </Button>
+                    {changeStep === 1 && (
+                        <Button
+                            onClick={handleVerifyForChange}
+                            variant="contained"
+                            disabled={processing || !verifyData.irctcId || !verifyData.pnr}
+                        >
+                            {processing ? 'Sending OTP...' : 'Send OTP'}
+                        </Button>
+                    )}
+                    {changeStep === 2 && (
+                        <Button
+                            onClick={handleVerifyOTPForChange}
+                            variant="contained"
+                            disabled={processing || changeOTP.length !== 6}
+                        >
+                            {processing ? 'Verifying...' : 'Verify OTP'}
+                        </Button>
+                    )}
+
+                    {changeStep === 3 && (
+                        <Button
+                            onClick={handleConfirmChange}
+                            variant="contained"
+                            color="primary"
+                            disabled={processing || !selectedStation}
+                        >
+                            {processing ? 'Updating...' : 'Confirm Change'}
+                        </Button>
+                    )}
+                </DialogActions>
+            </Dialog>
+
+            {/* Cancel Ticket Modal */}
+            <Dialog open={showCancelModal} onClose={handleCloseCancelModal} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ bgcolor: '#e74c3c', color: '#ffffff' }}>
+                    ❌ Cancel Ticket
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                        <Typography variant="body2">
+                            <strong>Warning:</strong> Cancelling your ticket will mark you as NO-SHOW and your berth will be made available for other passengers.
+                        </Typography>
+                    </Alert>
+                    {/* Step 1: Enter credentials */}
+                    {cancelStep === 1 && (
+                        <Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                Please verify your IRCTC ID and PNR to proceed with ticket cancellation.
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                label="IRCTC ID"
+                                value={cancelVerifyData.irctcId}
+                                onChange={(e) => setCancelVerifyData({ ...cancelVerifyData, irctcId: e.target.value })}
+                                sx={{ mb: 2 }}
+                            />
+                            <TextField
+                                fullWidth
+                                label="PNR Number"
+                                value={cancelVerifyData.pnr}
+                                onChange={(e) => setCancelVerifyData({ ...cancelVerifyData, pnr: e.target.value })}
+                            />
+                        </Box>
+                    )}
+
+                    {/* Step 2: Enter OTP */}
+                    {cancelStep === 2 && (
+                        <Box>
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                                📧 OTP has been sent to your registered email.
+                            </Alert>
+                            <TextField
+                                fullWidth
+                                label="Enter 6-digit OTP"
+                                value={cancelOTP}
+                                onChange={(e) => setCancelOTP(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                inputProps={{ maxLength: 6 }}
+                                placeholder="000000"
+                                autoFocus
+                            />
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={handleCloseCancelModal} disabled={cancelProcessing}>
+                        Back
+                    </Button>
+
+                    {cancelStep === 1 && (
+                        <Button
+                            onClick={handleSendCancelOTP}
+                            variant="contained"
+                            color="error"
+                            disabled={cancelProcessing || !cancelVerifyData.irctcId || !cancelVerifyData.pnr}
+                        >
+                            {cancelProcessing ? 'Sending...' : 'Send OTP'}
+                        </Button>
+                    )}
+
+                    {cancelStep === 2 && (
+                        <Button
+                            onClick={handleConfirmCancel}
+                            variant="contained"
+                            color="error"
+                            disabled={cancelProcessing || cancelOTP.length !== 6}
+                        >
+                            {cancelProcessing ? 'Cancelling...' : 'Confirm Cancellation'}
+                        </Button>
+                    )}
                 </DialogActions>
             </Dialog>
         </Container>

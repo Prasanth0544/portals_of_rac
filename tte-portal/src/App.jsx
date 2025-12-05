@@ -9,7 +9,7 @@ import LoginPage from './pages/LoginPage'; // ✅ NEW
 import DashboardPage from './pages/DashboardPage'; // ✅ Real dashboard
 import BoardingVerificationPage from './pages/BoardingVerificationPage'; // ✅ NEW - Boarding Verification
 import ActionHistoryPage from './pages/ActionHistoryPage'; // ✅ NEW
-import OfflineUpgradesPage from './pages/OfflineUpgradesPage'; // ✅ NEW
+
 import PassengersPage from './pages/PassengersPage'; // ✅ UNIFIED - Same as admin portal
 import BoardedPassengersPage from './pages/BoardedPassengersPage'; // ✅ NEW
 import UpgradeNotificationsPage from './pages/UpgradeNotificationsPage'; // ✅ Sent offers tracking
@@ -161,10 +161,9 @@ function App() {
                         <Tab label="Dashboard" />
                         <Tab label="Passenger List" />
                         <Tab label="Boarded Passengers" />
-                        <Tab label="RAC Upgrades" />
-                        <Tab label="Action History" />
                         <Tab label="Pending Reallocations" />
                         <Tab label="Journey Visualization" />
+                        <Tab label="Action History" />
                     </Tabs>
                 </AppBar>
 
@@ -173,10 +172,9 @@ function App() {
                     {currentTab === 0 && <DashboardPage />}
                     {currentTab === 1 && <PassengersPage />}
                     {currentTab === 2 && <BoardedPassengersPage />}
-                    {currentTab === 3 && <OfflineUpgradesPage />}
-                    {currentTab === 4 && <ActionHistoryPage />}
-                    {currentTab === 5 && <PendingReallocationsPage />}
-                    {currentTab === 6 && <VisualizationPage />}
+                    {currentTab === 3 && <PendingReallocationsPage />}
+                    {currentTab === 4 && <VisualizationPage />}
+                    {currentTab === 5 && <ActionHistoryPage />}
                 </Box>
 
                 <Box component="footer" sx={{ bgcolor: 'background.paper', py: 2, borderTop: '1px solid #e0e0e0' }}>

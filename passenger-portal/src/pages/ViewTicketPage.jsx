@@ -11,11 +11,14 @@ function ViewTicketPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showChangeModal, setShowChangeModal] = useState(false);
-    const [modalStep, setModalStep] = useState(1); // 1: verify, 2: select, 3: confirm
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [modalStep, setModalStep] = useState(1);
     const [verifyData, setVerifyData] = useState({ irctcId: '', pnr: '' });
+    const [cancelData, setCancelData] = useState({ irctcId: '', pnr: '' });
     const [availableStations, setAvailableStations] = useState([]);
     const [selectedStation, setSelectedStation] = useState(null);
     const [alreadyChanged, setAlreadyChanged] = useState(false);
+    const [isCancelled, setIsCancelled] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [successMessage, setSuccessMessage] = useState(null);
 
@@ -33,11 +36,14 @@ function ViewTicketPage() {
                 return;
             }
 
-            const response = await axios.get(`${API_URL}/passenger/irctc/${userData.irctcId}`);
+            const response = await axios.get(`${API_URL}/passengers/by-irctc/${userData.irctcId}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
 
             if (response.data.success) {
                 setPassenger(response.data.data);
                 setAlreadyChanged(response.data.data.boardingStationChanged || false);
+                setIsCancelled(response.data.data.NO_show || false);
             }
         } catch (err) {
             console.error('Error fetching passenger:', err);
@@ -47,6 +53,7 @@ function ViewTicketPage() {
         }
     };
 
+    // ========== Change Boarding Station Handlers ==========
     const handleOpenChangeModal = () => {
         setShowChangeModal(true);
         setModalStep(1);
@@ -55,7 +62,7 @@ function ViewTicketPage() {
         setAvailableStations([]);
     };
 
-    const handleCloseModal = () => {
+    const handleCloseChangeModal = () => {
         setShowChangeModal(false);
         setModalStep(1);
         setVerifyData({ irctcId: '', pnr: '' });
@@ -70,13 +77,12 @@ function ViewTicketPage() {
 
         setProcessing(true);
         try {
-            // Fetch available stations
             const response = await axios.get(`${API_URL}/passenger/available-boarding-stations/${verifyData.pnr}`);
 
             if (response.data.success) {
                 if (response.data.alreadyChanged) {
                     alert('Boarding station has already been changed once for this booking.');
-                    handleCloseModal();
+                    handleCloseChangeModal();
                     return;
                 }
 
@@ -84,7 +90,7 @@ function ViewTicketPage() {
 
                 if (response.data.availableStations?.length === 0) {
                     alert('No forward stations available for change.');
-                    handleCloseModal();
+                    handleCloseChangeModal();
                     return;
                 }
 
@@ -130,15 +136,58 @@ function ViewTicketPage() {
             if (response.data.success) {
                 setSuccessMessage(`Boarding station changed successfully to ${selectedStation.name}!`);
                 setAlreadyChanged(true);
-                handleCloseModal();
-                fetchPassengerData(); // Refresh data
-
-                // Clear success message after 5 seconds
+                handleCloseChangeModal();
+                fetchPassengerData();
                 setTimeout(() => setSuccessMessage(null), 5000);
             }
         } catch (err) {
             console.error('Error changing station:', err);
             alert(err.response?.data?.message || 'Failed to change boarding station');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    // ========== Cancel Ticket Handlers ==========
+    const handleOpenCancelModal = () => {
+        setShowCancelModal(true);
+        setCancelData({ irctcId: '', pnr: '' });
+    };
+
+    const handleCloseCancelModal = () => {
+        setShowCancelModal(false);
+        setCancelData({ irctcId: '', pnr: '' });
+    };
+
+    const handleCancelTicket = async () => {
+        if (!cancelData.irctcId || !cancelData.pnr) {
+            alert('Please enter both IRCTC ID and PNR Number');
+            return;
+        }
+
+        const confirmResult = window.confirm(
+            '⚠️ Are you sure you want to CANCEL your ticket?\n\nThis will mark you as NO-SHOW and your berth will be made available for other passengers.\n\nThis action cannot be undone!'
+        );
+
+        if (!confirmResult) return;
+
+        setProcessing(true);
+        try {
+            const response = await axios.post(`${API_URL}/passenger/self-cancel`, {
+                pnr: cancelData.pnr,
+                irctcId: cancelData.irctcId
+            });
+
+            if (response.data.success) {
+                setSuccessMessage('Ticket cancelled successfully. Your berth is now available for other passengers.');
+                setIsCancelled(true);
+                handleCloseCancelModal();
+                fetchPassengerData();
+                setTimeout(() => setSuccessMessage(null), 5000);
+            }
+        } catch (err) {
+            console.error('Error cancelling ticket:', err);
+            alert(err.response?.data?.message || 'Failed to cancel ticket');
         } finally {
             setProcessing(false);
         }
@@ -182,29 +231,59 @@ function ViewTicketPage() {
                 </div>
             )}
 
-            {/* Change Boarding Station Section */}
+            {/* Cancelled Ticket Warning */}
+            {isCancelled && (
+                <div className="cancelled-notice">
+                    ❌ This ticket has been cancelled. Your berth is no longer reserved.
+                </div>
+            )}
+
+            {/* Action Buttons Section */}
             <div className="change-station-section">
                 <div className="section-title">
-                    📍 Change Boarding Station
+                    🎫 Ticket Actions
                 </div>
 
-                {alreadyChanged ? (
+                {isCancelled ? (
                     <div className="already-changed-notice">
-                        ⚠️ Boarding station has already been changed for this booking. Changes are allowed only once.
+                        ❌ This ticket has been cancelled and no further actions are available.
                     </div>
                 ) : (
-                    <>
-                        <p style={{ color: '#7f8c8d', marginBottom: 15 }}>
-                            You can change your boarding station to any of the next 3 upcoming stations.
-                            This can only be done <strong>once</strong>.
-                        </p>
-                        <button
-                            className="change-station-btn"
-                            onClick={handleOpenChangeModal}
-                        >
-                            🔄 Change Boarding Station
-                        </button>
-                    </>
+                    <div className="action-buttons-row">
+                        {/* Change Boarding Station */}
+                        <div className="action-card">
+                            <h4>📍 Change Boarding Station</h4>
+                            {alreadyChanged ? (
+                                <p className="notice-text">⚠️ Already changed once (limit reached)</p>
+                            ) : (
+                                <>
+                                    <p className="info-text">
+                                        Change to any of the next 3 upcoming stations. <strong>One-time only.</strong>
+                                    </p>
+                                    <button
+                                        className="change-station-btn"
+                                        onClick={handleOpenChangeModal}
+                                    >
+                                        🔄 Change Boarding Station
+                                    </button>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Cancel Ticket */}
+                        <div className="action-card">
+                            <h4>❌ Cancel Ticket</h4>
+                            <p className="info-text">
+                                Cancel your ticket and free up your berth for other passengers.
+                            </p>
+                            <button
+                                className="cancel-ticket-btn"
+                                onClick={handleOpenCancelModal}
+                            >
+                                ❌ Cancel Ticket
+                            </button>
+                        </div>
+                    </div>
                 )}
             </div>
 
@@ -213,13 +292,12 @@ function ViewTicketPage() {
 
             {/* Change Station Modal */}
             {showChangeModal && (
-                <div className="modal-overlay" onClick={handleCloseModal}>
+                <div className="modal-overlay" onClick={handleCloseChangeModal}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3>🔄 Change Boarding Station</h3>
                         </div>
 
-                        {/* Step Indicator */}
                         <div className="step-indicator" style={{ padding: '20px 0' }}>
                             <div className="step">
                                 <div className={`step-number ${modalStep >= 1 ? 'active' : ''}`}>1</div>
@@ -235,7 +313,6 @@ function ViewTicketPage() {
                         </div>
 
                         <div className="modal-body">
-                            {/* Step 1: Verify Identity */}
                             {modalStep === 1 && (
                                 <>
                                     <div className="form-group">
@@ -260,7 +337,6 @@ function ViewTicketPage() {
                                 </>
                             )}
 
-                            {/* Step 2: Select Station */}
                             {modalStep === 2 && (
                                 <>
                                     <p style={{ marginBottom: 15, color: '#5a6c7d' }}>
@@ -285,7 +361,6 @@ function ViewTicketPage() {
                                 </>
                             )}
 
-                            {/* Step 3: Confirm */}
                             {modalStep === 3 && selectedStation && (
                                 <div className="confirm-dialog">
                                     <div className="confirm-icon">⚠️</div>
@@ -307,30 +382,19 @@ function ViewTicketPage() {
                         </div>
 
                         <div className="modal-footer">
-                            <button className="btn-cancel" onClick={handleCloseModal}>
+                            <button className="btn-cancel" onClick={handleCloseChangeModal}>
                                 Cancel
                             </button>
-
                             {modalStep === 1 && (
-                                <button
-                                    className="btn-confirm"
-                                    onClick={handleVerify}
-                                    disabled={processing}
-                                >
+                                <button className="btn-confirm" onClick={handleVerify} disabled={processing}>
                                     {processing ? 'Verifying...' : 'Verify & Continue'}
                                 </button>
                             )}
-
                             {modalStep === 2 && (
-                                <button
-                                    className="btn-confirm"
-                                    onClick={handleProceedToConfirm}
-                                    disabled={!selectedStation}
-                                >
+                                <button className="btn-confirm" onClick={handleProceedToConfirm} disabled={!selectedStation}>
                                     Continue
                                 </button>
                             )}
-
                             {modalStep === 3 && (
                                 <button
                                     className="btn-confirm"
@@ -341,6 +405,69 @@ function ViewTicketPage() {
                                     {processing ? 'Processing...' : 'Confirm Change'}
                                 </button>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancel Ticket Modal */}
+            {showCancelModal && (
+                <div className="modal-overlay" onClick={handleCloseCancelModal}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)' }}>
+                            <h3>❌ Cancel Ticket</h3>
+                        </div>
+
+                        <div className="modal-body">
+                            <div className="confirm-dialog">
+                                <div className="confirm-icon">⚠️</div>
+                                <div className="confirm-message" style={{ color: '#e74c3c' }}>
+                                    You are about to cancel your ticket
+                                </div>
+                                <p style={{ color: '#7f8c8d', marginBottom: 20 }}>
+                                    This will mark you as NO-SHOW and your berth will be made available for other passengers.
+                                </p>
+                            </div>
+
+                            <div className="form-group">
+                                <label>IRCTC ID</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter your IRCTC ID"
+                                    value={cancelData.irctcId}
+                                    onChange={e => setCancelData({ ...cancelData, irctcId: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>PNR Number</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter 10-digit PNR"
+                                    value={cancelData.pnr}
+                                    onChange={e => setCancelData({ ...cancelData, pnr: e.target.value })}
+                                    maxLength={10}
+                                />
+                            </div>
+
+                            <div style={{ background: '#fef2f2', padding: 15, borderRadius: 8, marginTop: 15 }}>
+                                <p style={{ color: '#e74c3c', fontSize: 14, margin: 0 }}>
+                                    ⚠️ <strong>Warning:</strong> This action cannot be undone. Your berth will be permanently released.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer">
+                            <button className="btn-cancel" onClick={handleCloseCancelModal}>
+                                Go Back
+                            </button>
+                            <button
+                                className="btn-confirm"
+                                onClick={handleCancelTicket}
+                                disabled={processing || !cancelData.irctcId || !cancelData.pnr}
+                                style={{ background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)' }}
+                            >
+                                {processing ? 'Cancelling...' : 'Confirm Cancellation'}
+                            </button>
                         </div>
                     </div>
                 </div>
