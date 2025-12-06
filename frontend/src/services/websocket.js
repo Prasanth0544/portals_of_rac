@@ -13,7 +13,7 @@ class WebSocketService {
   /**
    * Connect to WebSocket server
    */
-  connect(url = (process.env.REACT_APP_WS_URL || 'ws://localhost:5000')) {
+  connect(url = (import.meta.env.VITE_WS_URL || 'ws://localhost:5000')) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       console.log('WebSocket already connected');
       return;

@@ -4,7 +4,7 @@
 import axios from 'axios';
 import { errorToast, networkErrorToast, serverErrorToast, validationErrorToast } from './toastNotification';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -24,7 +24,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log(`[API] Request: ${config.method.toUpperCase()} ${config.url}`, config.data);
     }
 
@@ -40,7 +40,7 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log(`[API] Response: ${response.config.url}`, response.data);
     }
     return response;

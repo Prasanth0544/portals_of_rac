@@ -242,6 +242,7 @@ class PassengerController {
 
       // Validate required fields
       const required = [
+        "irctc_id",
         "pnr",
         "name",
         "age",
@@ -331,12 +332,16 @@ class PassengerController {
       }
       // Create new passenger document matching MongoDB schema
       const newPassenger = {
+        IRCTC_ID: passengerData.irctc_id || `IR_${Date.now()}`,
         PNR_Number: passengerData.pnr,
         Train_Number: trainState.trainNo,
+        Train_Name: passengerData.train_name || trainState.trainName || "Express",
         Journey_Date: passengerData.journey_date || trainState.journeyDate,
         Name: passengerData.name,
         Age: parseInt(passengerData.age),
         Gender: passengerData.gender,
+        Mobile: passengerData.mobile || "",
+        Email: passengerData.email || "",
         PNR_Status: passengerData.pnr_status || "CNF",
         Class: passengerData.class,
         Rac_status: passengerData.rac_status || "-",
@@ -345,6 +350,7 @@ class PassengerController {
         Assigned_Coach: passengerData.coach,
         Assigned_berth: parseInt(passengerData.seat_no),
         Berth_Type: berth.berth_type,
+        Passenger_Status: passengerData.passenger_status || "Offline",
         NO_show: false,
       };
       // Insert into MongoDB

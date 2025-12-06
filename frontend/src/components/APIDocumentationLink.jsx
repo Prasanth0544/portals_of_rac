@@ -7,7 +7,7 @@ import '../components/APIDocumentationLink.css';
 function APIDocumentationLink() {
   const [showTooltip, setShowTooltip] = useState(false);
 
-  const API_DOCS_URL = process.env.REACT_APP_API_DOCS_URL || 'http://localhost:5000/api-docs';
+  const API_DOCS_URL = import.meta.env.VITE_API_DOCS_URL || 'http://localhost:5000/api-docs';
 
   return (
     <div className="api-docs-link">

@@ -54,7 +54,7 @@ function App() {
 
   const setupWebSocket = () => {
     // Connect to WebSocket using env or default
-    const WS_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:5000';
+    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
     wsService.connect(WS_URL);
 
     // Listen to connection events

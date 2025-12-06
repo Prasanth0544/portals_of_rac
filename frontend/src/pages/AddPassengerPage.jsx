@@ -6,22 +6,30 @@ import "./AddPassengerPage.css";
 
 const AddPassengerPage = ({ trainData, onClose }) => {
   const [formData, setFormData] = useState({
+    // Personal Information
+    irctc_id: "",
     pnr: "",
     name: "",
     age: "",
     gender: "Male",
+    mobile: "",
+    email: "",
+
+    // Journey Details
+    train_no: trainData?.trainNo || "",
+    train_name: trainData?.trainName || "",
+    journey_date: trainData?.journeyDate || new Date().toISOString().split("T")[0],
     from: "",
     to: "",
+
+    // Booking Details
     class: "Sleeper",
     pnr_status: "CNF",
     rac_status: "-",
     coach: "S1",
     seat_no: "",
     berth_type: "Lower",
-    train_no: trainData?.trainNo || "",
-    train_name: trainData?.trainName || "",
-    journey_date:
-      trainData?.journeyDate || new Date().toISOString().split("T")[0],
+    passenger_status: "Online",
   });
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -157,7 +165,20 @@ const AddPassengerPage = ({ trainData, onClose }) => {
               Personal Information
             </h3>
             <div className="form-grid">
-              <div className="form-group full-width">
+              <div className="form-group">
+                <label>IRCTC ID</label>
+                <input
+                  type="text"
+                  name="irctc_id"
+                  value={formData.irctc_id}
+                  onChange={handleChange}
+                  placeholder="e.g., IR_0001"
+                  required
+                />
+                <span className="field-hint">Unique IRCTC identifier</span>
+              </div>
+
+              <div className="form-group">
                 <label>PNR Number</label>
                 <input
                   type="text"
@@ -210,6 +231,32 @@ const AddPassengerPage = ({ trainData, onClose }) => {
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label>Mobile Number</label>
+                <input
+                  type="tel"
+                  name="mobile"
+                  value={formData.mobile}
+                  onChange={handleChange}
+                  placeholder="10-digit mobile number"
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                />
+                <span className="field-hint">For SMS notifications</span>
+              </div>
+
+              <div className="form-group">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="passenger@email.com"
+                />
+                <span className="field-hint">For email notifications</span>
               </div>
             </div>
           </div>
@@ -392,6 +439,20 @@ const AddPassengerPage = ({ trainData, onClose }) => {
                   <option value="Side Lower">Side Lower</option>
                   <option value="Side Upper">Side Upper</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label>Passenger Status</label>
+                <select
+                  name="passenger_status"
+                  value={formData.passenger_status}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="Online">Online</option>
+                  <option value="Offline">Offline</option>
+                </select>
+                <span className="field-hint">Online = Mobile app user</span>
               </div>
             </div>
           </div>
