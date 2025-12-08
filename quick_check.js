@@ -1,203 +1,188 @@
 /**
- * RAC Reallocation System - Quick MongoDB Data Check
- * Directly queries MongoDB to verify data integrity
+ * RAC Reallocation System - Quick API Data Check
+ * Queries the running backend API to verify data integrity
  * 
  * Run with: node quick_check.js
- * Make sure MongoDB is running
+ * Make sure the backend server is running on port 5000
  */
 
-const db = require('./backend/config/db');
+const API_BASE = 'http://localhost:5000/api';
 
 async function checkData() {
     try {
         console.log('\n' + '═'.repeat(60));
-        console.log('🔍 RAC SYSTEM - MONGODB DATA CHECK');
+        console.log('🔍 RAC SYSTEM - DATA CHECK (via API)');
         console.log('═'.repeat(60) + '\n');
 
-        await db.connect();
-        console.log('✅ Connected to MongoDB\n');
-
-        const collection = db.getPassengersCollection();
-
         // ═══════════════════════════════════════════════════════════
-        // 1. PASSENGER COUNTS BY STATUS
+        // 1. CHECK SERVER HEALTH
         // ═══════════════════════════════════════════════════════════
-        console.log('📊 PASSENGER COUNTS BY STATUS');
+        console.log('🏥 SERVER HEALTH CHECK');
         console.log('─'.repeat(40));
 
-        const totalPassengers = await collection.countDocuments();
-        const cnfCount = await collection.countDocuments({ PNR_Status: "CNF" });
-        const racCount = await collection.countDocuments({ PNR_Status: "RAC" });
-        const wlCount = await collection.countDocuments({ PNR_Status: "WL" });
-
-        console.log(`   Total Passengers:     ${totalPassengers}`);
-        console.log(`   Confirmed (CNF):      ${cnfCount}`);
-        console.log(`   RAC:                  ${racCount}`);
-        console.log(`   Waiting List (WL):    ${wlCount}`);
+        const healthRes = await fetch(`${API_BASE}/health`);
+        const healthData = await healthRes.json();
+        console.log(`   Status: ${healthData.status || 'OK'}`);
+        console.log(`   Server: ${healthRes.ok ? '✅ Running' : '❌ Not responding'}\n`);
 
         // ═══════════════════════════════════════════════════════════
-        // 2. RAC PASSENGER DETAILS
+        // 2. GET TRAIN STATE
         // ═══════════════════════════════════════════════════════════
-        console.log('\n🎫 RAC PASSENGER DETAILS');
+        console.log('🚂 TRAIN STATE');
         console.log('─'.repeat(40));
 
-        const onlineRAC = await collection.countDocuments({
-            PNR_Status: "RAC",
-            Passenger_Status: "Online"
-        });
-        const offlineRAC = await collection.countDocuments({
-            PNR_Status: "RAC",
-            Passenger_Status: { $in: ["Offline", null, ""] }
-        });
-        const boardedRAC = await collection.countDocuments({
-            PNR_Status: "RAC",
-            Boarded: true
-        });
-        const noShowRAC = await collection.countDocuments({
-            PNR_Status: "RAC",
-            NO_show: true
-        });
+        const stateRes = await fetch(`${API_BASE}/train/state`);
+        const stateData = await stateRes.json();
 
-        console.log(`   Online RAC:           ${onlineRAC}`);
-        console.log(`   Offline RAC:          ${offlineRAC}`);
-        console.log(`   Boarded RAC:          ${boardedRAC}`);
-        console.log(`   No-Show RAC:          ${noShowRAC}`);
-
-        // ═══════════════════════════════════════════════════════════
-        // 3. CONFIRMED PASSENGER DETAILS
-        // ═══════════════════════════════════════════════════════════
-        console.log('\n✅ CONFIRMED PASSENGER DETAILS');
-        console.log('─'.repeat(40));
-
-        const boardedCNF = await collection.countDocuments({
-            PNR_Status: "CNF",
-            Boarded: true
-        });
-        const noShowCNF = await collection.countDocuments({
-            PNR_Status: "CNF",
-            NO_show: true
-        });
-        const upgradedFromRAC = await collection.countDocuments({
-            Upgraded_From: "RAC"
-        });
-
-        console.log(`   Boarded CNF:          ${boardedCNF}`);
-        console.log(`   No-Show CNF:          ${noShowCNF}`);
-        console.log(`   Upgraded from RAC:    ${upgradedFromRAC}`);
-
-        // ═══════════════════════════════════════════════════════════
-        // 4. STATION-WISE DISTRIBUTION
-        // ═══════════════════════════════════════════════════════════
-        console.log('\n🚉 TOP BOARDING STATIONS');
-        console.log('─'.repeat(40));
-
-        const stationCounts = await collection.aggregate([
-            { $group: { _id: "$Boarding_Station", count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 5 }
-        ]).toArray();
-
-        stationCounts.forEach((s, i) => {
-            console.log(`   ${i + 1}. ${s._id}: ${s.count} passengers`);
-        });
-
-        // ═══════════════════════════════════════════════════════════
-        // 5. BERTH TYPE DISTRIBUTION
-        // ═══════════════════════════════════════════════════════════
-        console.log('\n🛏️  BERTH TYPE DISTRIBUTION');
-        console.log('─'.repeat(40));
-
-        const berthCounts = await collection.aggregate([
-            { $group: { _id: "$Berth_Type", count: { $sum: 1 } } },
-            { $sort: { count: -1 } }
-        ]).toArray();
-
-        berthCounts.forEach(b => {
-            console.log(`   ${b._id || 'Unknown'}: ${b.count}`);
-        });
-
-        // ═══════════════════════════════════════════════════════════
-        // 6. SAMPLE PASSENGERS
-        // ═══════════════════════════════════════════════════════════
-        console.log('\n📋 SAMPLE RAC PASSENGER');
-        console.log('─'.repeat(40));
-
-        const sampleRAC = await collection.findOne({ PNR_Status: "RAC" });
-        if (sampleRAC) {
-            console.log(`   IRCTC ID:       ${sampleRAC.IRCTC_ID || 'N/A'}`);
-            console.log(`   PNR:            ${sampleRAC.PNR_Number}`);
-            console.log(`   Name:           ${sampleRAC.Name}`);
-            console.log(`   Age:            ${sampleRAC.Age}`);
-            console.log(`   Gender:         ${sampleRAC.Gender}`);
-            console.log(`   Mobile:         ${sampleRAC.Mobile || 'N/A'}`);
-            console.log(`   Email:          ${sampleRAC.Email || 'N/A'}`);
-            console.log(`   Train:          ${sampleRAC.Train_Number} - ${sampleRAC.Train_Name || ''}`);
-            console.log(`   Date:           ${sampleRAC.Journey_Date}`);
-            console.log(`   Class:          ${sampleRAC.Class}`);
-            console.log(`   PNR Status:     ${sampleRAC.PNR_Status}`);
-            console.log(`   RAC Status:     ${sampleRAC.Rac_status}`);
-            console.log(`   Boarding:       ${sampleRAC.Boarding_Station}`);
-            console.log(`   Deboarding:     ${sampleRAC.Deboarding_Station}`);
-            console.log(`   Coach:          ${sampleRAC.Assigned_Coach}`);
-            console.log(`   Berth:          ${sampleRAC.Assigned_berth}`);
-            console.log(`   Berth Type:     ${sampleRAC.Berth_Type}`);
-            console.log(`   Passenger Stat: ${sampleRAC.Passenger_Status || 'Unknown'}`);
-            console.log(`   Boarded:        ${sampleRAC.Boarded || false}`);
-            console.log(`   No-Show:        ${sampleRAC.NO_show || false}`);
+        if (stateData.success && stateData.data) {
+            const train = stateData.data;
+            console.log(`   Train Number:     ${train.trainNo || 'N/A'}`);
+            console.log(`   Train Name:       ${train.trainName || 'N/A'}`);
+            console.log(`   Journey Date:     ${train.journeyDate || 'N/A'}`);
+            console.log(`   Status:           ${train.journeyStatus || 'N/A'}`);
+            console.log(`   Current Station:  ${train.stations?.[train.currentStationIdx]?.name || 'N/A'} (Index: ${train.currentStationIdx})`);
+            console.log(`   Total Stations:   ${train.stations?.length || 0}`);
         } else {
-            console.log('   ⚠️  No RAC passengers found');
+            console.log('   ⚠️  Train not initialized');
         }
 
-        console.log('\n📋 SAMPLE CNF PASSENGER');
+        // ═══════════════════════════════════════════════════════════
+        // 3. PASSENGER COUNTS BY STATUS
+        // ═══════════════════════════════════════════════════════════
+        console.log('\n📊 PASSENGER COUNTS BY STATUS');
         console.log('─'.repeat(40));
 
-        const sampleCNF = await collection.findOne({ PNR_Status: "CNF" });
-        if (sampleCNF) {
-            console.log(`   IRCTC ID:       ${sampleCNF.IRCTC_ID || 'N/A'}`);
-            console.log(`   PNR:            ${sampleCNF.PNR_Number}`);
-            console.log(`   Name:           ${sampleCNF.Name}`);
-            console.log(`   Coach-Berth:    ${sampleCNF.Assigned_Coach}-${sampleCNF.Assigned_berth}`);
-            console.log(`   Status:         ${sampleCNF.PNR_Status}`);
-            console.log(`   Boarded:        ${sampleCNF.Boarded || false}`);
-            console.log(`   No-Show:        ${sampleCNF.NO_show || false}`);
-            if (sampleCNF.Upgraded_From) {
-                console.log(`   Upgraded From:  ${sampleCNF.Upgraded_From}`);
+        const countsRes = await fetch(`${API_BASE}/passengers/counts`);
+        const countsData = await countsRes.json();
+
+        if (countsData.success && countsData.data) {
+            const counts = countsData.data;
+            console.log(`   Total Passengers:     ${counts.total || 0}`);
+            console.log(`   Confirmed (CNF):      ${counts.cnf || 0}`);
+            console.log(`   RAC:                  ${counts.rac || 0}`);
+            console.log(`   Waiting List (WL):    ${counts.wl || 0}`);
+            console.log(`   Boarded:              ${counts.boarded || 0}`);
+            console.log(`   No-Show:              ${counts.noShow || 0}`);
+        } else {
+            console.log('   ⚠️  Could not fetch passenger counts');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // 4. RAC QUEUE DETAILS
+        // ═══════════════════════════════════════════════════════════
+        console.log('\n🎫 RAC QUEUE DETAILS');
+        console.log('─'.repeat(40));
+
+        const racRes = await fetch(`${API_BASE}/train/rac-queue`);
+        const racData = await racRes.json();
+
+        if (racData.success && racData.data?.queue) {
+            const queue = racData.data.queue;
+            const boarded = queue.filter(r => r.boarded).length;
+            const online = queue.filter(r => r.passengerStatus === 'Online').length;
+
+            console.log(`   Total RAC:            ${queue.length}`);
+            console.log(`   Boarded RAC:          ${boarded}`);
+            console.log(`   Online RAC:           ${online}`);
+
+            // Show first RAC passenger
+            if (queue.length > 0) {
+                const sample = queue[0];
+                console.log('\n   � First RAC Passenger:');
+                console.log(`      Name:     ${sample.name}`);
+                console.log(`      PNR:      ${sample.pnr}`);
+                console.log(`      RAC:      ${sample.racStatus}`);
+                console.log(`      Route:    ${sample.from} → ${sample.to}`);
+                console.log(`      Boarded:  ${sample.boarded}`);
+                console.log(`      Status:   ${sample.passengerStatus || 'Unknown'}`);
             }
         } else {
-            console.log('   ⚠️  No CNF passengers found');
+            console.log('   ⚠️  No RAC queue data available');
         }
 
         // ═══════════════════════════════════════════════════════════
-        // 7. DATA QUALITY CHECK
+        // 5. VACANT BERTHS
         // ═══════════════════════════════════════════════════════════
-        console.log('\n🔍 DATA QUALITY CHECK');
+        console.log('\n�️  VACANT BERTHS');
         console.log('─'.repeat(40));
 
-        const missingIRCTC = await collection.countDocuments({
-            $or: [
-                { IRCTC_ID: { $exists: false } },
-                { IRCTC_ID: null },
-                { IRCTC_ID: "" }
-            ]
-        });
-        const missingEmail = await collection.countDocuments({
-            $or: [
-                { Email: { $exists: false } },
-                { Email: null },
-                { Email: "" }
-            ]
-        });
-        const missingMobile = await collection.countDocuments({
-            $or: [
-                { Mobile: { $exists: false } },
-                { Mobile: null },
-                { Mobile: "" }
-            ]
-        });
+        const vacantRes = await fetch(`${API_BASE}/train/vacant-berths`);
+        const vacantData = await vacantRes.json();
 
-        console.log(`   Missing IRCTC_ID:     ${missingIRCTC}`);
-        console.log(`   Missing Email:        ${missingEmail}`);
-        console.log(`   Missing Mobile:       ${missingMobile}`);
+        if (vacantData.success && vacantData.data?.vacancies) {
+            const vacancies = vacantData.data.vacancies;
+            console.log(`   Total Vacant:         ${vacancies.length}`);
+
+            // Group by type
+            const byType = {};
+            vacancies.forEach(v => {
+                const type = v.type || v.berthType || 'Unknown';
+                byType[type] = (byType[type] || 0) + 1;
+            });
+
+            if (Object.keys(byType).length > 0) {
+                console.log('\n   By Berth Type:');
+                Object.entries(byType).forEach(([type, count]) => {
+                    console.log(`      ${type}: ${count}`);
+                });
+            }
+
+            // Show first vacant berth
+            if (vacancies.length > 0) {
+                const sample = vacancies[0];
+                console.log('\n   📋 First Vacant Berth:');
+                console.log(`      Berth:      ${sample.fullBerthNo || `${sample.coachNo}-${sample.berthNo}`}`);
+                console.log(`      Type:       ${sample.type || sample.berthType}`);
+                console.log(`      Vacant:     ${sample.vacantFrom || 'N/A'} → ${sample.vacantTo || 'N/A'}`);
+            }
+        } else {
+            console.log('   ⚠️  No vacant berths or journey not started');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // 6. ELIGIBILITY MATRIX
+        // ═══════════════════════════════════════════════════════════
+        console.log('\n🎯 ELIGIBILITY MATRIX');
+        console.log('─'.repeat(40));
+
+        const eligibilityRes = await fetch(`${API_BASE}/reallocation/eligibility`);
+        const eligibilityData = await eligibilityRes.json();
+
+        if (eligibilityData.success) {
+            const matrix = eligibilityData.data?.eligibilityMatrix || [];
+            console.log(`   Eligible Matches:     ${matrix.length}`);
+
+            if (matrix.length > 0) {
+                const sample = matrix[0];
+                console.log('\n   📋 Top Eligible Match:');
+                console.log(`      Passenger:  ${sample.passenger?.name || sample.name}`);
+                console.log(`      PNR:        ${sample.passenger?.pnr || sample.pnr}`);
+                console.log(`      Offered:    ${sample.berth?.fullBerthNo || sample.offeredBerth}`);
+                console.log(`      Score:      ${sample.score || 'N/A'}`);
+            }
+        } else {
+            console.log(`   ⚠️  ${eligibilityData.message || 'Could not fetch eligibility data'}`);
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // 7. TRAIN STATS
+        // ═══════════════════════════════════════════════════════════
+        console.log('\n� TRAIN STATS');
+        console.log('─'.repeat(40));
+
+        const statsRes = await fetch(`${API_BASE}/train/stats`);
+        const statsData = await statsRes.json();
+
+        if (statsData.success && statsData.data) {
+            const stats = statsData.data;
+            console.log(`   CNF Passengers:       ${stats.cnfPassengers || 0}`);
+            console.log(`   RAC Passengers:       ${stats.racPassengers || 0}`);
+            console.log(`   Boarded:              ${stats.boardedPassengers || 0}`);
+            console.log(`   No-Shows:             ${stats.noShowCount || 0}`);
+            console.log(`   Upgrades Done:        ${stats.upgradesCompleted || 0}`);
+        } else {
+            console.log('   ⚠️  Could not fetch train stats');
+        }
 
         // ═══════════════════════════════════════════════════════════
         // SUMMARY
@@ -209,7 +194,7 @@ async function checkData() {
         process.exit(0);
     } catch (error) {
         console.error('\n❌ Error:', error.message);
-        console.error(error.stack);
+        console.error('   Make sure the backend server is running on port 5000');
         process.exit(1);
     }
 }

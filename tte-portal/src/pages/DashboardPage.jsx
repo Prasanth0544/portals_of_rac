@@ -10,6 +10,14 @@ function DashboardPage() {
     const [passengers, setPassengers] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // PNR Search state
+    const [searchPnr, setSearchPnr] = useState('');
+    const [searchResult, setSearchResult] = useState(null);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [searchError, setSearchError] = useState('');
+    const [actionLoading, setActionLoading] = useState(false);
+    const [actionMessage, setActionMessage] = useState({ type: '', text: '' });
+
     useEffect(() => {
         // Request TTE push notification permission
         const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -50,6 +58,95 @@ function DashboardPage() {
         }
     };
 
+    // PNR Search handler
+    const handleSearch = async () => {
+        if (!searchPnr.trim()) {
+            setSearchError('Please enter a PNR number');
+            return;
+        }
+
+        setSearchLoading(true);
+        setSearchError('');
+        setSearchResult(null);
+        setActionMessage({ type: '', text: '' });
+
+        try {
+            const response = await tteAPI.getPassengers({ pnr: searchPnr.trim() });
+            if (response.success && response.data.passengers && response.data.passengers.length > 0) {
+                setSearchResult(response.data.passengers[0]);
+            } else {
+                setSearchError('No passenger found with this PNR');
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            setSearchError(error.response?.data?.message || 'Failed to search passenger');
+        } finally {
+            setSearchLoading(false);
+        }
+    };
+
+    // Mark No-Show handler
+    const handleMarkNoShow = async () => {
+        if (!searchResult) return;
+
+        if (!window.confirm(`Mark ${searchResult.name} (PNR: ${searchResult.pnr}) as NO-SHOW?`)) {
+            return;
+        }
+
+        setActionLoading(true);
+        setActionMessage({ type: '', text: '' });
+
+        try {
+            const response = await tteAPI.markNoShow(searchResult.pnr);
+            if (response.success) {
+                setActionMessage({ type: 'success', text: '✅ Passenger marked as NO-SHOW successfully!' });
+                // Refresh search result
+                setSearchResult({ ...searchResult, noShow: true });
+                loadData(); // Refresh dashboard stats
+            }
+        } catch (error) {
+            console.error('Mark no-show error:', error);
+            setActionMessage({ type: 'error', text: '❌ ' + (error.response?.data?.message || 'Failed to mark as no-show') });
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    // Revert No-Show handler
+    const handleRevertNoShow = async () => {
+        if (!searchResult) return;
+
+        if (!window.confirm(`Revert NO-SHOW status for ${searchResult.name} (PNR: ${searchResult.pnr})?`)) {
+            return;
+        }
+
+        setActionLoading(true);
+        setActionMessage({ type: '', text: '' });
+
+        try {
+            const response = await tteAPI.revertNoShow(searchResult.pnr);
+            if (response.success) {
+                setActionMessage({ type: 'success', text: '✅ NO-SHOW status reverted successfully!' });
+                // Refresh search result
+                setSearchResult({ ...searchResult, noShow: false });
+                loadData(); // Refresh dashboard stats
+            }
+        } catch (error) {
+            console.error('Revert no-show error:', error);
+            setActionMessage({ type: 'error', text: '❌ ' + (error.response?.data?.message || 'Failed to revert no-show') });
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    // Clear search
+    const handleClearSearch = () => {
+        setSearchPnr('');
+        setSearchResult(null);
+        setSearchError('');
+        setActionMessage({ type: '', text: '' });
+    };
+
     if (loading) {
         return (
             <div className="dashboard-loading">
@@ -67,6 +164,13 @@ function DashboardPage() {
         cnf: passengers.filter(p => p.pnrStatus === 'CNF').length,
         rac: passengers.filter(p => p.pnrStatus === 'RAC').length,
         online: passengers.filter(p => p.passengerStatus?.toLowerCase() === 'online').length,
+    };
+
+    // Helper function to get station name from code
+    const getStationName = (code) => {
+        if (!code || !trainState?.stations) return code;
+        const station = trainState.stations.find(s => s.code === code);
+        return station?.name || code;
     };
 
     const currentStation = trainState?.stations?.[trainState.currentStationIdx];
@@ -154,6 +258,113 @@ function DashboardPage() {
                     <div className="stat-label">UPGRADED</div>
                     <div className="stat-value success">{trainState?.stats?.totalRACUpgraded || 0}</div>
                 </div>
+            </div>
+
+            {/* PNR Search & No-Show Section */}
+            <div className="pnr-search-section">
+                <h3>🔍 PNR Search & Mark No-Show</h3>
+                <div className="card-divider"></div>
+
+                <div className="search-input-row">
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Enter PNR Number..."
+                        value={searchPnr}
+                        onChange={(e) => setSearchPnr(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                    />
+                    <button
+                        className="search-btn"
+                        onClick={handleSearch}
+                        disabled={searchLoading}
+                    >
+                        {searchLoading ? 'Searching...' : 'Search'}
+                    </button>
+                    {(searchResult || searchError) && (
+                        <button className="clear-btn" onClick={handleClearSearch}>
+                            Clear
+                        </button>
+                    )}
+                </div>
+
+                {/* Error Message */}
+                {searchError && (
+                    <div className="search-message error">{searchError}</div>
+                )}
+
+                {/* Action Message */}
+                {actionMessage.text && (
+                    <div className={`search-message ${actionMessage.type}`}>
+                        {actionMessage.text}
+                    </div>
+                )}
+
+                {/* Search Result */}
+                {searchResult && (
+                    <div className="search-result-card">
+                        <div className="passenger-details-grid">
+                            <div className="detail-item">
+                                <span className="detail-label">Name</span>
+                                <span className="detail-value">{searchResult.name}</span>
+                            </div>
+                            <div className="detail-item">
+                                <span className="detail-label">PNR</span>
+                                <span className="detail-value">{searchResult.pnr}</span>
+                            </div>
+                            <div className="detail-item">
+                                <span className="detail-label">Coach-Berth</span>
+                                <span className="detail-value">{searchResult.coach}-{searchResult.seatNo || searchResult.berth}</span>
+                            </div>
+                            <div className="detail-item">
+                                <span className="detail-label">Status</span>
+                                <span className={`status-tag ${searchResult.pnrStatus?.toLowerCase()}`}>
+                                    {searchResult.pnrStatus}
+                                </span>
+                            </div>
+                            <div className="detail-item">
+                                <span className="detail-label">Boarding</span>
+                                <span className="detail-value">{getStationName(searchResult.from)}</span>
+                            </div>
+                            <div className="detail-item">
+                                <span className="detail-label">Deboarding</span>
+                                <span className="detail-value">{getStationName(searchResult.to)}</span>
+                            </div>
+                            <div className="detail-item">
+                                <span className="detail-label">Boarded</span>
+                                <span className={`status-tag ${searchResult.boarded ? 'boarded' : 'not-boarded'}`}>
+                                    {searchResult.boarded ? 'Yes' : 'No'}
+                                </span>
+                            </div>
+                            <div className="detail-item">
+                                <span className="detail-label">No-Show</span>
+                                <span className={`status-tag ${searchResult.noShow ? 'no-show' : 'active'}`}>
+                                    {searchResult.noShow ? 'Yes ⚠️' : 'No'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="action-buttons">
+                            {!searchResult.noShow ? (
+                                <button
+                                    className="btn-no-show"
+                                    onClick={handleMarkNoShow}
+                                    disabled={actionLoading || searchResult.deboarded}
+                                >
+                                    {actionLoading ? 'Processing...' : '⛔ Mark as No-Show'}
+                                </button>
+                            ) : (
+                                <button
+                                    className="btn-revert"
+                                    onClick={handleRevertNoShow}
+                                    disabled={actionLoading}
+                                >
+                                    {actionLoading ? 'Processing...' : '✅ Revert No-Show'}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Journey Progress & Passenger Status */}

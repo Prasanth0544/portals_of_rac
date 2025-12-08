@@ -46,6 +46,32 @@ class TrainController {
 
       console.log(`\n🚂 Initializing train ${train} for date ${date}...`);
 
+      // ═══════════════════════════════════════════════════════════
+      // CLEAR STALE DATA FROM PREVIOUS SESSIONS
+      // ═══════════════════════════════════════════════════════════
+      try {
+        const racDb = await db.getDb();
+
+        // Clear all pending upgrade notifications
+        const upgradeNotifications = racDb.collection('upgrade_notifications');
+        const notifResult = await upgradeNotifications.deleteMany({ status: 'PENDING' });
+        if (notifResult.deletedCount > 0) {
+          console.log(`   🗑️ Cleared ${notifResult.deletedCount} stale upgrade notifications`);
+        }
+
+        // Clear all pending station reallocations
+        const stationReallocations = racDb.collection('station_reallocations');
+        const reallocResult = await stationReallocations.deleteMany({ status: 'pending' });
+        if (reallocResult.deletedCount > 0) {
+          console.log(`   🗑️ Cleared ${reallocResult.deletedCount} stale station reallocations`);
+        }
+
+        console.log('   ✅ Stale session data cleared');
+      } catch (cleanupError) {
+        console.warn('   ⚠️ Could not clear stale data:', cleanupError.message);
+        // Continue with initialization even if cleanup fails
+      }
+
       trainState = await DataService.loadTrainData(train, date, name);
 
       const responseData = {

@@ -84,6 +84,8 @@ code {
 
 .page-header .back-btn:hover {
   background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-50%);
+  /* Keep stable, no movement */
 }
 
 .page-header .back-btn svg {

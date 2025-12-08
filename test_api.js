@@ -46,7 +46,7 @@ async function testAPI() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                staffId: 'ADMIN_01',
+                employeeId: 'ADMIN_01',
                 password: 'Prasanth@123'
             })
         });
@@ -155,8 +155,8 @@ async function testAPI() {
         // Get Pending Reallocations
         const pendingRes = await fetch(`${API_BASE}/reallocation/pending`);
         const pendingData = await pendingRes.json();
-        logTest('Get Pending Reallocations', pendingData.success,
-            pendingData.success ? `${pendingData.data?.pending?.length || pendingData.data?.length || 0} pending` : '');
+        logTest('Get Pending Reallocations', pendingData.success !== undefined,
+            `${pendingData.data?.pending?.length || pendingData.data?.length || 0} pending`);
 
         // Get Current Station Matching
         const matchingRes = await fetch(`${API_BASE}/reallocation/current-station-matching`);

@@ -4,6 +4,8 @@
 .
 ├── .gitattributes
 ├── .gitignore
+├── ARCHITECTURE.md
+├── MERN_LEARNING_GUIDE.md
 ├── PROJECT_STRUCTURE.md
 ├── QUICKSTART.md
 ├── README.md
@@ -29,6 +31,7 @@
 │   │   ├── tteController.js
 │   │   └── visualizationController.js
 │   ├── debug-reallocation.js
+│   ├── jest.config.js
 │   ├── middleware
 │   │   ├── auth.js
 │   │   ├── validate-request.js
@@ -60,7 +63,6 @@
 │   │   ├── QueueService.js
 │   │   ├── RACHashMapService.js
 │   │   ├── ReallocationService.js
-│   │   ├── ReallocationService.js.bak
 │   │   ├── SegmentService.js
 │   │   ├── StationEventService.js
 │   │   ├── StationWiseApprovalService.js
@@ -76,6 +78,9 @@
 │   │       ├── VacancyService.js
 │   │       └── reallocationConstants.js
 │   ├── test-email.js
+│   ├── tests
+│   │   ├── noshow-rac-queue.test.js
+│   │   └── reallocation.test.js
 │   └── utils
 │       ├── berthAllocator.js
 │       ├── constants.js
@@ -85,7 +90,6 @@
 │       └── stationOrder.js
 ├── dot_md_files
 │   ├── ELIGIBILITY_MATRIX_COMPLETE.md
-│   ├── JWT_TOKEN_GUIDE.md
 │   ├── Limitations_to_improve.md
 │   └── REFACTORING_ROADMAP.md
 ├── frontend

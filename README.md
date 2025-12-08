@@ -8,9 +8,8 @@ A **real-time Railway RAC (Reservation Against Cancellation) seat reallocation s
 
 | Document | Purpose |
 |----------|---------|
-| **[QUICKSTART.md](QUICKSTART.md)** | How to run all three apps + backend |
-| **[ARCHITECTURE.md](ARCHITECTURE.md)** | High-level system design and concepts |
-| **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** | Detailed file structure |
+| **[QUICKSTART.md](QUICKSTART.md)** | Complete setup guide, installation, and first-time configuration |
+| **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** | Detailed architecture and file structure |
 
 ---
 
