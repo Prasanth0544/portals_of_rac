@@ -18,10 +18,37 @@
     font-weight: 600;
 }
 
+.dashboard-header-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .dashboard-subtitle {
     font-size: 13px;
     color: #5a6c7d;
     margin: 0;
+}
+
+.ws-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.ws-status.connected {
+    background: #d5f4e6;
+    color: #27ae60;
+}
+
+.ws-status.disconnected {
+    background: #fadbd8;
+    color: #c0392b;
 }
 
 /* Train Status Banner */

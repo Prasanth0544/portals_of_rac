@@ -63,12 +63,12 @@
 - [ ] Create `config/env.js` to check for `MONGO_URI`, `JWT_SECRET`, `ALLOWED_ORIGINS`.
 - [ ] Throw an error immediately if a key is missing.
 
-### 8. Input Validation Middleware
-**Current State:** Controllers manually check `if (!req.body.pnr) ...`.
-**Action:** Add a validation step before the controller.
-- [ ] Use `express-validator` or `Joi`.
-- [ ] Example: `router.post('/no-show', validateNoShow, controller.markNoShow)`.
-- [ ] **Result:** Controllers assume data is valid; cleaner code.
+### 8. Input Validation Middleware - ✅ COMPLETED
+**Status:** ✅ Implemented with Zod + TypeScript
+**Files Created:** 
+- `backend/validation/schemas.ts` - All API validation schemas
+- `backend/middleware/validate.ts` - Express middleware
+- [ ] Wire up validation to all routes (next step)
 
 ### 9. Externalize Magic Numbers
 **Current State:** Timeouts (300s), status strings ('RAC', 'CNF'), and tab names are hardcoded.
