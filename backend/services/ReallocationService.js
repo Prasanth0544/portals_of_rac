@@ -7,6 +7,7 @@
 const db = require("../config/db");
 const wsManager = require("../config/websocket");
 const UpgradeNotificationService = require("./UpgradeNotificationService");
+const logger = require("../utils/logger");
 
 // Import specialized services
 const NoShowService = require("./reallocation/NoShowService");
@@ -82,8 +83,8 @@ class ReallocationService {
         return { error: 'Current station not provided', offersCreated: 0 };
       }
 
-      console.log(`\n🔍 Processing vacancy for upgrade: ${vacantBerthInfo.fullBerthNo}`);
-      console.log(`   At station: ${currentStation.name} (${currentStation.code})`);
+      logger.debug(`Processing vacancy for upgrade: ${vacantBerthInfo.fullBerthNo}`);
+      logger.debug(`At station: ${currentStation.name} (${currentStation.code})`);
 
       // Find eligible RAC passengers (using loop since hasDeniedBerth is async)
       const eligibleRAC = [];
@@ -94,14 +95,14 @@ class ReallocationService {
 
         // Check if passenger already denied this specific berth
         if (await UpgradeNotificationService.hasDeniedBerth(rac.pnr, vacantBerthInfo.fullBerthNo)) {
-          console.log(`   ⏭️  Skipping ${rac.name} - previously denied ${vacantBerthInfo.fullBerthNo}`);
+          logger.debug(`Skipping ${rac.name} - previously denied ${vacantBerthInfo.fullBerthNo}`);
           continue;
         }
 
         eligibleRAC.push(rac);
       }
 
-      console.log(`   Found ${eligibleRAC.length} eligible RAC passenger(s)`);
+      logger.debug(`Found ${eligibleRAC.length} eligible RAC passenger(s)`);
 
       // Create notifications for eligible passengers
       let offersCreated = 0;
@@ -117,7 +118,7 @@ class ReallocationService {
 
           if (notification) {
             offersCreated++;
-            console.log(`   ✅ Created offer for ${racPassenger.name} (${racPassenger.pnr})`);
+            logger.info(`Created upgrade offer for ${racPassenger.name} (${racPassenger.pnr})`);
 
             // Create in-app notification
             if (racPassenger.irctcId) {
@@ -149,7 +150,7 @@ class ReallocationService {
                     tag: `upgrade-${racPassenger.pnr}`
                   }
                 );
-                console.log(`   📲 Push sent to Online passenger ${racPassenger.pnr}`);
+                logger.debug(`Push sent to Online passenger ${racPassenger.pnr}`);
               } else {
                 // Offline passenger -> broadcast to all TTEs
                 await WebPushService.sendPushToAllTTEs({
@@ -158,7 +159,7 @@ class ReallocationService {
                   url: 'http://localhost:5173/#/upgrade-notifications',
                   tag: `tte-upgrade-${racPassenger.pnr}`
                 });
-                console.log(`   📲 Push to TTE for offline ${racPassenger.pnr}`);
+                logger.debug(`Push to TTE for offline ${racPassenger.pnr}`);
               }
 
             }

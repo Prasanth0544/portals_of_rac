@@ -53,25 +53,27 @@ router.post('/tte/revert-no-show',
   (req, res) => tteController.revertNoShow(req, res)
 );
 
-// Passenger self-revert NO-SHOW status
+// Passenger self-revert NO-SHOW status (requires authentication)
 router.post('/passenger/revert-no-show',
-  // Note: Can add authMiddleware here if passenger authentication is required
-  // For now allowing based on PNR validation in controller
+  authMiddleware,
   (req, res) => passengerController.selfRevertNoShow(req, res)
 );
 
 // Get available boarding stations for change (next 3 forward stations)
 router.get('/passenger/available-boarding-stations/:pnr',
+  authMiddleware,
   (req, res) => passengerController.getAvailableBoardingStations(req, res)
 );
 
-// Change boarding station (one-time only)
+// Change boarding station (one-time only, requires authentication)
 router.post('/passenger/change-boarding-station',
+  authMiddleware,
   (req, res) => passengerController.changeBoardingStation(req, res)
 );
 
-// Self-cancel ticket (passenger marks as NO-SHOW)
+// Self-cancel ticket (passenger marks as NO-SHOW, requires authentication)
 router.post('/passenger/self-cancel',
+  authMiddleware,
   (req, res) => passengerController.selfCancelTicket(req, res)
 );
 
@@ -101,10 +103,13 @@ router.post('/otp/verify',
 );
 
 
-// Apply reallocation manually
+// Apply reallocation manually (Admin only with validation)
 router.post('/reallocation/apply',
   authMiddleware,
   requireRole(['ADMIN']),
+  validationMiddleware.sanitizeBody,
+  validationMiddleware.validateReallocation,
+  validationMiddleware.checkTrainInitialized,
   (req, res) => reallocationController.applyReallocation(req, res)
 );
 
@@ -230,13 +235,6 @@ router.get('/reallocation/eligibility',
   validationMiddleware.checkTrainInitialized,
   validationMiddleware.checkJourneyStarted,
   (req, res) => reallocationController.getEligibilityMatrix(req, res)
-);
-
-router.post('/reallocation/apply',
-  validationMiddleware.sanitizeBody,
-  validationMiddleware.validateReallocation,
-  validationMiddleware.checkTrainInitialized,
-  (req, res) => reallocationController.applyReallocation(req, res)
 );
 
 // ========== STATION-WISE APPROVAL ROUTES ========== ✅ NEW
@@ -560,8 +558,9 @@ router.post('/passenger/cancel',
   (req, res) => passengerController.markNoShow(req, res)
 );
 
-// Set passenger online/offline status
+// Set passenger online/offline status (requires authentication)
 router.post('/passenger/set-status',
+  authMiddleware,
   validationMiddleware.sanitizeBody,
   validationMiddleware.checkTrainInitialized,
   (req, res) => passengerController.setPassengerStatus(req, res)
