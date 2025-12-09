@@ -49,8 +49,8 @@ export const passengerAPI = {
     },
 
     // Passenger login
-    login: async (pnr: string, mobile: string): Promise<ApiResponse> => {
-        const response = await api.post('/auth/passenger/login', { pnr, mobile });
+    login: async (irctcId: string, password: string): Promise<ApiResponse> => {
+        const response = await api.post('/auth/passenger/login', { irctcId, password });
         return response.data;
     },
 

@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Opens at: **http://localhost:5173**
+Opens at: **http://localhost:5175**
 
 ---
 
@@ -70,7 +70,7 @@ passenger-portal/
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server (port 5173) |
+| `npm run dev` | Start development server (port 5175) |
 | `npm run build` | Build for production |
 | `npm run preview` | Preview production build |
 | `npm run lint` | Run ESLint |

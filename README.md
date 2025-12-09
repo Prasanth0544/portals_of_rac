@@ -18,8 +18,8 @@ A **real-time Railway RAC (Reservation Against Cancellation) seat reallocation s
 ```
 RAC-Reallocation-System/
 ├── backend/              # Express.js REST API + WebSocket Server (Port 5000)
-├── frontend/             # Vite + React Admin Portal (Port 3000)
-├── passenger-portal/     # Vite + React Passenger Portal (Port 5173)
+├── frontend/             # Vite + React Admin Portal (Port 5173)
+├── passenger-portal/     # Vite + React Passenger Portal (Port 5175)
 └── tte-portal/           # Vite + React TTE Portal (Port 5174)
 ```
 
@@ -77,9 +77,9 @@ cd tte-portal && npm run dev
 
 | Portal | URL | Default Login |
 |--------|-----|---------------|
-| **Admin Portal** | http://localhost:3000 | `ADMIN_01` / `Prasanth@123` |
+| **Admin Portal** | http://localhost:5173 | `ADMIN_01` / `Prasanth@123` |
 | **TTE Portal** | http://localhost:5174 | `TTE_01` / `Prasanth@123` |
-| **Passenger Portal** | http://localhost:5173 | `IR_0001` / `Prasanth@123` |
+| **Passenger Portal** | http://localhost:5175 | `IR_0001` / `Prasanth@123` |
 | **API Docs** | http://localhost:5000/api-docs | - |
 
 ---

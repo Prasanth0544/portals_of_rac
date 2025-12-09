@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Opens at: **http://localhost:3000**
+Opens at: **http://localhost:5173**
 
 ---
 
@@ -67,7 +67,7 @@ frontend/
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server (port 3000) |
+| `npm run dev` | Start development server (port 5173) |
 | `npm run build` | Build for production |
 | `npm run preview` | Preview production build |
 | `npm run lint` | Run ESLint |

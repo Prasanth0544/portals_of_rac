@@ -36,12 +36,12 @@ function LoginPage({ onLoginSuccess }: LoginPageProps): React.ReactElement {
             const response = await passengerAPI.login(loginId, password);
 
             if (response.success) {
-                localStorage.setItem('token', response.data.token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
-                localStorage.setItem('tickets', JSON.stringify(response.data.tickets));
+                localStorage.setItem('token', response.token);
+                localStorage.setItem('user', JSON.stringify(response.user));
+                localStorage.setItem('tickets', JSON.stringify(response.tickets));
 
                 if (onLoginSuccess) {
-                    onLoginSuccess(response.data.user, response.data.tickets);
+                    onLoginSuccess(response.user, response.tickets);
                 }
 
                 window.location.reload();

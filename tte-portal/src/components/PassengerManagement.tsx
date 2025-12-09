@@ -21,9 +21,9 @@ import {
     Button,
     CircularProgress,
     IconButton,
-    Grid,
     SelectChangeEvent
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -42,6 +42,10 @@ interface Passenger {
 
 interface PassengerFilters {
     status?: string;
+    coach?: string;
+    from?: string;
+    to?: string;
+    [key: string]: string | undefined;
 }
 
 const PassengerManagement: React.FC = () => {
@@ -115,7 +119,7 @@ const PassengerManagement: React.FC = () => {
             <Card sx={{ mb: 3 }}>
                 <CardContent>
                     <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                             <TextField
                                 fullWidth
                                 label="Search PNR"
@@ -124,7 +128,7 @@ const PassengerManagement: React.FC = () => {
                                 placeholder="Enter PNR"
                             />
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                             <FormControl fullWidth>
                                 <InputLabel>Filter by Status</InputLabel>
                                 <Select
@@ -142,7 +146,7 @@ const PassengerManagement: React.FC = () => {
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                             <Button
                                 fullWidth
                                 variant="contained"

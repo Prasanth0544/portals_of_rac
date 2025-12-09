@@ -102,7 +102,7 @@ export const subscribeToPushNotifications = async (): Promise<PushSubscriptionRe
         // Subscribe to push
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer
         });
 
         console.log('✅ Push subscription created');

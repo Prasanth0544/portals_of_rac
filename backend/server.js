@@ -20,13 +20,15 @@ app.use(cors({
     'http://localhost:3000',  // Admin Portal (React)
     'http://localhost:3001',  // TTE Portal (old port)
     'http://localhost:3002',  // Passenger Portal (old port)
+    'http://localhost:5173',  // Frontend (Vite)
     'http://localhost:5174',  // TTE Portal (Vite)
-    'http://localhost:5173'   // Passenger Portal (Vite)
+    'http://localhost:5175'   // Passenger Portal (Vite)
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

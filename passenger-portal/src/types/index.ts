@@ -72,7 +72,12 @@ export interface ApiResponse<T = any> {
     message?: string;
     data?: T;
     error?: string;
+    // Login response fields
+    token?: string;
+    user?: any;
+    tickets?: any[];
 }
+
 
 // =============================================
 // Upgrade Notification Types

@@ -7,7 +7,6 @@ import {
     Typography,
     Button,
     Alert,
-    Grid,
     Chip,
     LinearProgress,
     List,
@@ -15,6 +14,7 @@ import {
     ListItemText,
     Divider
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import NavigationIcon from '@mui/icons-material/Navigation';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import InfoIcon from '@mui/icons-material/Info';
@@ -109,13 +109,13 @@ const TrainControls: React.FC = () => {
             <Card sx={{ mb: 3, bgcolor: 'primary.main', color: 'white' }}>
                 <CardContent>
                     <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Typography variant="h5">{trainState.trainName}</Typography>
                             <Typography variant="body2" sx={{ opacity: 0.9 }}>
                                 Train #{trainState.trainNo}
                             </Typography>
                         </Grid>
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Typography variant="h6">Current Station:</Typography>
                             <Typography variant="h4">{currentStation?.name}</Typography>
                             <Typography variant="body2" sx={{ opacity: 0.9 }}>
