@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import * as api from '../services/apiWithErrorHandling';
 import apiClient from '../services/apiWithErrorHandling';
-import './ReallocationPage.css';
+import '../styles/pages/ReallocationPage.css';
 
 interface Station {
     name: string;
@@ -867,3 +867,4 @@ const CurrentStationMatchingView = (): React.ReactElement => {
 };
 
 export default ReallocationPage;
+

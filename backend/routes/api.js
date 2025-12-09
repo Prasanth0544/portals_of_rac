@@ -13,16 +13,21 @@ const stationWiseApprovalController = require('../controllers/StationWiseApprova
 const otpController = require('../controllers/otpController'); // ✅ NEW - OTP verification
 const validationMiddleware = require('../middleware/validation');
 const { authMiddleware, requireRole, requirePermission } = require('../middleware/auth'); // ✅ NEW
+const { authLimiter, otpLimiter } = require('../middleware/rateLimiter'); // ✅ Rate limiting
+const CurrentStationService = require('../services/CurrentStationReallocationService');
+const AllocationService = require('../services/reallocation/AllocationService');
 
 // ========== AUTHENTICATION ROUTES ========== ✅ NEW
 // Staff Login (Admin + TTE)
 router.post('/auth/staff/login',
+  authLimiter, // Rate limit: 5 attempts per 15 minutes
   validationMiddleware.sanitizeBody,
   (req, res) => authController.staffLogin(req, res)
 );
 
 // Passenger Login
 router.post('/auth/passenger/login',
+  authLimiter, // Rate limit: 5 attempts per 15 minutes
   validationMiddleware.sanitizeBody,
   (req, res) => authController.passengerLogin(req, res)
 );
@@ -37,6 +42,11 @@ router.get('/auth/verify',
 router.post('/auth/logout',
   authMiddleware,
   (req, res) => authController.logout(req, res)
+);
+
+// Refresh access token
+router.post('/auth/refresh',
+  (req, res) => authController.refresh(req, res)
 );
 
 // Mark passenger as NO_SHOW
@@ -92,6 +102,7 @@ router.get('/passenger/pending-upgrades/:irctcId',
 // ========== OTP ROUTES ==========
 // Send OTP for verification
 router.post('/otp/send',
+  otpLimiter, // Rate limit: 3 requests per hour
   validationMiddleware.sanitizeBody,
   (req, res) => otpController.sendOTP(req, res)
 );
@@ -286,7 +297,6 @@ router.get('/reallocation/current-station-matching',
   validationMiddleware.checkJourneyStarted,
   async (req, res) => {
     try {
-      const CurrentStationService = require('../services/CurrentStationReallocationService');
       const trainState = trainController.getGlobalTrainState();
 
       if (!trainState) {
@@ -312,7 +322,6 @@ router.post('/reallocation/create-from-matches',
   validationMiddleware.checkJourneyStarted,
   async (req, res) => {
     try {
-      const CurrentStationService = require('../services/CurrentStationReallocationService');
       const trainState = trainController.getGlobalTrainState();
 
       if (!trainState) {
@@ -400,7 +409,6 @@ router.post('/reallocation/upgrade/:upgradeId/approve',
       const upgrade = trainState.completeUpgrade(upgradeId);
 
       // Apply the actual upgrade (update passenger status, berth allocation)
-      const AllocationService = require('../services/reallocation/AllocationService');
       await AllocationService.applyUpgrade(
         pendingUpgrade.pnr,
         pendingUpgrade.berthId,

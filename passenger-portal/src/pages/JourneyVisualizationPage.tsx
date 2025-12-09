@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { passengerAPI } from '../api';
 import { Station } from '../types';
-import './JourneyVisualizationPage.css';
+import '../styles/pages/JourneyVisualizationPage.css';
 
 interface StationSchedule extends Station {
     sno?: number;

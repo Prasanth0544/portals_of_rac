@@ -1,7 +1,7 @@
 // passenger-portal/src/pages/PNRSearchPage.tsx
 import React, { useState, FormEvent, ChangeEvent } from 'react';
 import { passengerAPI } from '../api';
-import './PNRSearchPage.css';
+import '../styles/pages/PNRSearchPage.css';
 
 interface Passenger {
     pnr: string;

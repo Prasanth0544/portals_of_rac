@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { getStationSchedule } from "../services/apiWithErrorHandling";
-import "./VisualizationPage.css";
+import "../styles/pages/VisualizationPage.css";
 
 interface Station {
     code: string;
@@ -363,3 +363,4 @@ function VisualizationPage({ trainData, onClose }: VisualizationPageProps): Reac
 }
 
 export default VisualizationPage;
+

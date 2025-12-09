@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { tteAPI } from '../api';
-import "./OfflineUpgradesPage.css";
+import "../styles/pages/OfflineUpgradesPage.css";
 
 interface Passenger {
     pnr: string;
@@ -187,3 +187,4 @@ function OfflineUpgradesPage(): React.ReactElement {
 }
 
 export default OfflineUpgradesPage;
+

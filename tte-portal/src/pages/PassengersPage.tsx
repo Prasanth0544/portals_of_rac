@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, FocusEvent, ChangeEvent } from "react";
 import { tteAPI } from "../api";
-import "./PassengersPage.css";
+import "../styles/pages/PassengersPage.css";
 
 interface Passenger {
     pnr: string;
@@ -742,3 +742,4 @@ function PassengersPage(): React.ReactElement {
 }
 
 export default PassengersPage;
+

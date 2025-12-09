@@ -14,7 +14,7 @@ import Grid from '@mui/material/Grid';
 import PrintIcon from '@mui/icons-material/Print';
 import DownloadIcon from '@mui/icons-material/Download';
 import TrainIcon from '@mui/icons-material/Train';
-import './BoardingPass.css';
+import '../styles/components/BoardingPass.css';
 
 interface PassengerData {
     PNR_Number?: string;
@@ -236,3 +236,4 @@ function BoardingPass({ passenger }: BoardingPassProps): React.ReactElement {
 }
 
 export default BoardingPass;
+

@@ -1,7 +1,7 @@
 // tte-portal/src/components/JourneyTimeline.tsx
 // Train Simulation - Journey Progress component (read-only, synced with frontend)
 import React, { useRef, useEffect } from 'react';
-import './JourneyTimeline.css';
+import '../styles/components/JourneyTimeline.css';
 
 interface Station {
     code?: string;

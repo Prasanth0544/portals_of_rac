@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import axios from 'axios';
-import './AllocationDiagnosticsPage.css';
+import '../styles/pages/AllocationDiagnosticsPage.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -219,3 +219,4 @@ function AllocationDiagnosticsPage({ onClose }: AllocationDiagnosticsPageProps):
 }
 
 export default AllocationDiagnosticsPage;
+

@@ -67,9 +67,23 @@ class Database {
       this.trainDetailsCollectionName = finalConfig.trainDetailsCollection || 'Trains_Details';
       this.currentTrainNo = finalConfig.trainNo;
 
-      // Create MongoDB clients
-      stationsClient = new MongoClient(this.mongoUri);
-      passengersClient = new MongoClient(this.mongoUri);
+      // Connection pooling configuration for performance
+      const poolOptions = {
+        minPoolSize: 10,           // Minimum connections to keep open
+        maxPoolSize: 50,           // Maximum connections allowed
+        maxIdleTimeMS: 45000,      // Close idle connections after 45 seconds
+        connectTimeoutMS: 10000,   // Connection timeout: 10 seconds
+        socketTimeoutMS: 30000,    // Socket timeout: 30 seconds
+        serverSelectionTimeoutMS: 5000,
+        retryWrites: true,
+        retryReads: true
+      };
+
+      // Create MongoDB clients with connection pooling
+      stationsClient = new MongoClient(this.mongoUri, poolOptions);
+      passengersClient = new MongoClient(this.mongoUri, poolOptions);
+
+      console.log('🔗 MongoDB connection pooling enabled (min: 10, max: 50)');
 
       // Connect to stations database
       await stationsClient.connect();

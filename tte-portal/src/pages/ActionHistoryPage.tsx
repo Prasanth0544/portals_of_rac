@@ -22,7 +22,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import HistoryIcon from '@mui/icons-material/History';
 import { tteAPI } from '../api';
-import './ActionHistoryPage.css';
+import '../styles/pages/ActionHistoryPage.css';
 
 interface ActionTarget {
     name: string;
@@ -316,3 +316,4 @@ function ActionHistoryPage(): React.ReactElement {
 }
 
 export default ActionHistoryPage;
+

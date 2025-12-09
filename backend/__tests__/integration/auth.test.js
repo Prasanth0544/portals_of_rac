@@ -43,6 +43,14 @@ jest.mock('../../config/db', () => ({
     })
 }));
 
+// Mock RefreshTokenService for auth tests
+jest.mock('../../services/RefreshTokenService', () => ({
+    createRefreshToken: jest.fn().mockResolvedValue('mock-refresh-token-12345'),
+    validateRefreshToken: jest.fn().mockResolvedValue(null),
+    revokeRefreshToken: jest.fn().mockResolvedValue(true),
+    revokeAllUserTokens: jest.fn().mockResolvedValue(1)
+}));
+
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const authController = require('../../controllers/authController');

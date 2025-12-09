@@ -1,6 +1,6 @@
 // tte-portal/src/pages/UpgradeNotificationsPage.tsx
 import React, { useState, useEffect } from 'react';
-import './UpgradeNotificationsPage.css';
+import '../styles/pages/UpgradeNotificationsPage.css';
 
 interface SentOffer {
     id?: string;
@@ -185,3 +185,4 @@ const UpgradeNotificationsPage: React.FC = () => {
 };
 
 export default UpgradeNotificationsPage;
+

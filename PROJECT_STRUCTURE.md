@@ -4,10 +4,12 @@
 .
 ├── .gitattributes
 ├── .gitignore
+├── COMPLETION_STATUS.md
 ├── MERN_LEARNING_GUIDE.md
 ├── PROJECT_STRUCTURE.md
 ├── QUICKSTART.md
 ├── README.md
+├── SECURITY_IMPROVEMENTS.md
 ├── backend
 │   ├── .env
 │   ├── .env.example
@@ -15,6 +17,9 @@
 │   │   ├── controllers
 │   │   │   ├── passengerController.test.js
 │   │   │   └── tteController.test.js
+│   │   ├── integration
+│   │   │   ├── auth.test.js
+│   │   │   └── reallocation-flow.test.js
 │   │   ├── services
 │   │   │   ├── OTPService.test.js
 │   │   │   ├── ValidationService.test.js
@@ -22,6 +27,10 @@
 │   │   │       ├── RACQueueService.test.js
 │   │   │       └── VacancyService.test.js
 │   │   ├── setup.js
+│   │   ├── smoke
+│   │   │   ├── admin-portal.spec.js
+│   │   │   ├── passenger-portal.spec.js
+│   │   │   └── tte-portal.spec.js
 │   │   └── utils
 │   │       └── helpers.test.js
 │   ├── add-passenger-emails.js
@@ -46,6 +55,7 @@
 │   ├── jest.config.js
 │   ├── middleware
 │   │   ├── auth.js
+│   │   ├── rateLimiter.js
 │   │   ├── validate-request.js
 │   │   ├── validate.ts
 │   │   ├── validation-schemas.js
@@ -65,10 +75,12 @@
 │   ├── scripts
 │   │   ├── check-passengers.js
 │   │   ├── cleanupDuplicateReallocations.js
+│   │   ├── createIndexes.js
 │   │   ├── createTestAccounts.js
 │   │   └── resetAdmin.js
 │   ├── server.js
 │   ├── services
+│   │   ├── CacheService.js
 │   │   ├── CurrentStationReallocationService.js
 │   │   ├── DataService.js
 │   │   ├── InAppNotificationService.js
@@ -80,6 +92,7 @@
 │   │   ├── QueueService.js
 │   │   ├── RACHashMapService.js
 │   │   ├── ReallocationService.js
+│   │   ├── RefreshTokenService.js
 │   │   ├── SegmentService.js
 │   │   ├── StationEventService.js
 │   │   ├── StationWiseApprovalService.js
@@ -95,6 +108,7 @@
 │   │       ├── VacancyService.js
 │   │       └── reallocationConstants.js
 │   ├── test-email.js
+│   ├── test_output.txt
 │   ├── tests
 │   ├── tsconfig.json
 │   ├── types
@@ -106,6 +120,8 @@
 │   │   ├── create-indexes.js
 │   │   ├── error-handler.js
 │   │   ├── helpers.js
+│   │   ├── logger.js
+│   │   ├── queryUtils.js
 │   │   └── stationOrder.js
 │   └── validation
 │       └── schemas.ts
@@ -132,19 +148,12 @@
 │   │   ├── App.tsx
 │   │   ├── UserMenu.css
 │   │   ├── components
-│   │   │   ├── APIDocumentationLink.css
 │   │   │   ├── APIDocumentationLink.tsx
-│   │   │   ├── FormInput.css
 │   │   │   ├── FormInput.tsx
-│   │   │   ├── PassengerList.css
 │   │   │   ├── PassengerList.tsx
-│   │   │   ├── RACQueue.css
 │   │   │   ├── RACQueue.tsx
-│   │   │   ├── StationProgress.css
 │   │   │   ├── StationProgress.tsx
-│   │   │   ├── ToastContainer.css
 │   │   │   ├── ToastContainer.tsx
-│   │   │   ├── TrainVisualization.css
 │   │   │   ├── TrainVisualization.tsx
 │   │   │   └── common
 │   │   │       └── LoadingSpinner.tsx
@@ -153,28 +162,16 @@
 │   │   ├── index.css
 │   │   ├── main.tsx
 │   │   ├── pages
-│   │   │   ├── AddPassengerPage.css
 │   │   │   ├── AddPassengerPage.tsx
-│   │   │   ├── AllocationDiagnosticsPage.css
 │   │   │   ├── AllocationDiagnosticsPage.tsx
-│   │   │   ├── CoachesPage.css
 │   │   │   ├── CoachesPage.tsx
-│   │   │   ├── ConfigPage.css
 │   │   │   ├── ConfigPage.tsx
-│   │   │   ├── HomePage.css
 │   │   │   ├── HomePage.tsx
-│   │   │   ├── LoginPage.css
 │   │   │   ├── LoginPage.tsx
-│   │   │   ├── PassengersPage-status.css
-│   │   │   ├── PassengersPage.css
 │   │   │   ├── PassengersPage.tsx
-│   │   │   ├── PhaseOnePage.css
 │   │   │   ├── PhaseOnePage.tsx
-│   │   │   ├── RACQueuePage.css
 │   │   │   ├── RACQueuePage.tsx
-│   │   │   ├── ReallocationPage.css
 │   │   │   ├── ReallocationPage.tsx
-│   │   │   ├── VisualizationPage.css
 │   │   │   └── VisualizationPage.tsx
 │   │   ├── services
 │   │   │   ├── api.ts
@@ -183,6 +180,28 @@
 │   │   │   ├── pushNotificationService.ts
 │   │   │   ├── toastNotification.ts
 │   │   │   └── websocket.ts
+│   │   ├── styles
+│   │   │   ├── components
+│   │   │   │   ├── APIDocumentationLink.css
+│   │   │   │   ├── FormInput.css
+│   │   │   │   ├── PassengerList.css
+│   │   │   │   ├── RACQueue.css
+│   │   │   │   ├── StationProgress.css
+│   │   │   │   ├── ToastContainer.css
+│   │   │   │   └── TrainVisualization.css
+│   │   │   └── pages
+│   │   │       ├── AddPassengerPage.css
+│   │   │       ├── AllocationDiagnosticsPage.css
+│   │   │       ├── CoachesPage.css
+│   │   │       ├── ConfigPage.css
+│   │   │       ├── HomePage.css
+│   │   │       ├── LoginPage.css
+│   │   │       ├── PassengersPage-status.css
+│   │   │       ├── PassengersPage.css
+│   │   │       ├── PhaseOnePage.css
+│   │   │       ├── RACQueuePage.css
+│   │   │       ├── ReallocationPage.css
+│   │   │       └── VisualizationPage.css
 │   │   ├── types
 │   │   │   └── index.ts
 │   │   └── vite-env.d.ts
@@ -212,11 +231,8 @@
 │   │   ├── assets
 │   │   │   └── react.svg
 │   │   ├── components
-│   │   │   ├── BoardingPass.css
 │   │   │   ├── BoardingPass.tsx
-│   │   │   ├── JourneyTimeline.css
 │   │   │   ├── JourneyTimeline.tsx
-│   │   │   ├── NotificationBell.css
 │   │   │   ├── NotificationBell.tsx
 │   │   │   ├── NotificationSettings.tsx
 │   │   │   └── OfferCard.tsx
@@ -230,18 +246,24 @@
 │   │   ├── main.tsx
 │   │   ├── pages
 │   │   │   ├── DashboardPage.tsx
-│   │   │   ├── JourneyVisualizationPage.css
 │   │   │   ├── JourneyVisualizationPage.tsx
 │   │   │   ├── LoginPage.tsx
-│   │   │   ├── PNRSearchPage.css
 │   │   │   ├── PNRSearchPage.tsx
-│   │   │   ├── UpgradeOffersPage.css
 │   │   │   ├── UpgradeOffersPage.tsx
-│   │   │   ├── ViewTicketPage.css
 │   │   │   └── ViewTicketPage.tsx
 │   │   ├── services
 │   │   │   └── offerService.ts
 │   │   ├── stores
+│   │   ├── styles
+│   │   │   ├── components
+│   │   │   │   ├── BoardingPass.css
+│   │   │   │   ├── JourneyTimeline.css
+│   │   │   │   └── NotificationBell.css
+│   │   │   └── pages
+│   │   │       ├── JourneyVisualizationPage.css
+│   │   │       ├── PNRSearchPage.css
+│   │   │       ├── UpgradeOffersPage.css
+│   │   │       └── ViewTicketPage.css
 │   │   ├── types
 │   │   │   └── index.ts
 │   │   ├── utils
@@ -257,7 +279,6 @@
 │   └── vite.config.js
 ├── passengers_data.py
 ├── quick_check.js
-├── test.py
 ├── test_api.js
 ├── test_eligibility.js
 └── tte-portal
@@ -279,7 +300,6 @@
     │   ├── assets
     │   │   └── react.svg
     │   ├── components
-    │   │   ├── JourneyTimeline.css
     │   │   ├── JourneyTimeline.tsx
     │   │   ├── PassengerManagement.tsx
     │   │   └── TrainControls.tsx
@@ -288,25 +308,29 @@
     │   ├── index.css
     │   ├── main.tsx
     │   ├── pages
-    │   │   ├── ActionHistoryPage.css
     │   │   ├── ActionHistoryPage.tsx
     │   │   ├── BoardedPassengersPage.tsx
     │   │   ├── BoardingVerificationPage.tsx
-    │   │   ├── DashboardPage.css
     │   │   ├── DashboardPage.tsx
     │   │   ├── LoginPage.tsx
-    │   │   ├── OfflineUpgradesPage.css
     │   │   ├── OfflineUpgradesPage.tsx
-    │   │   ├── PassengersPage.css
     │   │   ├── PassengersPage.tsx
-    │   │   ├── PendingReallocationsPage.css
     │   │   ├── PendingReallocationsPage.tsx
-    │   │   ├── UpgradeNotificationsPage.css
     │   │   ├── UpgradeNotificationsPage.tsx
-    │   │   ├── VisualizationPage.css
     │   │   └── VisualizationPage.tsx
     │   ├── services
     │   │   └── pushNotificationService.ts
+    │   ├── styles
+    │   │   ├── components
+    │   │   │   └── JourneyTimeline.css
+    │   │   └── pages
+    │   │       ├── ActionHistoryPage.css
+    │   │       ├── DashboardPage.css
+    │   │       ├── OfflineUpgradesPage.css
+    │   │       ├── PassengersPage.css
+    │   │       ├── PendingReallocationsPage.css
+    │   │       ├── UpgradeNotificationsPage.css
+    │   │       └── VisualizationPage.css
     │   ├── types
     │   │   └── index.ts
     │   ├── utils

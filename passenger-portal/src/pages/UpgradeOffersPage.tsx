@@ -1,7 +1,7 @@
 // passenger-portal/src/pages/UpgradeOffersPage.tsx
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import './UpgradeOffersPage.css';
+import '../styles/pages/UpgradeOffersPage.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 

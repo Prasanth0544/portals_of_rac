@@ -1,6 +1,6 @@
 // passenger-portal/src/components/NotificationBell.tsx
 import React, { useState, useEffect } from 'react';
-import './NotificationBell.css';
+import '../styles/components/NotificationBell.css';
 
 interface NotificationData {
     message?: string;
@@ -228,3 +228,4 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ irctcId }) => {
 };
 
 export default NotificationBell;
+

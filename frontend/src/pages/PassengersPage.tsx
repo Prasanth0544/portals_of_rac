@@ -7,7 +7,7 @@ import {
     setPassengerStatus,
     getVacantBerths,
 } from "../services/apiWithErrorHandling";
-import "./PassengersPage.css";
+import "../styles/pages/PassengersPage.css";
 
 interface Station {
     name: string;
@@ -669,3 +669,4 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
 }
 
 export default PassengersPage;
+

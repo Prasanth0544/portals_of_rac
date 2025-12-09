@@ -5,7 +5,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import TrainIcon from '@mui/icons-material/Train';
 import { Station } from '../types';
-import './JourneyTimeline.css';
+import '../styles/components/JourneyTimeline.css';
 
 interface StationWithSno extends Station {
     sno?: number;
@@ -143,3 +143,4 @@ function JourneyTimeline({ stations, currentStationIndex }: JourneyTimelineProps
 }
 
 export default JourneyTimeline;
+

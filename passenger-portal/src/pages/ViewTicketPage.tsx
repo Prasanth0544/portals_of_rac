@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import BoardingPass from '../components/BoardingPass';
-import './ViewTicketPage.css';
+import '../styles/pages/ViewTicketPage.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 

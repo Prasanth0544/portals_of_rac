@@ -371,3 +371,4 @@ const OfferCard: React.FC<OfferCardProps> = ({
 };
 
 export default OfferCard;
+

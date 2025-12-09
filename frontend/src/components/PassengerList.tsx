@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, ChangeEvent } from "react";
 import { getAllPassengers, getRACQueue } from "../services/api";
-import "./PassengerList.css";
+import "../styles/components/PassengerList.css";
 
 interface Station {
     code: string;
@@ -455,3 +455,4 @@ function PassengerList({ currentStationIdx, stations }: PassengerListProps): Rea
 }
 
 export default PassengerList;
+

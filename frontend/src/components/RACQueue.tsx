@@ -1,7 +1,7 @@
 // frontend/src/components/RACQueue.tsx
 
 import React from "react";
-import "./RACQueue.css";
+import "../styles/components/RACQueue.css";
 
 interface RACPassenger {
     pnr: string;
@@ -85,3 +85,4 @@ function RACQueue({ racQueue = [] }: RACQueueProps): React.ReactElement {
 }
 
 export default RACQueue;
+

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { getRACQueue } from "../services/apiWithErrorHandling";
-import "./RACQueuePage.css";
+import "../styles/pages/RACQueuePage.css";
 
 interface RACPassenger {
     pnr: string;
@@ -151,3 +151,4 @@ function RACQueuePage({ trainData, onClose }: RACQueuePageProps): React.ReactEle
 }
 
 export default RACQueuePage;
+

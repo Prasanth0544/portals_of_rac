@@ -120,3 +120,4 @@ function NotificationSettings(): React.ReactElement {
 }
 
 export default NotificationSettings;
+

@@ -1,7 +1,7 @@
 // frontend/src/components/TrainVisualization.tsx
 
 import React, { useState } from 'react';
-import './TrainVisualization.css';
+import '../styles/components/TrainVisualization.css';
 
 interface Passenger {
     pnr?: string;
@@ -179,3 +179,4 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations }: Bert
 }
 
 export default TrainVisualization;
+

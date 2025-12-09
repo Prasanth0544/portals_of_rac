@@ -3,7 +3,7 @@
 
 import React, { useState, ChangeEvent, FocusEvent } from 'react';
 import { validateField, transformFieldValue, getValidationMessage } from '../services/formValidation';
-import './FormInput.css';
+import '../styles/components/FormInput.css';
 
 interface FormInputProps {
     name: string;
@@ -123,3 +123,4 @@ function FormInput({
 }
 
 export default FormInput;
+

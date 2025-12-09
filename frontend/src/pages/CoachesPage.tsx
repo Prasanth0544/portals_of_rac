@@ -1,7 +1,7 @@
 // frontend/src/pages/CoachesPage.tsx
 
 import React, { useState, useRef, MouseEvent } from "react";
-import "./CoachesPage.css";
+import "../styles/pages/CoachesPage.css";
 
 interface Passenger {
     pnr: string;
@@ -312,3 +312,4 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations, journe
 }
 
 export default CoachesPage;
+

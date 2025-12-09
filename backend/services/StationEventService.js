@@ -1,5 +1,10 @@
 // backend/services/StationEventService.js
 
+// Imports moved to top-level to avoid circular dependency anti-pattern
+const CONSTANTS = require('./reallocation/reallocationConstants');
+const StationWiseApprovalService = require('./StationWiseApprovalService');
+const ReallocationService = require('./ReallocationService');
+
 class StationEventService {
   /**
    * Process station arrival - main orchestration
@@ -141,7 +146,6 @@ class StationEventService {
    * UPDATED: Now supports two modes - AUTO (immediate allocation) and APPROVAL (TTE approval required)
    */
   async processRACUpgradesWithEligibility(trainState, newlyVacantBerths = []) {
-    const CONSTANTS = require('./reallocation/reallocationConstants');
     const currentIdx = trainState.currentStationIdx;
 
     console.log(`\n🎯 Processing RAC upgrades (Mode: ${CONSTANTS.CURRENT_MODE})...`);
@@ -157,7 +161,6 @@ class StationEventService {
     if (CONSTANTS.CURRENT_MODE === CONSTANTS.REALLOCATION_MODE.APPROVAL) {
       // NEW PATH: Create pending reallocations for TTE approval
       console.log(`   📋 Mode: APPROVAL - Creating pending reallocations for TTE`);
-      const StationWiseApprovalService = require('./StationWiseApprovalService');
       return await StationWiseApprovalService.createPendingReallocations(
         trainState,
         newlyVacantBerths
@@ -167,7 +170,6 @@ class StationEventService {
     // ===== EXISTING PATH: AUTO MODE (Immediate Allocation) =====
     console.log(`   ⚡ Mode: AUTO - Allocating immediately`);
 
-    const ReallocationService = require('./ReallocationService');
     let upgradeCount = 0;
     const upgrades = [];
 

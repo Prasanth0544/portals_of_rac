@@ -2,7 +2,7 @@
 // Global Toast Notification Container
 
 import React, { useState, useEffect } from 'react';
-import './ToastContainer.css';
+import '../styles/components/ToastContainer.css';
 
 // Types
 interface Toast {
@@ -96,3 +96,4 @@ function ToastContainer(): React.ReactElement {
 }
 
 export default ToastContainer;
+

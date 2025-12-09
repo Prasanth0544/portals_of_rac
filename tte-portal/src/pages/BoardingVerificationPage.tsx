@@ -314,3 +314,4 @@ function BoardingVerificationPage(): React.ReactElement {
 }
 
 export default BoardingVerificationPage;
+

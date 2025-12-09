@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
 import { initializePushNotifications } from '../services/pushNotificationService';
-import './PhaseOnePage.css';
+import '../styles/pages/PhaseOnePage.css';
 
 interface Station {
     name: string;
@@ -462,3 +462,4 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
 };
 
 export default PhaseOnePage;
+

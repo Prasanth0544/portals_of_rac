@@ -10,6 +10,7 @@ const wsManager = require('../config/websocket');
 const EligibilityService = require('./reallocation/EligibilityService');
 const VacancyService = require('./reallocation/VacancyService');
 const AllocationService = require('./reallocation/AllocationService');
+const CacheService = require('./CacheService');
 
 class StationWiseApprovalService {
     /**
@@ -457,11 +458,21 @@ class StationWiseApprovalService {
 
     /**
      * Get station-wise view data (for Admin portal)
+     * Uses caching to improve performance
      */
     async getStationWiseData(trainState) {
         try {
             const currentStation = trainState.getCurrentStation();
             const currentIdx = trainState.currentStationIdx;
+            const trainNo = trainState.trainNo;
+
+            // Check cache first
+            const cacheKey = `${currentStation.code}`;
+            const cached = CacheService.getReallocation(trainNo, cacheKey);
+            if (cached) {
+                console.log(`📦 Cache HIT for station-wise data: ${cacheKey}`);
+                return cached;
+            }
 
             // Get currently boarded RAC passengers
             const boardedRAC = trainState.getBoardedRACPassengers();
@@ -473,7 +484,7 @@ class StationWiseApprovalService {
             // Get pending reallocations
             const pending = await this.getPendingReallocations(trainState.trainNo);
 
-            return {
+            const result = {
                 currentStation: {
                     name: currentStation.name,
                     code: currentStation.code,
@@ -502,8 +513,15 @@ class StationWiseApprovalService {
                     boardedRACCount: boardedRAC.length,
                     vacantBerthsCount: currentStationVacancies.length,
                     pendingCount: pending.length
-                }
+                },
+                cachedAt: new Date().toISOString()
             };
+
+            // Cache the result
+            CacheService.setReallocation(trainNo, cacheKey, result);
+            console.log(`📦 Cache SET for station-wise data: ${cacheKey}`);
+
+            return result;
         } catch (error) {
             console.error('Error getting station-wise data:', error.message);
             throw error;

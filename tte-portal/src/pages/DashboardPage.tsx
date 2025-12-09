@@ -4,7 +4,7 @@ import { tteAPI } from '../api';
 import { subscribeTTEToPush } from '../utils/pushManager';
 import useTteSocket from '../hooks/useTteSocket';
 import JourneyTimeline from '../components/JourneyTimeline';
-import './DashboardPage.css';
+import '../styles/pages/DashboardPage.css';
 
 interface Station {
     code: string;
@@ -546,3 +546,4 @@ function DashboardPage(): React.ReactElement {
 }
 
 export default DashboardPage;
+

@@ -9,7 +9,12 @@ const wsManager = require('./config/websocket');
 const apiRoutes = require('./routes/api');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
-const { errorHandler } = require('./utils/error-handler');
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { apiLimiter } = require('./middleware/rateLimiter');
+const { validateEnv } = require('./utils/envValidator');
+
+// Validate environment variables on startup
+validateEnv();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,6 +37,9 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Rate limiting - applies to all /api routes
+app.use('/api', apiLimiter);
 
 // Request logging middleware (development only)
 if (process.env.NODE_ENV === 'development') {
@@ -112,7 +120,9 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check
+// Health check with cache metrics
+const CacheService = require('./services/CacheService');
+
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
@@ -122,18 +132,13 @@ app.get('/api/health', (req, res) => {
     memory: process.memoryUsage(),
     websocket: {
       connectedClients: wsManager.getClientCount()
-    }
+    },
+    cache: CacheService.getMetrics()
   });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Endpoint not found',
-    path: req.path
-  });
-});
+// 404 handler (must be after all routes)
+app.use(notFoundHandler);
 
 // Global error handler (must be last)
 app.use(errorHandler);

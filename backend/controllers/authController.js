@@ -3,10 +3,11 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
+const RefreshTokenService = require('../services/RefreshTokenService');
 
 // JWT Secret (in production, use environment variable)
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = '48h'; // Token valid for 48 hours
+const JWT_EXPIRES_IN = '15m'; // Short-lived access token (15 minutes)
 
 /**
  * Authentication Controller
@@ -77,11 +78,20 @@ class AuthController {
                 { expiresIn: JWT_EXPIRES_IN }
             );
 
-            // Return success with token and user info
+            // Generate refresh token
+            const refreshToken = await RefreshTokenService.createRefreshToken(
+                user.employeeId,
+                user.role,
+                { trainAssigned: user.trainAssigned }
+            );
+
+            // Return success with tokens and user info
             res.json({
                 success: true,
                 message: 'Login successful',
                 token,
+                refreshToken,
+                expiresIn: 900, // 15 minutes in seconds
                 user: {
                     employeeId: user.employeeId,
                     name: user.name,
@@ -178,11 +188,20 @@ class AuthController {
                 { expiresIn: JWT_EXPIRES_IN }
             );
 
-            // Return success with token, user info, and tickets
+            // Generate refresh token
+            const refreshToken = await RefreshTokenService.createRefreshToken(
+                user.IRCTC_ID,
+                'PASSENGER',
+                { email: user.email }
+            );
+
+            // Return success with tokens, user info, and tickets
             res.json({
                 success: true,
                 message: 'Login successful',
                 token,
+                refreshToken,
+                expiresIn: 900, // 15 minutes in seconds
                 user: {
                     irctcId: user.IRCTC_ID,  // ✅ FIXED: Read from uppercase field
                     name: user.name,
@@ -236,13 +255,19 @@ class AuthController {
     }
 
     /**
-     * Logout (optional - mainly client-side token removal)
+     * Logout (revoke refresh token)
      * POST /api/auth/logout
+     * Body: { refreshToken }
      */
     async logout(req, res) {
         try {
-            // For JWT, logout is mainly handled client-side by removing the token
-            // Could add token blacklisting here if needed
+            const { refreshToken } = req.body;
+
+            if (refreshToken) {
+                // Revoke the refresh token
+                await RefreshTokenService.revokeRefreshToken(refreshToken);
+            }
+
             res.json({
                 success: true,
                 message: 'Logged out successfully'
@@ -251,6 +276,57 @@ class AuthController {
             res.status(500).json({
                 success: false,
                 message: 'Logout failed'
+            });
+        }
+    }
+
+    /**
+     * Refresh Access Token
+     * POST /api/auth/refresh
+     * Body: { refreshToken }
+     */
+    async refresh(req, res) {
+        try {
+            const { refreshToken } = req.body;
+
+            if (!refreshToken) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Refresh token is required'
+                });
+            }
+
+            // Validate the refresh token
+            const storedToken = await RefreshTokenService.validateRefreshToken(refreshToken);
+
+            if (!storedToken) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid or expired refresh token. Please login again.'
+                });
+            }
+
+            // Generate new access token
+            const newAccessToken = jwt.sign(
+                {
+                    userId: storedToken.userId,
+                    role: storedToken.role
+                },
+                JWT_SECRET,
+                { expiresIn: JWT_EXPIRES_IN }
+            );
+
+            res.json({
+                success: true,
+                token: newAccessToken,
+                expiresIn: 900 // 15 minutes in seconds
+            });
+
+        } catch (error) {
+            console.error('Token refresh error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to refresh token'
             });
         }
     }

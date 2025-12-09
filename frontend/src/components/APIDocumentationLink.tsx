@@ -2,7 +2,7 @@
 // Component for linking to Swagger API documentation
 
 import React, { useState } from 'react';
-import './APIDocumentationLink.css';
+import '../styles/components/APIDocumentationLink.css';
 
 function APIDocumentationLink(): React.ReactElement {
     const [showTooltip, setShowTooltip] = useState<boolean>(false);
@@ -32,3 +32,4 @@ function APIDocumentationLink(): React.ReactElement {
 }
 
 export default APIDocumentationLink;
+

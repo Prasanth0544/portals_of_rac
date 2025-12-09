@@ -1,7 +1,7 @@
 // frontend/src/pages/ConfigPage.tsx
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { setupConfig, initializeTrain, getTrains } from "../services/apiWithErrorHandling";
-import "./ConfigPage.css";
+import "../styles/pages/ConfigPage.css";
 
 interface FormState {
     mongoUri: string;
@@ -244,3 +244,4 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
 }
 
 export default ConfigPage;
+

@@ -8,6 +8,8 @@ const db = require("../config/db");
 const wsManager = require("../config/websocket");
 const UpgradeNotificationService = require("./UpgradeNotificationService");
 const logger = require("../utils/logger");
+const InAppNotificationService = require('./InAppNotificationService');
+const WebPushService = require('./WebPushService');
 
 // Import specialized services
 const NoShowService = require("./reallocation/NoShowService");
@@ -106,7 +108,6 @@ class ReallocationService {
 
       // Create notifications for eligible passengers
       let offersCreated = 0;
-      const InAppNotificationService = require('./InAppNotificationService');
 
       for (const racPassenger of eligibleRAC) {
         try {
@@ -135,9 +136,7 @@ class ReallocationService {
                 }
               );
 
-
               // Send browser push notification
-              const WebPushService = require('./WebPushService');
 
               if (racPassenger.passengerStatus === 'Online') {
                 // Online passenger -> send to passenger portal

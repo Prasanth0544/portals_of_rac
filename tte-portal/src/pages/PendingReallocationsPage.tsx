@@ -1,7 +1,7 @@
 // tte-portal/src/pages/PendingReallocationsPage.tsx
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { tteAPI } from '../api';
-import './PendingReallocationsPage.css';
+import '../styles/pages/PendingReallocationsPage.css';
 
 interface Reallocation {
     _id: string;
@@ -307,3 +307,4 @@ const PendingReallocationsPage: React.FC = () => {
 };
 
 export default PendingReallocationsPage;
+

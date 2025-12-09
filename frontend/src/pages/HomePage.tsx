@@ -1,7 +1,7 @@
 // frontend/src/pages/HomePage.tsx
 
 import React, { useState, ChangeEvent } from 'react';
-import './HomePage.css';
+import '../styles/pages/HomePage.css';
 
 interface Station {
     code: string;
@@ -274,3 +274,4 @@ function HomePage({
 }
 
 export default HomePage;
+

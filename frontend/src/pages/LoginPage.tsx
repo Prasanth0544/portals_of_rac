@@ -1,7 +1,7 @@
 // frontend/src/pages/LoginPage.tsx
 import React, { useState, FormEvent, ChangeEvent } from 'react';
 import axios from 'axios';
-import './LoginPage.css';
+import '../styles/pages/LoginPage.css';
 
 function LoginPage(): React.ReactElement {
     const [employeeId, setEmployeeId] = useState<string>('');
@@ -84,3 +84,4 @@ function LoginPage(): React.ReactElement {
 }
 
 export default LoginPage;
+

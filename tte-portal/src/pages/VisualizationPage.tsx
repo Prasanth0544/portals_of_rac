@@ -2,7 +2,7 @@
 // Train Journey Visualization - Station Schedule Table (DYNAMIC - loads from current train)
 import React, { useState, useEffect } from 'react';
 import { tteAPI } from '../api';
-import './VisualizationPage.css';
+import '../styles/pages/VisualizationPage.css';
 
 interface Station {
     code: string;
@@ -150,3 +150,4 @@ function VisualizationPage(): React.ReactElement {
 }
 
 export default VisualizationPage;
+

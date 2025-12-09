@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { addPassenger, getTrainState } from "../services/apiWithErrorHandling";
-import "./AddPassengerPage.css";
+import "../styles/pages/AddPassengerPage.css";
 
 interface Station {
     code: string;
@@ -396,3 +396,4 @@ const AddPassengerPage = ({ trainData, onClose }: AddPassengerPageProps): React.
 };
 
 export default AddPassengerPage;
+

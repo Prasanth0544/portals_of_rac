@@ -1,7 +1,7 @@
 // frontend/src/components/StationProgress.tsx
 
 import React from 'react';
-import './StationProgress.css';
+import '../styles/components/StationProgress.css';
 
 interface Station {
     code: string;
@@ -53,3 +53,4 @@ function StationProgress({ stations = [], currentStationIdx = 0 }: StationProgre
 }
 
 export default StationProgress;
+
