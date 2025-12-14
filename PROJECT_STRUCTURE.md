@@ -2,17 +2,33 @@
 
 ```
 .
+├── .dockerignore
 ├── .gitattributes
+├── .github
+│   └── workflows
+│       ├── cd.yml
+│       └── ci.yml
 ├── .gitignore
 ├── COMPLETION_STATUS.md
-├── MERN_LEARNING_GUIDE.md
+├── DEPLOYMENT.md
+├── Data
+│   ├── 17225.py
+│   ├── generate_tree.py
+│   ├── passengers_data.py
+│   ├── sample.py
+│   ├── train_details.py
+│   └── users.py
+├── MERN_STACK_COMPLETE_LEARNING_GUIDE.md
 ├── PROJECT_STRUCTURE.md
 ├── QUICKSTART.md
 ├── README.md
 ├── SECURITY_IMPROVEMENTS.md
+├── WEBSOCKET_ROOMS_PLAN.md
 ├── backend
+│   ├── .dockerignore
 │   ├── .env
 │   ├── .env.example
+│   ├── Dockerfile
 │   ├── __tests__
 │   │   ├── controllers
 │   │   │   ├── passengerController.test.js
@@ -55,6 +71,7 @@
 │   ├── jest.config.js
 │   ├── middleware
 │   │   ├── auth.js
+│   │   ├── errorHandler.js
 │   │   ├── rateLimiter.js
 │   │   ├── validate-request.js
 │   │   ├── validate.ts
@@ -118,6 +135,7 @@
 │   │   ├── berthAllocator.js
 │   │   ├── constants.js
 │   │   ├── create-indexes.js
+│   │   ├── envValidator.js
 │   │   ├── error-handler.js
 │   │   ├── helpers.js
 │   │   ├── logger.js
@@ -125,16 +143,24 @@
 │   │   └── stationOrder.js
 │   └── validation
 │       └── schemas.ts
+├── docker-compose.prod.yml
+├── docker-compose.yml
 ├── dot_md_files
+│   ├── ARCHITECTURE.md
 │   ├── ELIGIBILITY_MATRIX_COMPLETE.md
 │   ├── Limitations_to_improve.md
-│   └── REFACTORING_ROADMAP.md
+│   ├── PROJECT_ANALYSIS.md
+│   ├── REFACTORING_ROADMAP.md
+│   └── TECHNOLOGY_OVERVIEW.md
 ├── frontend
+│   ├── .dockerignore
 │   ├── .env
 │   ├── .env.example
 │   ├── .gitignore
+│   ├── Dockerfile
 │   ├── README.md
 │   ├── index.html
+│   ├── nginx.conf
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── public
@@ -208,15 +234,28 @@
 │   ├── tsconfig.json
 │   ├── tsconfig.node.json
 │   └── vite.config.js
-├── generate_tree.py
+├── k8s
+│   ├── backend
+│   │   ├── configmap.yaml
+│   │   ├── deployment.yaml
+│   │   ├── secrets.yaml
+│   │   └── service.yaml
+│   ├── frontend
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   ├── ingress.yaml
+│   └── namespace.yaml
 ├── package-lock.json
 ├── package.json
 ├── passenger-portal
+│   ├── .dockerignore
 │   ├── .env.example
 │   ├── .gitignore
+│   ├── Dockerfile
 │   ├── README.md
 │   ├── eslint.config.js
 │   ├── index.html
+│   ├── nginx.conf
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── public
@@ -277,16 +316,18 @@
 │   ├── tsconfig.json
 │   ├── tsconfig.node.json
 │   └── vite.config.js
-├── passengers_data.py
 ├── quick_check.js
 ├── test_api.js
 ├── test_eligibility.js
 └── tte-portal
+    ├── .dockerignore
     ├── .env.example
     ├── .gitignore
+    ├── Dockerfile
     ├── README.md
     ├── eslint.config.js
     ├── index.html
+    ├── nginx.conf
     ├── package-lock.json
     ├── package.json
     ├── public

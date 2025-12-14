@@ -1,0 +1,156 @@
+# ============================================
+# RAC Reallocation System - Docker Compose
+# Development Configuration
+# ============================================
+# 
+# Usage:
+#   docker-compose up -d        # Start all services
+#   docker-compose logs -f      # View logs
+#   docker-compose down         # Stop all services
+#   docker-compose build        # Rebuild images
+#
+# ============================================
+
+version: '3.8'
+
+services:
+  # ─────────────────────────────────────────
+  # MongoDB Database
+  # ─────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: rac-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=rac
+    networks:
+      - rac-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─────────────────────────────────────────
+  # Backend API Server
+  # ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rac-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017
+      - STATIONS_DB=rac
+      - PASSENGERS_DB=rac
+      - TRAIN_DETAILS_DB=rac
+      - STATIONS_COLLECTION=17225
+      - PASSENGERS_COLLECTION=17225_passengers
+      - TRAIN_DETAILS_COLLECTION=Trains_Details
+      - DEFAULT_TRAIN_NO=17225
+      - JWT_SECRET=rac-docker-dev-secret-change-in-prod
+      - JWT_EXPIRES_IN=24h
+      - LOG_LEVEL=INFO
+      - ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175
+      # VAPID keys for push notifications (generate your own for production)
+      - VAPID_PUBLIC_KEY=BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U
+      - VAPID_PRIVATE_KEY=UUxI4O8-FbRouAf7-7PVTv1qCIqAThH7t6lFQCRVnDY
+      - VAPID_EMAIL=mailto:admin@example.com
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - rac-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ─────────────────────────────────────────
+  # Admin Portal (Frontend)
+  # ─────────────────────────────────────────
+  admin-portal:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rac-admin-portal
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - rac-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────
+  # TTE Portal
+  # ─────────────────────────────────────────
+  tte-portal:
+    build:
+      context: ./tte-portal
+      dockerfile: Dockerfile
+    container_name: rac-tte-portal
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    depends_on:
+      - backend
+    networks:
+      - rac-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────
+  # Passenger Portal
+  # ─────────────────────────────────────────
+  passenger-portal:
+    build:
+      context: ./passenger-portal
+      dockerfile: Dockerfile
+    container_name: rac-passenger-portal
+    restart: unless-stopped
+    ports:
+      - "5175:80"
+    depends_on:
+      - backend
+    networks:
+      - rac-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# ─────────────────────────────────────────
+# Networks
+# ─────────────────────────────────────────
+networks:
+  rac-network:
+    driver: bridge
+
+# ─────────────────────────────────────────
+# Volumes
+# ─────────────────────────────────────────
+volumes:
+  mongodb_data:
+    driver: local
