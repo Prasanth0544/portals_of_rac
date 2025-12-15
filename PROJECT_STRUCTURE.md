@@ -19,6 +19,7 @@
 │   ├── train_details.py
 │   └── users.py
 ├── MERN_STACK_COMPLETE_LEARNING_GUIDE.md
+├── PROJECT_STATUS_ANALYSIS.md
 ├── PROJECT_STRUCTURE.md
 ├── QUICKSTART.md
 ├── README.md
@@ -49,9 +50,7 @@
 │   │   │   └── tte-portal.spec.js
 │   │   └── utils
 │   │       └── helpers.test.js
-│   ├── add-passenger-emails.js
 │   ├── config
-│   │   ├── .env
 │   │   ├── db.js
 │   │   ├── swagger.js
 │   │   └── websocket.js
@@ -67,7 +66,6 @@
 │   │   ├── trainController.js
 │   │   ├── tteController.js
 │   │   └── visualizationController.js
-│   ├── debug-reallocation.js
 │   ├── jest.config.js
 │   ├── middleware
 │   │   ├── auth.js
@@ -124,9 +122,6 @@
 │   │       ├── RACQueueService.js
 │   │       ├── VacancyService.js
 │   │       └── reallocationConstants.js
-│   ├── test-email.js
-│   ├── test_output.txt
-│   ├── tests
 │   ├── tsconfig.json
 │   ├── types
 │   │   ├── global.d.ts
@@ -165,7 +160,6 @@
 │   ├── package.json
 │   ├── public
 │   │   ├── favicon.ico
-│   │   ├── index.html
 │   │   ├── manifest.json
 │   │   ├── robots.txt
 │   │   └── sw.js
@@ -316,9 +310,6 @@
 │   ├── tsconfig.json
 │   ├── tsconfig.node.json
 │   └── vite.config.js
-├── quick_check.js
-├── test_api.js
-├── test_eligibility.js
 └── tte-portal
     ├── .dockerignore
     ├── .env.example

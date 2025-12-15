@@ -1,6 +1,6 @@
 # System-Wide Limitations & Improvement Recommendations
 
-**Last Updated:** 2025-12-09  
+**Last Updated:** 2025-12-15  
 **Purpose:** Consolidated list of known limitations, technical debt, and scalability improvements needed across all system components.
 
 ---
@@ -15,6 +15,12 @@
 - [x] **Documentation Updates** - All README files + QUICKSTART.md updated ✅
 - [x] **CORS Configuration** - Backend configured for ports 5173/5174/5175 ✅
 - [x] **Input Validation** - Zod schemas implemented ✅
+- [x] **Rate Limiting** - 4 limiters in `backend/middleware/rateLimiter.js` ✅
+- [x] **JWT Refresh Tokens** - `backend/services/RefreshTokenService.js` ✅
+- [x] **In-Memory Caching** - node-cache in `backend/services/CacheService.js` ✅
+- [x] **Connection Pooling** - MongoDB pool configured in `db.js` ✅
+- [x] **Docker & Kubernetes** - Dockerfiles, docker-compose, k8s manifests ✅
+- [x] **CI/CD Pipeline** - GitHub Actions workflows (ci.yml, cd.yml) ✅
 
 ---
 
@@ -22,9 +28,10 @@
 
 ### 1. Security
 - [x] **Backend OTP Storage** - ~~In-memory~~ → MongoDB with TTL ✅ COMPLETED
-- [ ] **No Rate Limiting** - API vulnerable to abuse
+- [x] **Rate Limiting** - ✅ COMPLETED (`backend/middleware/rateLimiter.js`)
 - [ ] **No CSRF Protection** - Forms need CSRF tokens
-- [ ] **JWT Refresh Strategy** - No refresh token implementation
+- [x] **JWT Refresh Strategy** - ✅ COMPLETED (`backend/services/RefreshTokenService.js`)
+- [ ] **Frontend Token Auto-Refresh** - Frontends need to use refresh tokens
 
 ### 2. Scalability  
 - [ ] **Single Server Architecture** - No horizontal scaling
@@ -57,31 +64,23 @@ await collection.updateOne(
 // TTL index handles automatic cleanup
 ```
 
-#### 2. No Rate Limiting
-**Current:** No request throttling  
-**Risk:** API abuse, DDoS vulnerability  
-**Impact:** Server overload, service degradation  
-**Fix:** Implement express-rate-limit
-```javascript
-const rateLimit = require('express-rate-limit');
+#### 2. Rate Limiting - ✅ COMPLETED
+**Status:** ✅ FIXED - Rate limiting implemented in `backend/middleware/rateLimiter.js`
+**Implementation:**
+- `authLimiter`: 5 requests per 15 minutes (login protection)
+- `otpLimiter`: 3 requests per hour (SMS/email spam prevention)
+- `apiLimiter`: 100 requests per 15 minutes (general API)
+- `sensitiveOpLimiter`: 10 requests per hour (sensitive operations)
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP'
-});
-
-app.use('/api/otp/send', limiter);
-```
-
-#### 3. JWT Token Security
-**Current:** No refresh token mechanism  
-**Risk:** Long-lived tokens if stolen  
-**Impact:** Security breach persistence  
-**Fix:** Implement refresh token pattern
+#### 3. JWT Token Security - ✅ COMPLETED
+**Status:** ✅ FIXED - Refresh tokens implemented in `backend/services/RefreshTokenService.js`
+**Implementation:**
 - Access token: 15 minutes
-- Refresh token: 7 days
-- Store refresh tokens in Redis
+- Refresh token: 7 days (MongoDB-backed)
+- TTL index for auto-expiration
+- Token rotation supported
+
+**⚠️ Pending:** Frontend Token Auto-Refresh - Frontends need axios interceptors to use refresh tokens
 
 #### 4. Password Policy
 **Current:** No password complexity requirements  
@@ -456,25 +455,26 @@ Use MongoDB for passenger database...
 ## 📊 PRIORITY MATRIX
 
 ### Must Fix (P0) - Before Production
-1. OTP Storage → Redis
-2. Rate Limiting
+1. ~~OTP Storage → MongoDB~~ ✅ DONE
+2. ~~Rate Limiting~~ ✅ DONE
 3. Error Tracking (Sentry)
 4. Database Backups
 5. Health Monitoring
 
 ### Should Fix (P1) - Within 1 Month
-6. Caching Layer
+6. ~~Caching Layer~~ ✅ DONE (node-cache)
 7. Load Balancing
 8. Centralized Logging
-9. JWT Refresh Tokens
-10. Unit Tests
+9. ~~JWT Refresh Tokens~~ ✅ DONE
+10. ~~Unit Tests~~ ✅ DONE (74 tests)
+11. Frontend Token Auto-Refresh ⚠️ PENDING
 
 ### Nice to Have (P2) - Within 3 Months
-11. Message Queue
-12. Performance Monitoring
-13. Load Testing
-14. Docker Containerization
-15. CI/CD Pipeline
+12. Message Queue
+13. Performance Monitoring
+14. Load Testing
+15. ~~Docker Containerization~~ ✅ DONE
+16. ~~CI/CD Pipeline~~ ✅ DONE
 
 ### Future Enhancements (P3) - 6+ Months
 16. Microservices Architecture
@@ -510,18 +510,18 @@ Use MongoDB for passenger database...
 ## 🎯 IMPLEMENTATION ROADMAP
 
 ### Week 1-2: Critical Security & Reliability
-- [ ] Migrate OTP to Redis
-- [ ] Add rate limiting (all endpoints)
+- [x] ~~Migrate OTP to MongoDB~~ ✅ DONE
+- [x] ~~Add rate limiting (all endpoints)~~ ✅ DONE
 - [ ] Setup Sentry error tracking
 - [ ] Configure automated DB backups
 - [ ] Implement comprehensive health checks
 
 ### Week 3-4: Performance & Scalability
-- [ ] Implement Redis caching layer
+- [x] ~~Implement caching layer~~ ✅ DONE (node-cache)
 - [ ] Setup Nginx load balancer
 - [ ] Configure PM2 cluster mode
 - [ ] Optimize database queries + indices
-- [ ] Add connection pooling configuration
+- [x] ~~Add connection pooling configuration~~ ✅ DONE
 
 ### Week 5-6: Monitoring & Observability
 - [ ] Setup Winston logging
@@ -531,15 +531,15 @@ Use MongoDB for passenger database...
 - [ ] Setup alerting (PagerDuty/Slack)
 
 ### Week 7-8: Testing & Quality
-- [ ] Write unit tests (target 80% coverage)
-- [ ] Add integration tests (API endpoints)
+- [x] ~~Write unit tests~~ ✅ DONE (74 tests, ~50% coverage)
+- [x] ~~Add integration tests~~ ✅ DONE
 - [ ] Load testing (k6)
 - [ ] Security scanning (OWASP ZAP)
 - [ ] Code quality (SonarQube)
 
 ### Week 9-12: Infrastructure & DevOps
-- [ ] Dockerize application
-- [ ] Setup CI/CD pipeline
+- [x] ~~Dockerize application~~ ✅ DONE
+- [x] ~~Setup CI/CD pipeline~~ ✅ DONE (GitHub Actions)
 - [ ] Implement secret management
 - [ ] Create deployment playbooks
 - [ ] Disaster recovery plan
