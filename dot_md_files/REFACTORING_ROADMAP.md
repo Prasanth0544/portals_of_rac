@@ -1,170 +1,89 @@
-# Safe Refactoring & Improvement Roadmap
+# Refactoring Roadmap (Remaining Items)
 
-**Goal:** Elevate the project from "Prototype" to "Production-Ready" quality by fixing architectural flaws, security gaps, and code structure **without touching the core RAC reallocation logic.**
-
-**Last Updated:** 2025-12-09
-
----
-
-## 🏗️ Phase 1: Frontend Structural Cleanup (Low Risk)
-*These changes purely reorganize code. The logic remains identical, but the files become readable and maintainable.*
-
-### 1. Split `ReallocationPage.jsx`
-**Current State:** A single ~800 line file containing multiple views.
-**Action:** Extract components into separate files.
-- [ ] Create `src/components/reallocation/StationWiseView.jsx`
-- [ ] Create `src/components/reallocation/HashMapView.jsx`
-- [ ] Create `src/components/reallocation/CurrentStationMatchingView.jsx`
-- [ ] **Result:** Main page drops to ~150 lines; easier to debug specific tabs.
-
-### 2. Replace Native Alerts with UI Modals
-**Current State:** Uses `window.alert()` and `window.confirm()`, which block the browser and look unprofessional.
-**Action:** Replace with a simple Modal component or a library (e.g., `react-hot-toast` for notifications, custom Modal for confirmations).
-- [ ] Replace "Confirm Reallocation" popup with a proper React Modal.
-- [ ] **Result:** Instantly looks 10x more professional for demos.
-
-### 3. Centralize API Calls - ✅ COMPLETED
-**Status:** ✅ All portals now have centralized API service layers
-**Files Updated:**
-- `frontend/src/services/api.ts` - Admin Portal API service
-- `tte-portal/src/api.ts` - TTE Portal API service  
-- `passenger-portal/src/api.ts` - Passenger Portal API service
-- [x] All axios calls go through service layer
-- [x] Consistent error handling and auth token management
+**Last Updated:** December 16, 2025  
+**Overall Status:** ~70% Complete
 
 ---
 
-## ⚙️ Phase 2: Backend Stability & Architecture (Medium Risk)
-*These changes fix "fragile" code patterns that could cause crashes, but do not change the algorithms.*
+## 🔲 Remaining Tasks
 
-### 4. Fix Circular Dependency (`setTimeout` Hack)
-**Current State:** `reallocationController.js` waits 1 second to load `wsManager` to avoid a circular dependency.
-**Action:** Use Dependency Injection.
-- [ ] Modify `reallocationController` to accept `wsManager` as an argument in its methods, OR
-- [ ] Initialize `wsManager` in `server.js` and attach it to the `req` object or pass it explicitly.
-- [ ] **Result:** Server starts reliably every time; no race conditions.
+### Phase 1: Frontend Cleanup
 
-### 5. "Slim Down" Controllers
-**Current State:** `reallocationController.js` contains logic for formatting emails and constructing objects.
-**Action:** Move non-HTTP logic to Services.
-- [ ] Move "Notification Construction" logic to `NotificationService`.
-- [ ] Move "Vacancy Object Formatting" to `ReallocationService`.
-- [ ] **Result:** Controller only handles "Receive Request -> Call Service -> Send Response".
+#### 1. Split `ReallocationPage.tsx` (~800 lines)
+**Priority:** Medium  
+**Effort:** 4-6 hours  
+Extract to separate files:
+- `src/components/reallocation/StationWiseView.tsx`
+- `src/components/reallocation/HashMapView.tsx`
+- `src/components/reallocation/CurrentStationMatchingView.tsx`
 
-### 6. Standardize Error Handling
-**Current State:** Every function has a repetitive `try-catch` block.
-**Action:** Use an `asyncHandler` wrapper.
-- [ ] Create `middleware/asyncHandler.js`.
-- [ ] Wrap controller methods: `exports.myMethod = asyncHandler(async (req, res) => { ... })`.
-- [ ] **Result:** Removes hundreds of lines of boilerplate code.
-
-### 7. Backend Unit Tests - ✅ COMPLETED
-**Status:** ✅ 74 tests passing with Jest
-**Files Created/Updated:**
-- `backend/__tests__/setup.js` - Test configuration
-- `backend/__tests__/controllers/*.test.js` - Controller tests
-- `backend/__tests__/services/*.test.js` - Service tests
-- `backend/jest.config.js` - Jest configuration
+#### 2. Replace Alerts with Modals
+**Priority:** High (demo impact)  
+**Effort:** 2-3 hours  
+Replace `window.alert()` / `window.confirm()` with React modals
 
 ---
 
-## 🔒 Phase 3: Security & Configuration (Zero Logic Risk)
-*These changes harden the application against attacks and configuration errors.*
+### Phase 2: Backend Stability
 
-### 8. Environment Variable Validation
-**Current State:** If `.env` is missing a key, the app might crash later or behave insecurely.
-**Action:** Validate config on startup.
-- [ ] Create `config/env.js` to check for `MONGO_URI`, `JWT_SECRET`, `ALLOWED_ORIGINS`.
-- [ ] Throw an error immediately if a key is missing.
+#### 3. Fix Circular Dependency
+**Priority:** High  
+**Effort:** 2-3 hours  
+Remove `setTimeout` hack in `reallocationController.js` - use dependency injection
 
-### 9. Input Validation Middleware - ✅ COMPLETED
-**Status:** ✅ Implemented with Zod + TypeScript
-**Files Created:** 
-- `backend/validation/schemas.ts` - All API validation schemas
-- `backend/middleware/validate.ts` - Express middleware
-- [ ] Wire up validation to all routes (next step)
+#### 4. Slim Down Controllers
+**Priority:** Medium  
+**Effort:** 4-6 hours  
+Move formatting/notification logic from controllers to services
 
-### 10. Externalize Magic Numbers
-**Current State:** Timeouts (300s), status strings ('RAC', 'CNF'), and tab names are hardcoded.
-**Action:** Move to `constants.js`.
-- [ ] Create `backend/constants/index.js`.
-- [ ] Define `CONSTANTS.PASSENGER_STATUS`, `CONSTANTS.TIMEOUTS`.
+#### 5. Standardize Error Handling
+**Priority:** Low  
+**Effort:** 2-3 hours  
+Create `asyncHandler` wrapper to remove try-catch boilerplate
 
 ---
 
-## 🎨 Phase 4: TypeScript Migration - ✅ COMPLETED
-*Convert JavaScript to TypeScript for type safety.*
+### Phase 3: Configuration
 
-### 11. Frontend TypeScript Conversion - ✅ COMPLETED
-**Status:** ✅ All 3 portals converted to TypeScript
-**Scope:**
-- [x] Admin Portal (`frontend/`) - All .jsx → .tsx
-- [x] TTE Portal (`tte-portal/`) - All .jsx → .tsx  
-- [x] Passenger Portal (`passenger-portal/`) - All .js → .ts/.tsx
+#### 6. Environment Variable Validation
+**Priority:** High  
+**Effort:** 1-2 hours  
+Create `config/env.js` to validate required env vars on startup
 
-### 12. Backend TypeScript Foundation - ✅ COMPLETED  
-**Status:** ✅ TypeScript configured but services remain .js
-**Files Created:**
-- [x] `backend/tsconfig.json` - TypeScript configuration
-- [x] `backend/types/index.ts` - Core interfaces
-- [x] `backend/validation/schemas.ts` - Zod validation schemas
-- [ ] Convert services to TypeScript (optional)
+#### 7. Externalize Magic Numbers
+**Priority:** Low  
+**Effort:** 1-2 hours  
+Create `constants/index.js` for status strings, timeouts
 
 ---
 
-## 📦 Phase 5: Project Configuration - ✅ COMPLETED
-*Configure build tools and project structure.*
+## ✅ Already Completed
 
-### 13. Vite Migration - ✅ COMPLETED
-**Status:** ✅ All frontends migrated from Create React App to Vite
-**Port Configuration:**
-- Frontend (Admin): Port 5173
-- TTE Portal: Port 5174
-- Passenger Portal: Port 5175
-
-### 14. CORS Configuration - ✅ COMPLETED
-**Status:** ✅ Backend CORS configured for all frontend ports
-**File:** `backend/server.js`
-
-### 15. Documentation Updates - ✅ COMPLETED
-**Status:** ✅ All README files and QUICKSTART.md updated
-**Files Updated:**
-- [x] `README.md` - Correct port numbers
-- [x] `frontend/README.md` - Updated
-- [x] `passenger-portal/README.md` - Updated
-- [x] `tte-portal/README.md` - Already correct
-- [x] `QUICKSTART.md` - Comprehensive guide created
+| Item | Status |
+|------|--------|
+| TypeScript Migration (all portals) | ✅ |
+| Vite Migration | ✅ |
+| Centralized API Calls | ✅ |
+| Input Validation (Zod) | ✅ |
+| Backend Unit Tests (74 tests) | ✅ |
+| Documentation Updates | ✅ |
+| CORS Configuration | ✅ |
+| Rate Limiting | ✅ |
+| JWT Refresh Tokens | ✅ |
+| CSRF Protection | ✅ |
+| httpOnly Cookies | ✅ |
+| Frontend Token Auto-Refresh | ✅ |
 
 ---
 
-## 🚀 Execution Order (Recommended)
+## 📊 Priority Order
 
-### ✅ Completed
-1. ~~TypeScript Migration~~ ✅
-2. ~~Vite Migration~~ ✅
-3. ~~Centralize API Calls~~ ✅
-4. ~~Input Validation Middleware~~ ✅
-5. ~~Backend Unit Tests~~ ✅
-6. ~~Documentation Updates~~ ✅
-
-### 🔲 Remaining (Priority Order)
-1. **Fix Circular Dependency** (Critical for server stability)
-2. **Environment Variable Validation** (Prevents startup failures)
-3. **Replace Alerts with Modals** (High visual impact)
-4. **Split ReallocationPage.jsx** (Code maintainability)
-5. **Slim Down Controllers** (Architecture improvement)
-6. **Standardize Error Handling** (Code quality)
+1. **Replace Alerts with Modals** - Best demo improvement
+2. **Fix Circular Dependency** - Server reliability
+3. **Environment Validation** - Prevent startup failures
+4. **Split ReallocationPage** - Code maintainability
+5. **Others** - Nice to have
 
 ---
 
-## 📊 Progress Summary
-
-| Phase | Status | Completion |
-|-------|--------|------------|
-| Phase 1: Frontend Cleanup | Partial | 33% |
-| Phase 2: Backend Stability | Partial | 17% |
-| Phase 3: Security/Config | Partial | 33% |
-| Phase 4: TypeScript | Complete | 100% |
-| Phase 5: Project Config | Complete | 100% |
-
-**Overall Progress: ~60% complete**
+**Total Remaining Effort:** ~2-3 days

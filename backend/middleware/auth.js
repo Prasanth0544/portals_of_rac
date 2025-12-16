@@ -11,25 +11,23 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
  */
 const authMiddleware = (req, res, next) => {
     try {
-        // Get token from Authorization header
-        const authHeader = req.headers.authorization;
+        // Try to get token from httpOnly cookie first, then Authorization header
+        let token = req.cookies?.accessToken;
 
-        if (!authHeader) {
-            return res.status(401).json({
-                success: false,
-                message: 'No authorization token provided'
-            });
+        if (!token) {
+            // Fall back to Authorization header for backward compatibility
+            const authHeader = req.headers.authorization;
+            if (authHeader) {
+                token = authHeader.startsWith('Bearer ')
+                    ? authHeader.substring(7)
+                    : authHeader;
+            }
         }
-
-        // Extract token (format: "Bearer <token>")
-        const token = authHeader.startsWith('Bearer ')
-            ? authHeader.substring(7)
-            : authHeader;
 
         if (!token) {
             return res.status(401).json({
                 success: false,
-                message: 'Invalid token format'
+                message: 'No authorization token provided'
             });
         }
 

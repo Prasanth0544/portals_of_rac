@@ -74,6 +74,8 @@
     font-size: 15px;
     transition: all 0.3s ease;
     box-sizing: border-box;
+    background-color: #ffffff;
+    color: #333;
 }
 
 .form-group input:focus {

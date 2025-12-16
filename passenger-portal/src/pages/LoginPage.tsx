@@ -22,6 +22,9 @@ function LoginPage(): React.ReactElement {
 
             if (response.success && response.token) {
                 localStorage.setItem('token', response.token);
+                if (response.refreshToken) {
+                    localStorage.setItem('refreshToken', response.refreshToken);
+                }
                 localStorage.setItem('user', JSON.stringify(response.user));
                 localStorage.setItem('tickets', JSON.stringify(response.tickets));
                 window.location.reload();

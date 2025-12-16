@@ -33,10 +33,28 @@ interface ApiResult<T = any> {
 const api: AxiosInstance = axios.create({
     baseURL: API_BASE_URL,
     timeout: 30000,
+    withCredentials: true, // Required for cookies (CSRF)
     headers: {
         'Content-Type': 'application/json',
     },
 });
+
+// CSRF Token management
+let csrfToken: string | null = null;
+
+const fetchCsrfToken = async (): Promise<string | null> => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
+        csrfToken = response.data.csrfToken;
+        return csrfToken;
+    } catch (error) {
+        console.warn('[API] Failed to fetch CSRF token:', error);
+        return null;
+    }
+};
+
+// Initialize CSRF token on module load
+fetchCsrfToken();
 
 // ========================== REQUEST INTERCEPTOR ==========================
 
@@ -45,6 +63,11 @@ api.interceptors.request.use(
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+        }
+
+        // Add CSRF token for state-changing requests
+        if (csrfToken && config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+            config.headers['X-CSRF-Token'] = csrfToken;
         }
 
         if (import.meta.env.DEV) {
@@ -68,7 +91,7 @@ api.interceptors.response.use(
         }
         return response;
     },
-    (error) => {
+    async (error) => {
         if (!error.response) {
             console.error('[API] Network error:', error.message);
             networkErrorToast();
@@ -92,14 +115,50 @@ api.interceptors.response.use(
             } as ApiError);
         }
 
-        if (status === 401 || status === 403) {
+        if (status === 401) {
+            // Check if token expired (not invalid credentials)
+            const isExpiredToken = data?.message?.toLowerCase().includes('expired') ||
+                data?.message?.toLowerCase().includes('jwt');
+
+            if (isExpiredToken) {
+                const refreshToken = localStorage.getItem('refreshToken');
+                if (refreshToken) {
+                    try {
+                        console.log('[API] Token expired, attempting refresh...');
+                        const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+                        const newToken = refreshResponse.data.token;
+
+                        // Save new token
+                        localStorage.setItem('token', newToken);
+                        console.log('[API] Token refreshed successfully');
+
+                        // Retry original request with new token
+                        error.config.headers.Authorization = `Bearer ${newToken}`;
+                        return api.request(error.config);
+                    } catch (refreshError) {
+                        console.error('[API] Token refresh failed:', refreshError);
+                    }
+                }
+            }
+
+            // If refresh fails or no refresh token, logout
             console.error('[API] Auth error:', data);
             localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
             window.location.href = '/login';
             return Promise.reject({
                 type: 'AUTH_ERROR',
                 message: 'Authentication failed. Please login again.',
+                status
+            } as ApiError);
+        }
+
+        if (status === 403) {
+            console.error('[API] Forbidden:', data);
+            return Promise.reject({
+                type: 'FORBIDDEN',
+                message: data.message || 'Access forbidden',
                 status
             } as ApiError);
         }

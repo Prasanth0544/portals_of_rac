@@ -27,6 +27,9 @@ function LoginPage(): React.ReactElement {
                 };
 
                 localStorage.setItem('token', response.token);
+                if (response.refreshToken) {
+                    localStorage.setItem('refreshToken', response.refreshToken);
+                }
                 localStorage.setItem('user', JSON.stringify(userForStorage));
                 window.location.reload();
             }

@@ -7,18 +7,42 @@ const API_BASE_URL: string = import.meta.env.VITE_API_URL || 'http://localhost:5
 // Create axios instance
 const api: AxiosInstance = axios.create({
     baseURL: API_BASE_URL,
+    withCredentials: true, // Required for cookies (CSRF)
     headers: {
         'Content-Type': 'application/json'
     }
 });
 
-// Add request interceptor to attach token to all requests
+// CSRF Token management
+let csrfToken: string | null = null;
+
+const fetchCsrfToken = async (): Promise<string | null> => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
+        csrfToken = response.data.csrfToken;
+        return csrfToken;
+    } catch (error) {
+        console.warn('[Passenger API] Failed to fetch CSRF token:', error);
+        return null;
+    }
+};
+
+// Initialize CSRF token on module load
+fetchCsrfToken();
+
+// Add request interceptor to attach token and CSRF to all requests
 api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // Add CSRF token for state-changing requests
+        if (csrfToken && config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+            config.headers['X-CSRF-Token'] = csrfToken;
+        }
+
         return config;
     },
     (error) => {
@@ -26,13 +50,39 @@ api.interceptors.request.use(
     }
 );
 
-// Add response interceptor to handle token expiration
+// Add response interceptor to handle token expiration with auto-refresh
 api.interceptors.response.use(
     (response: AxiosResponse) => response,
-    (error) => {
+    async (error) => {
         if (error.response?.status === 401) {
-            // Token expired or invalid
+            const data = error.response?.data;
+            const isExpiredToken = data?.message?.toLowerCase().includes('expired') ||
+                data?.message?.toLowerCase().includes('jwt');
+
+            if (isExpiredToken) {
+                const refreshToken = localStorage.getItem('refreshToken');
+                if (refreshToken) {
+                    try {
+                        console.log('[Passenger API] Token expired, attempting refresh...');
+                        const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+                        const newToken = refreshResponse.data.token;
+
+                        // Save new token
+                        localStorage.setItem('token', newToken);
+                        console.log('[Passenger API] Token refreshed successfully');
+
+                        // Retry original request with new token
+                        error.config.headers.Authorization = `Bearer ${newToken}`;
+                        return api.request(error.config);
+                    } catch (refreshError) {
+                        console.error('[Passenger API] Token refresh failed:', refreshError);
+                    }
+                }
+            }
+
+            // If refresh fails or no refresh token, logout
             localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
             localStorage.removeItem('passengerPNR');
             console.warn('⚠️ Session expired. Please login again.');
         }

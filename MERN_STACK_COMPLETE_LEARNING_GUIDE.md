@@ -987,7 +987,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 | **Day 3** | Automated Testing Pipeline | 4 hours | Test on push |
 | **Day 4** | Build & Deploy Pipelines | 4 hours | Deploy automation |
 | **Day 5** | Environment Variables | 3 hours | Secrets management |
-| **Day 6** | Docker Basics (Optional) | 3 hours | Containerization |
+| **Day 6** | Docker & Containerization | 4 hours | Containerize app |
 | **Day 7** | Deploy to Vercel/Railway | 4 hours | Live deployment |
 
 **Key Concepts:**
@@ -1045,6 +1045,141 @@ jobs:
           vercel-org-id: ${{ secrets.ORG_ID }}
           vercel-project-id: ${{ secrets.PROJECT_ID }}
           vercel-args: '--prod'
+```
+
+### 🐳 Docker Fundamentals
+
+```dockerfile
+# Dockerfile (Backend)
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files first (layer caching)
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy application code
+COPY . .
+
+EXPOSE 5000
+
+CMD ["node", "server.js"]
+```
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/myapp
+      - JWT_SECRET=your-secret
+    depends_on:
+      - mongo
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  mongo:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+**Docker Commands:**
+```bash
+# Build and run
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+
+# Build specific service
+docker-compose build backend
+
+# Run single container
+docker build -t my-app .
+docker run -p 5000:5000 my-app
+```
+
+### 🔐 Advanced Security (CSRF & httpOnly Cookies)
+
+**CSRF Protection (Double-Submit Cookie Pattern):**
+```javascript
+// middleware/csrf.js
+const crypto = require('crypto');
+
+const csrfProtection = (req, res, next) => {
+  // Generate token if not exists
+  if (!req.cookies.csrfToken) {
+    const token = crypto.randomBytes(32).toString('hex');
+    res.cookie('csrfToken', token, {
+      httpOnly: false, // Client must read it
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
+  }
+
+  // Validate for state-changing requests
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const headerToken = req.headers['x-csrf-token'];
+    const cookieToken = req.cookies.csrfToken;
+    
+    if (!headerToken || headerToken !== cookieToken) {
+      return res.status(403).json({ error: 'CSRF token mismatch' });
+    }
+  }
+
+  next();
+};
+
+// Frontend: Include CSRF token in requests
+axios.interceptors.request.use(config => {
+  const csrfToken = getCookie('csrfToken');
+  if (csrfToken) {
+    config.headers['X-CSRF-Token'] = csrfToken;
+  }
+  return config;
+});
+```
+
+**httpOnly Cookies for JWT:**
+```javascript
+// Set tokens as httpOnly cookies (XSS protection)
+res.cookie('accessToken', token, {
+  httpOnly: true,  // Cannot be accessed by JavaScript
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 15 * 60 * 1000 // 15 minutes
+});
+
+res.cookie('refreshToken', refreshToken, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+});
+
+// Auth middleware reads from cookies
+const token = req.cookies?.accessToken || 
+              req.headers.authorization?.split(' ')[1];
 ```
 
 ---

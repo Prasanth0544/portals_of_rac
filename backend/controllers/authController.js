@@ -85,7 +85,25 @@ class AuthController {
                 { trainAssigned: user.trainAssigned }
             );
 
+            // Set tokens as httpOnly cookies (secure in production)
+            const isProduction = process.env.NODE_ENV === 'production';
+
+            res.cookie('accessToken', token, {
+                httpOnly: true,
+                secure: isProduction,
+                sameSite: 'strict',
+                maxAge: 15 * 60 * 1000 // 15 minutes
+            });
+
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: isProduction,
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            });
+
             // Return success with tokens and user info
+            // Also return tokens in body for backward compatibility
             res.json({
                 success: true,
                 message: 'Login successful',
@@ -195,7 +213,25 @@ class AuthController {
                 { email: user.email }
             );
 
+            // Set tokens as httpOnly cookies (secure in production)
+            const isProduction = process.env.NODE_ENV === 'production';
+
+            res.cookie('accessToken', token, {
+                httpOnly: true,
+                secure: isProduction,
+                sameSite: 'strict',
+                maxAge: 15 * 60 * 1000 // 15 minutes
+            });
+
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: isProduction,
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            });
+
             // Return success with tokens, user info, and tickets
+            // Also return tokens in body for backward compatibility
             res.json({
                 success: true,
                 message: 'Login successful',

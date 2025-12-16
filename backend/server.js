@@ -12,6 +12,8 @@ const swaggerSpecs = require('./config/swagger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { validateEnv } = require('./utils/envValidator');
+const cookieParser = require('cookie-parser');
+const { csrfProtection, getCsrfToken } = require('./middleware/csrf');
 
 // Validate environment variables on startup
 validateEnv();
@@ -31,12 +33,16 @@ app.use(cors({
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// CSRF Protection - applies to state-changing requests
+app.use(csrfProtection);
 
 // Rate limiting - applies to all /api routes
 app.use('/api', apiLimiter);
@@ -51,6 +57,9 @@ if (process.env.NODE_ENV === 'development') {
 
 // Create HTTP Server
 const httpServer = http.createServer(app);
+
+// CSRF Token endpoint - must be before API routes
+app.get('/api/csrf-token', getCsrfToken);
 
 // API Routes
 app.use('/api', apiRoutes);

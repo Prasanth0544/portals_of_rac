@@ -90,7 +90,8 @@ describe('Auth Flow Integration', () => {
             };
             const res = {
                 json: jest.fn(),
-                status: jest.fn().mockReturnThis()
+                status: jest.fn().mockReturnThis(),
+                cookie: jest.fn()
             };
 
             await authController.staffLogin(req, res);
@@ -121,7 +122,8 @@ describe('Auth Flow Integration', () => {
             };
             const res = {
                 json: jest.fn(),
-                status: jest.fn().mockReturnThis()
+                status: jest.fn().mockReturnThis(),
+                cookie: jest.fn()
             };
 
             await authController.staffLogin(req, res);
@@ -188,7 +190,8 @@ describe('Auth Flow Integration', () => {
             };
             const res = {
                 json: jest.fn(),
-                status: jest.fn().mockReturnThis()
+                status: jest.fn().mockReturnThis(),
+                cookie: jest.fn()
             };
 
             await authController.passengerLogin(req, res);

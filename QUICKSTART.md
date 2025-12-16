@@ -172,11 +172,11 @@ cd passenger-portal && npm run dev
 
 | Portal | URL | Credentials |
 |--------|-----|-------------|
-| **Admin Portal** | http://localhost:5173 | ADMIN_01 / Prasanth@123 |
+| **Admin Portal** | http://localhost:3000 or 5173 | ADMIN_01 / Prasanth@123 |
 | **TTE Portal** | http://localhost:5174 | TTE_01 / Prasanth@123 |
 | **Passenger Portal** | http://localhost:5175 | IR_0001 / Prasanth@123 |
 | **API Documentation** | http://localhost:5000/api-docs | - |
-| **Health Check** | http://localhost:5000/health | - |
+| **Health Check** | http://localhost:5000/api/health | - |
 
 ---
 
@@ -241,17 +241,29 @@ Connect: `ws://localhost:5000`
 
 ---
 
-## 🔐 JWT Authentication
+## 🔐 Authentication & Security
 
+### JWT Authentication
 All protected API routes require:
-
 ```http
 Authorization: Bearer <token>
 ```
 
-Token obtained from login endpoints:
+### Security Features Implemented
+| Feature | Status |
+|---------|--------|
+| JWT Access Tokens (15 min) | ✅ |
+| Refresh Tokens (7 days) | ✅ |
+| httpOnly Cookies | ✅ |
+| CSRF Protection | ✅ |
+| Auto Token Refresh | ✅ |
+| Rate Limiting | ✅ |
+
+Token endpoints:
 - `POST /api/auth/passenger/login`
 - `POST /api/auth/staff/login`
+- `POST /api/auth/refresh`
+- `GET /api/csrf-token`
 
 ---
 
@@ -296,6 +308,45 @@ Full API docs: http://localhost:5000/api-docs
 - [ ] Train initialization successful
 - [ ] WebSocket connected (check console)
 - [ ] Push subscription created (check console)
+
+---
+
+## 🐳 Docker Deployment (Alternative)
+
+### Prerequisites
+- Docker Desktop installed
+- docker-compose available
+
+### Quick Start with Docker
+
+```bash
+# Start all services (MongoDB + Backend + All Portals)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+### Docker URLs
+| Service | URL |
+|---------|-----|
+| Backend API | http://localhost:5000 |
+| Admin Portal | http://localhost:3000 |
+| TTE Portal | http://localhost:3001 |
+| Passenger Portal | http://localhost:3002 |
+| MongoDB | localhost:27017 |
+
+### Available Docker Files
+- `docker-compose.yml` - Development setup
+- `docker-compose.prod.yml` - Production setup
+- `backend/Dockerfile` - Backend image
+- `frontend/Dockerfile` - Admin portal image
+- `tte-portal/Dockerfile` - TTE portal image
+- `passenger-portal/Dockerfile` - Passenger portal image
+- `k8s/` - Kubernetes manifests
 
 ---
 

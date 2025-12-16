@@ -74,6 +74,7 @@ export interface ApiResponse<T = any> {
     error?: string;
     // Login response fields
     token?: string;
+    refreshToken?: string;
     user?: any;
     tickets?: any[];
 }

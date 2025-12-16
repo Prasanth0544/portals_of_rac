@@ -1,7 +1,6 @@
 # Project Structure
 
-```
-.
+
 ├── .dockerignore
 ├── .gitattributes
 ├── .github
@@ -9,21 +8,12 @@
 │       ├── cd.yml
 │       └── ci.yml
 ├── .gitignore
-├── COMPLETION_STATUS.md
 ├── DEPLOYMENT.md
-├── Data
-│   ├── 17225.py
-│   ├── generate_tree.py
-│   ├── passengers_data.py
-│   ├── sample.py
-│   ├── train_details.py
-│   └── users.py
 ├── MERN_STACK_COMPLETE_LEARNING_GUIDE.md
-├── PROJECT_STATUS_ANALYSIS.md
 ├── PROJECT_STRUCTURE.md
 ├── QUICKSTART.md
 ├── README.md
-├── SECURITY_IMPROVEMENTS.md
+├── SECURITY_TODO.md
 ├── WEBSOCKET_ROOMS_PLAN.md
 ├── backend
 │   ├── .dockerignore
@@ -69,6 +59,7 @@
 │   ├── jest.config.js
 │   ├── middleware
 │   │   ├── auth.js
+│   │   ├── csrf.js
 │   │   ├── errorHandler.js
 │   │   ├── rateLimiter.js
 │   │   ├── validate-request.js
@@ -143,10 +134,8 @@
 ├── dot_md_files
 │   ├── ARCHITECTURE.md
 │   ├── ELIGIBILITY_MATRIX_COMPLETE.md
-│   ├── Limitations_to_improve.md
-│   ├── PROJECT_ANALYSIS.md
-│   ├── REFACTORING_ROADMAP.md
-│   └── TECHNOLOGY_OVERVIEW.md
+│   ├── FUTURE_IMPROVEMENTS.md
+│   └── REFACTORING_ROADMAP.md
 ├── frontend
 │   ├── .dockerignore
 │   ├── .env
@@ -228,6 +217,7 @@
 │   ├── tsconfig.json
 │   ├── tsconfig.node.json
 │   └── vite.config.js
+├── generate_tree.py
 ├── k8s
 │   ├── backend
 │   │   ├── configmap.yaml
@@ -294,6 +284,7 @@
 │   │   │   │   └── NotificationBell.css
 │   │   │   └── pages
 │   │   │       ├── JourneyVisualizationPage.css
+│   │   │       ├── LoginPage.css
 │   │   │       ├── PNRSearchPage.css
 │   │   │       ├── UpgradeOffersPage.css
 │   │   │       └── ViewTicketPage.css
@@ -340,7 +331,6 @@
     │   ├── index.css
     │   ├── main.tsx
     │   ├── pages
-    │   │   ├── ActionHistoryPage.tsx
     │   │   ├── BoardedPassengersPage.tsx
     │   │   ├── BoardingVerificationPage.tsx
     │   │   ├── DashboardPage.tsx
@@ -356,8 +346,8 @@
     │   │   ├── components
     │   │   │   └── JourneyTimeline.css
     │   │   └── pages
-    │   │       ├── ActionHistoryPage.css
     │   │       ├── DashboardPage.css
+    │   │       ├── LoginPage.css
     │   │       ├── OfflineUpgradesPage.css
     │   │       ├── PassengersPage.css
     │   │       ├── PendingReallocationsPage.css
@@ -371,4 +361,4 @@
     ├── tsconfig.json
     ├── tsconfig.node.json
     └── vite.config.js
-```
+
