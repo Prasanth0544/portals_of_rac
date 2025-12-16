@@ -13,22 +13,27 @@ const api: AxiosInstance = axios.create({
     }
 });
 
-// CSRF Token management
-let csrfToken: string | null = null;
+// CSRF Token management - read from cookies
+const getCookie = (name: string): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    return null;
+};
 
-const fetchCsrfToken = async (): Promise<string | null> => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
-        csrfToken = response.data.csrfToken;
-        return csrfToken;
-    } catch (error) {
-        console.warn('[Passenger API] Failed to fetch CSRF token:', error);
-        return null;
+// Ensure CSRF token exists
+const ensureCsrfToken = async () => {
+    if (!getCookie('csrfToken')) {
+        try {
+            await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
+        } catch (error) {
+            console.warn('[Passenger API] Failed to fetch CSRF token:', error);
+        }
     }
 };
 
-// Initialize CSRF token on module load
-fetchCsrfToken();
+// Initialize CSRF token check
+ensureCsrfToken();
 
 // Add request interceptor to attach token and CSRF to all requests
 api.interceptors.request.use(
@@ -39,8 +44,11 @@ api.interceptors.request.use(
         }
 
         // Add CSRF token for state-changing requests
-        if (csrfToken && config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
-            config.headers['X-CSRF-Token'] = csrfToken;
+        if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+            const csrfToken = getCookie('csrfToken');
+            if (csrfToken) {
+                config.headers['X-CSRF-Token'] = csrfToken;
+            }
         }
 
         return config;

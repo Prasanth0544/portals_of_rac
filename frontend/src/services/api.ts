@@ -55,10 +55,19 @@ interface PassengerCounts {
 const api: AxiosInstance = axios.create({
     baseURL: API_BASE_URL,
     timeout: 30000,
+    withCredentials: true, // Required for cookies (CSRF)
     headers: {
         'Content-Type': 'application/json',
     },
 });
+
+// CSRF Token helper - read from cookies
+const getCookie = (name: string): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    return null;
+};
 
 // ========================== INTERCEPTORS ==========================
 
@@ -67,6 +76,14 @@ api.interceptors.request.use(
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+        }
+
+        // Add CSRF token for state-changing requests
+        if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+            const csrfToken = getCookie('csrfToken');
+            if (csrfToken) {
+                config.headers['X-CSRF-Token'] = csrfToken;
+            }
         }
 
         if (import.meta.env.DEV) {

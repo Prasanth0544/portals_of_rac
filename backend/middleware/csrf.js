@@ -17,7 +17,7 @@ const csrfProtection = (req, res, next) => {
         return next();
     }
 
-    // Skip CSRF for specific public endpoints (login, OTP)
+    // Skip CSRF for specific public endpoints (login, OTP, push notifications)
     const publicPaths = [
         '/api/auth/staff/login',
         '/api/auth/passenger/login',
@@ -25,7 +25,10 @@ const csrfProtection = (req, res, next) => {
         '/api/otp/send',
         '/api/otp/verify',
         '/api/config/setup',
-        '/api/train/initialize'
+        '/api/train/initialize',
+        '/api/tte/push-subscribe',
+        '/api/passenger/push-subscribe',
+        '/api/push-subscribe'
     ];
 
     if (publicPaths.some(path => req.path.startsWith(path))) {
