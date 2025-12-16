@@ -71,14 +71,19 @@ function PassengerList({ currentStationIdx, stations }: PassengerListProps): Rea
                     getRACQueue(),
                 ]);
 
-                const berthPassengers: Passenger[] = passengersRes?.data?.passengers || [];
+                // API functions already return unwrapped data (not response.data)
+                // getAllPassengers returns { passengers: [] } or Passenger[]
+                const berthPassengers: Passenger[] = Array.isArray(passengersRes)
+                    ? passengersRes
+                    : (passengersRes as any)?.passengers || [];
                 console.log('📊 Berth passengers:', berthPassengers.length);
 
                 let racPassengers: Passenger[] = [];
 
-                if (racRes?.success) {
-                    console.log('🔍 Raw RAC Response:', racRes.data?.queue?.[0]);
-                    racPassengers = (racRes.data?.queue || [])
+                // Check if racRes is an array or has a queue property
+                if (Array.isArray(racRes)) {
+                    console.log('🔍 RAC Response is array:', racRes.length);
+                    racPassengers = racRes
                         .filter((r: any) => r.pnrStatus === "RAC")
                         .map((r: any): Passenger => ({
                             pnr: r.pnr,

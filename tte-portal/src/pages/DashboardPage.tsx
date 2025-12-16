@@ -537,8 +537,8 @@ function DashboardPage(): React.ReactElement {
             {/* Quick Tip */}
             <div className="quick-tip-box">
                 <p>
-                    💡 <strong>Quick Tip:</strong> Use the "Passenger Management" tab to view detailed passenger list,
-                    "Offline Upgrades" for RAC reallocation, and "Action History" to review all TTE actions.
+                    💡 <strong>Quick Tip:</strong> Use the "Passenger List" tab to view detailed passenger list
+                    and "Pending Reallocations" for RAC upgrade management.
                 </p>
             </div>
         </div>

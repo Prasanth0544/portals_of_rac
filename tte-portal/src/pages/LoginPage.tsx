@@ -1,20 +1,9 @@
 // tte-portal/src/pages/LoginPage.tsx
 import React, { useState, FormEvent, ChangeEvent } from 'react';
 import { tteAPI } from '../api';
-import { Box, TextField, Button, Typography, Paper, Alert, CircularProgress } from '@mui/material';
-import TrainIcon from '@mui/icons-material/Train';
+import '../styles/pages/LoginPage.css';
 
-interface LoginPageProps {
-    onLoginSuccess?: (user: User) => void;
-}
-
-interface User {
-    username: string;
-    role: string;
-    userId: string;
-}
-
-function LoginPage({ onLoginSuccess }: LoginPageProps): React.ReactElement {
+function LoginPage(): React.ReactElement {
     const [employeeId, setEmployeeId] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [error, setError] = useState<string>('');
@@ -28,14 +17,17 @@ function LoginPage({ onLoginSuccess }: LoginPageProps): React.ReactElement {
         try {
             const response = await tteAPI.login(employeeId, password);
 
-            if (response.success) {
-                localStorage.setItem('token', response.data.token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
+            if (response.success && response.token && response.user) {
+                // Map API response to localStorage format
+                const apiUser = response.user;
+                const userForStorage = {
+                    username: apiUser.name || apiUser.employeeId || '',
+                    role: apiUser.role || 'TTE',
+                    userId: apiUser.employeeId || ''
+                };
 
-                if (onLoginSuccess) {
-                    onLoginSuccess(response.data.user);
-                }
-
+                localStorage.setItem('token', response.token);
+                localStorage.setItem('user', JSON.stringify(userForStorage));
                 window.location.reload();
             }
         } catch (err: any) {
@@ -45,99 +37,55 @@ function LoginPage({ onLoginSuccess }: LoginPageProps): React.ReactElement {
         }
     };
 
-
     return (
-        <Box
-            sx={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)',
-                padding: 0
-            }}
-        >
-            <Paper
-                elevation={0}
-                sx={{
-                    maxWidth: 500,
-                    width: '100%',
-                    margin: '0 auto',
-                    borderRadius: 0
-                }}
-            >
-                <Box sx={{ p: 5, textAlign: 'center', bgcolor: '#1565c0', color: 'white' }}>
-                    <TrainIcon sx={{ fontSize: 56, mb: 2 }} />
-                    <Typography variant="h4" fontWeight={700}>
-                        TTE Portal
-                    </Typography>
-                    <Typography variant="body1" sx={{ opacity: 0.9, mt: 1.5 }}>
-                        Dynamic RAC Reallocation System
-                    </Typography>
-                </Box>
+        <div className="login-container">
+            <div className="login-box">
+                <div className="login-header">
+                    <h1>🚂 TTE Portal</h1>
+                    <p>Dynamic RAC Reallocation System</p>
+                </div>
 
-                <Box component="form" onSubmit={handleLogin} sx={{ p: 5 }}>
-                    <TextField
-                        fullWidth
-                        label="Employee ID"
-                        variant="outlined"
-                        value={employeeId}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setEmployeeId(e.target.value)}
-                        required
-                        disabled={loading}
-                        sx={{ mb: 3 }}
-                        autoFocus
-                    />
+                <form onSubmit={handleLogin} className="login-form">
+                    <div className="form-group">
+                        <label htmlFor="employeeId">Employee ID</label>
+                        <input
+                            type="text"
+                            id="employeeId"
+                            value={employeeId}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setEmployeeId(e.target.value)}
+                            placeholder="Enter your employee ID"
+                            required
+                            disabled={loading}
+                        />
+                    </div>
 
-                    <TextField
-                        fullWidth
-                        label="Password"
-                        type="password"
-                        variant="outlined"
-                        value={password}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                        required
-                        disabled={loading}
-                        sx={{ mb: 3 }}
-                    />
+                    <div className="form-group">
+                        <label htmlFor="password">Password</label>
+                        <input
+                            type="password"
+                            id="password"
+                            value={password}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                            placeholder="Enter your password"
+                            required
+                            disabled={loading}
+                        />
+                    </div>
 
-                    {error && (
-                        <Alert severity="error" sx={{ mb: 3 }}>
-                            {error}
-                        </Alert>
-                    )}
+                    {error && <div className="error-message">{error}</div>}
 
-                    <Button
-                        fullWidth
-                        type="submit"
-                        variant="contained"
-                        size="large"
-                        disabled={loading}
-                        sx={{
-                            py: 1.8,
-                            textTransform: 'none',
-                            fontSize: 17,
-                            fontWeight: 600,
-                            background: 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)',
-                            borderRadius: 0
-                        }}
-                    >
-                        {loading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
-                    </Button>
+                    <button type="submit" className="login-btn" disabled={loading}>
+                        {loading ? 'Logging in...' : 'Login'}
+                    </button>
+                </form>
 
-                    <Box sx={{ mt: 4, textAlign: 'center', py: 2, bgcolor: '#f5f5f5', borderRadius: 0 }}>
-                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                            Test Credentials
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                            TTE_01 / Prasanth@123
-                        </Typography>
-                    </Box>
-                </Box>
-            </Paper>
-        </Box>
+                <div className="login-footer">
+                    <p>TTE Portal</p>
+                    <small>Test Credentials: TTE_01 / Prasanth@123</small>
+                </div>
+            </div>
+        </div>
     );
 }
 
 export default LoginPage;
-

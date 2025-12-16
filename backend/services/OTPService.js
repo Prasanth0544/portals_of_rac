@@ -25,10 +25,18 @@ class OTPService {
             const collection = racDb.collection(this.collectionName);
 
             // Create TTL index for automatic expiry (expires after 5 minutes)
-            await collection.createIndex(
-                { createdAt: 1 },
-                { expireAfterSeconds: 300 } // 5 minutes
-            );
+            // Wrap in try-catch to handle case where index exists with different name
+            try {
+                await collection.createIndex(
+                    { createdAt: 1 },
+                    { expireAfterSeconds: 300 } // 5 minutes
+                );
+            } catch (indexError) {
+                // Ignore IndexOptionsConflict (code 85) - index already exists
+                if (indexError.code !== 85) {
+                    throw indexError;
+                }
+            }
 
             this.initialized = true;
             console.log('✅ OTP collection initialized with TTL index');

@@ -16,6 +16,18 @@ interface ApiResponse<T = any> {
     data?: T;
     message?: string;
     error?: string;
+    // Login response fields
+    token?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+    user?: {
+        employeeId?: string;
+        name?: string;
+        email?: string;
+        role?: string;
+        trainAssigned?: number;
+        permissions?: string[];
+    };
 }
 
 // Create axios instance
@@ -152,19 +164,6 @@ export const tteAPI = {
     // Staff login (TTE/Admin)
     login: async (employeeId: string, password: string): Promise<ApiResponse> => {
         const response = await api.post('/auth/staff/login', { employeeId, password });
-        return response.data;
-    },
-
-    // ========== Action History & Undo ==========
-    // Get action history (last 10 actions)
-    getActionHistory: async (): Promise<ApiResponse> => {
-        const response = await api.get('/tte/action-history');
-        return response.data;
-    },
-
-    // Undo a specific action
-    undoAction: async (actionId: string): Promise<ApiResponse> => {
-        const response = await api.post('/tte/undo', { actionId });
         return response.data;
     },
 

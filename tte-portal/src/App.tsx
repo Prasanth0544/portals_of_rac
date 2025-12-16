@@ -8,7 +8,6 @@ import TrainIcon from '@mui/icons-material/Train';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import BoardingVerificationPage from './pages/BoardingVerificationPage';
-import ActionHistoryPage from './pages/ActionHistoryPage';
 import PassengersPage from './pages/PassengersPage';
 import BoardedPassengersPage from './pages/BoardedPassengersPage';
 import UpgradeNotificationsPage from './pages/UpgradeNotificationsPage';
@@ -178,7 +177,6 @@ function App(): React.ReactElement {
                         <Tab label="Boarded Passengers" />
                         <Tab label="Pending Reallocations" />
                         <Tab label="Journey Visualization" />
-                        <Tab label="Action History" />
                     </Tabs>
                 </AppBar>
 
@@ -189,7 +187,6 @@ function App(): React.ReactElement {
                     {currentTab === 2 && <BoardedPassengersPage />}
                     {currentTab === 3 && <PendingReallocationsPage />}
                     {currentTab === 4 && <VisualizationPage />}
-                    {currentTab === 5 && <ActionHistoryPage />}
                 </Box>
 
                 <Box component="footer" sx={{ bgcolor: 'background.paper', py: 2, borderTop: '1px solid #e0e0e0' }}>

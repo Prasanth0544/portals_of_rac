@@ -21,12 +21,7 @@ class RefreshTokenService {
 
             const racDb = await db.getDb();
             const collection = racDb.collection('refresh_tokens');
-
-            // Ensure TTL index exists (runs once, MongoDB handles idempotency)
-            await collection.createIndex(
-                { expiresAt: 1 },
-                { expireAfterSeconds: 0, background: true }
-            );
+            // Note: TTL index is created by scripts/createIndexes.js
 
             // Store the refresh token
             await collection.insertOne({
