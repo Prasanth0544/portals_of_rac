@@ -682,3 +682,198 @@
 .status-btn.cancel-btn:hover {
   background: #da190b;
 }
+
+/* ============================================
+   MOBILE RESPONSIVENESS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .passengers-page {
+    padding: 15px;
+    max-height: none;
+  }
+
+  /* Stats grid - 2 columns on mobile */
+  .pass-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .pass-stat {
+    padding: 8px;
+  }
+
+  .pass-stat-label {
+    font-size: 9px;
+  }
+
+  .pass-stat-value {
+    font-size: 18px;
+  }
+
+  /* Filters - stack vertically */
+  .filters {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filter-row {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filter-input,
+  .filter-select {
+    width: 100%;
+    font-size: 16px; /* Prevent iOS zoom */
+    min-height: 44px;
+  }
+
+  .filter-btn,
+  .filter-reset {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  /* Vacant berths section */
+  .vacant-berths-section {
+    padding: 15px;
+  }
+
+  .vacant-toggle-section {
+    margin-bottom: 15px;
+  }
+
+  .vacant-toggle-btn {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  /* Vacant berths filter */
+  .vacant-filter-inputs {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .vacant-filter-input {
+    width: 100%;
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .vacant-filter-reset {
+    width: 100%;
+  }
+
+  /* Tables - horizontal scroll */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 15px;
+  }
+
+  .pass-table,
+  .vacant-berths-table {
+    min-width: 800px; /* Force horizontal scroll */
+    font-size: 11px;
+  }
+
+  .pass-table th,
+  .pass-table td,
+  .vacant-berths-table th,
+  .vacant-berths-table td {
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  /* Station codes */
+  .station-code {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  /* Status badges */
+  .badge {
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+
+  /* Add passenger button */
+  .add-passenger-button-container {
+    padding: 15px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-add-passenger-bottom {
+    width: 100%;
+    min-height: 50px;
+    font-size: 16px;
+  }
+
+  .add-passenger-hint {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  /* Status buttons - larger touch targets */
+  .status-buttons-container {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .status-btn {
+    width: 100%;
+    min-height: 40px;
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .current-status-btn {
+    min-height: 40px;
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+
+  /* Section headers */
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .section-header h3 {
+    font-size: 16px;
+  }
+
+  .badge-count {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small screens */
+  .passengers-page {
+    padding: 10px;
+  }
+
+  .pass-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .pass-table,
+  .vacant-berths-table {
+    font-size: 10px;
+  }
+
+  .pass-table th,
+  .pass-table td {
+    padding: 6px 4px;
+  }
+
+  .section-header h3 {
+    font-size: 15px;
+  }
+}

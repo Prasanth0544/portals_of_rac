@@ -1456,4 +1456,165 @@
     .stage2-results-container {
         gap: 16px;
     }
+
+    /* ENHANCED MOBILE FIXES */
+    
+    /* No-show table - horizontal scroll with better styling */
+    .noshow-content {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 8px;
+    }
+
+    .noshow-table-rebuilt {
+        min-width: 900px; /* Force horizontal scroll instead of crushing */
+        font-size: 12px;
+    }
+
+    .noshow-table-rebuilt th,
+    .noshow-table-rebuilt td {
+        padding: 10px 8px;
+        white-space: nowrap;
+    }
+
+    /* Tabs - horizontal scroll */
+    .tabs-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .tab {
+        padding: 14px 20px;
+        font-size: 14px;
+        min-width: 140px;
+        white-space: nowrap;
+    }
+
+    /* Matrix cards - better spacing */
+    .matrix-card {
+        padding: 18px;
+    }
+
+    .berth-info h3 {
+        font-size: 20px;
+    }
+
+    /* Candidate section - more compact */
+    .candidate-section {
+        padding: 15px;
+    }
+
+    .candidate-name {
+        font-size: 17px;
+    }
+
+    .candidate-details {
+        gap: 8px;
+    }
+
+    .detail-item {
+        padding: 3px 10px;
+        font-size: 12px;
+    }
+
+    /* Apply button - prominent */
+    .btn-apply {
+        padding: 16px 20px;
+        font-size: 17px;
+        min-height: 54px;
+    }
+
+    /* Hashmap section - stack columns */
+    .dual-hashmap-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .hashmap-column {
+        padding: 15px;
+    }
+
+    .column-header h3 {
+        font-size: 16px;
+    }
+
+    /* Matching cards - better mobile layout */
+    .matches-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .match-card {
+        padding: 12px;
+    }
+
+    /* Page header - stack elements */
+    .page-header {
+        padding: 18px;
+    }
+
+    .train-info {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .train-name {
+        font-size: 16px;
+    }
+
+    .train-no,
+    .current-station {
+        font-size: 13px;
+    }
+
+    /* Section headers - more compact */
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .section-header h2 {
+        font-size: 22px;
+    }
+
+    .matrix-description {
+        font-size: 14px;
+    }
+
+    .btn-refresh {
+        width: 100%;
+        padding: 12px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Extra small screens - further optimizations */
+    .reallocation-page {
+        padding: 12px;
+    }
+
+    .page-header h1 {
+        font-size: 20px;
+    }
+
+    .matrix-card {
+        padding: 15px;
+    }
+
+    .berth-info h3 {
+        font-size: 18px;
+    }
+
+    .noshow-table-rebuilt {
+        font-size: 11px;
+    }
+
+    .tab {
+        font-size: 13px;
+        padding: 12px 16px;
+        min-width: 120px;
+    }
 }

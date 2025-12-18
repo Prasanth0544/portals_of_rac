@@ -97,23 +97,86 @@
     }
 }
 
-/* Mobile Responsive */
-@media (max-width: 600px) {
+/* ENHANCED MOBILE RESPONSIVE */
+@media (max-width: 768px) {
     .boarding-pass-card {
-        margin: 0 8px 16px;
-        border-radius: 6px !important;
+        margin: 0 10px 16px;
+        padding: 18px;
+        border-radius: 8px !important;
+    }
+
+    .boarding-pass-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 12px;
+    }
+
+    .train-info {
+        font-size: 16px;
+    }
+
+    .passenger-details {
+        padding: 15px;
+    }
+
+    .detail-row {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .detail-label {
+        font-size: 12px;
+    }
+
+    .detail-value {
+        font-size: 16px;
+    }
+
+    .berth-display {
+        font-size: 32px;
+        padding: 20px;
+    }
+
+    .qr-section {
+        padding: 20px;
+    }
+
+    .qr-section svg {
+        width: 180px !important;
+        height: 180px !important;
     }
 
     .action-buttons {
         flex-direction: column;
+        gap: 10px;
     }
 
     .action-buttons button {
         width: 100%;
+        min-height: 50px;
+        font-size: 16px;
+    }
+
+    .journey-route {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 600px) {
+    .boarding-pass-card {
+        margin: 0 8px 14px;
+        padding: 15px;
+    }
+
+    .berth-display {
+        font-size: 28px;
     }
 
     .qr-section svg {
-        width: 200px !important;
-        height: 200px !important;
+        width: 160px !important;
+        height: 160px !important;
     }
 }

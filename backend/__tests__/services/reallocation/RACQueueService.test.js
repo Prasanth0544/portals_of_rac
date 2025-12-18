@@ -97,6 +97,13 @@ describe('RACQueueService', () => {
 
             expect(result).toHaveLength(0);
         });
+
+        it('should handle errors gracefully', () => {
+            const trainState = { racQueue: null };
+            const result = RACQueueService.getRACQueue(trainState);
+
+            expect(result).toEqual([]);
+        });
     });
 
     describe('getRACStats', () => {
@@ -113,7 +120,7 @@ describe('RACQueueService', () => {
             const trainState = createMockTrainState();
             const result = RACQueueService.getRACStats(trainState);
 
-            expect(result.boarded).toBe(2); // Only 2 are boarded
+            expect(result.boarded).toBe(2);
         });
     });
 
@@ -179,12 +186,27 @@ describe('RACQueueService', () => {
             expect(trainState.racQueue.length).toBe(2);
         });
 
-        it('should return failure for non-existent passenger', () => {
+        it('should return error if passenger not found', () => {
             const trainState = createMockTrainState();
-
-            const result = RACQueueService.removeFromRACQueue(trainState, '0000000000');
+            const result = RACQueueService.removeFromRACQueue(trainState, 'NONEXISTENT');
 
             expect(result.success).toBe(false);
+        });
+
+        it('should return removed passenger details', () => {
+            const trainState = createMockTrainState();
+            const result = RACQueueService.removeFromRACQueue(trainState, '1111111111');
+
+            expect(result.passenger).toBeDefined();
+            expect(result.passenger.pnr).toBe('1111111111');
+        });
+
+        it('should handle errors gracefully', () => {
+            const trainState = { racQueue: null };
+            const result = RACQueueService.removeFromRACQueue(trainState, 'P001');
+
+            expect(result.success).toBe(false);
+            expect(result.message).toBeDefined();
         });
     });
 
@@ -194,7 +216,45 @@ describe('RACQueueService', () => {
             const result = RACQueueService.getRACByPriority(trainState);
 
             expect(typeof result).toBe('object');
-            // Should have groups like {'1': [...], '2': [...], '3': [...]}
+            expect(Object.keys(result).length).toBeGreaterThan(0);
+        });
+
+        it('should handle errors gracefully', () => {
+            const trainState = { racQueue: null };
+            const result = RACQueueService.getRACByPriority(trainState);
+
+            expect(result).toEqual({});
+        });
+    });
+
+    describe('getBoardedOnlineRAC', () => {
+        it('should return only boarded and online RAC passengers', () => {
+            const trainState = createMockTrainState();
+            trainState.getAllPassengers = jest.fn().mockReturnValue([
+                { pnr: 'P001', pnrStatus: 'RAC', boarded: true, passengerStatus: 'online', noShow: false },
+                { pnr: 'P002', pnrStatus: 'RAC', boarded: false, passengerStatus: 'online', noShow: false },
+                { pnr: 'P003', pnrStatus: 'RAC', boarded: true, passengerStatus: 'offline', noShow: false }
+            ]);
+
+            const result = RACQueueService.getBoardedOnlineRAC(trainState);
+
+            expect(result).toHaveLength(1);
+            expect(result[0].pnr).toBe('P001');
+        });
+    });
+
+    describe('getOfflineRAC', () => {
+        it('should return offline RAC passengers', () => {
+            const trainState = createMockTrainState();
+            trainState.getAllPassengers = jest.fn().mockReturnValue([
+                { pnr: 'P001', pnrStatus: 'RAC', passengerStatus: 'offline', noShow: false },
+                { pnr: 'P002', pnrStatus: 'RAC', passengerStatus: 'online', noShow: false }
+            ]);
+
+            const result = RACQueueService.getOfflineRAC(trainState);
+
+            expect(result).toHaveLength(1);
+            expect(result[0].pnr).toBe('P001');
         });
     });
 });

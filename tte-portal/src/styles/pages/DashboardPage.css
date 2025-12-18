@@ -606,7 +606,8 @@
     color: #5a6c7d;
 }
 
-/* Responsive */
+/* ENHANCED MOBILE RESPONSIVENESS */
+
 @media (max-width: 1024px) {
     .train-status-grid {
         grid-template-columns: 1fr;
@@ -623,26 +624,224 @@
 }
 
 @media (max-width: 768px) {
+    /* Dashboard container */
+    .tte-dashboard {
+        padding: 15px;
+    }
+
+    /* Header */
+    .dashboard-header {
+        padding: 15px;
+    }
+
+    .dashboard-title {
+        font-size: 20px;
+    }
+
+    .tte-name {
+        font-size: 14px;
+    }
+
+    /* Stats grid - 2 columns */
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 12px;
+    }
+
+    .stat-label {
+        font-size: 11px;
+    }
+
+    .stat-value {
+        font-size: 22px;
+    }
+
+    /* Train status */
+    .train-status-section {
+        padding: 15px;
     }
 
     .train-status-item {
         flex-direction: column;
         text-align: center;
+        padding: 12px;
+    }
+
+    .status-label {
+        font-size: 12px;
+    }
+
+    .status-value {
+        font-size: 16px;
+    }
+
+    /* Train controls - stack vertically */
+    .train-controls {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .control-button {
+        width: 100%;
+        min-height: 54px;
+        font-size: 16px;
+        padding: 14px 20px;
+    }
+
+    .next-station-btn {
+        width: 100%;
+        min-height: 54px;
+        font-size: 17px;
+    }
+
+    /* Station controls */
+    .station-controls {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .station-info {
+        width: 100%;
+        text-align: center;
+    }
+
+    .current-station-name {
+        font-size: 18px;
+    }
+
+    .station-time {
+        font-size: 13px;
+    }
+
+    /* Action cards */
+    .action-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .action-card {
+        padding: 16px;
+    }
+
+    .action-card-title {
+        font-size: 15px;
+    }
+
+    .action-card-description {
+        font-size: 12px;
+    }
+
+    /* Quick actions */
+    .quick-actions {
+        padding: 15px;
+    }
+
+    .quick-action-btn {
+        min-height: 50px;
+        font-size: 15px;
+        padding: 12px 16px;
+    }
+
+    /* Journey progress */
+    .journey-progress {
+        padding: 15px;
+    }
+
+    .progress-bar {
+        height: 6px;
+    }
+
+    .progress-label {
+        font-size: 12px;
+    }
+
+    /* Recent activity */
+    .activity-feed {
+        padding: 15px;
+    }
+
+    .activity-item {
+        padding: 12px;
+    }
+
+    .activity-time {
+        font-size: 11px;
+    }
+
+    .activity-text {
+        font-size: 13px;
     }
 }
 
 @media (max-width: 480px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-
+    /* Extra small screens */
     .tte-dashboard {
         padding: 10px;
     }
 
+    .dashboard-header {
+        padding: 12px;
+    }
+
+    .dashboard-title {
+        font-size: 18px;
+    }
+
+    /* Stats - single column */
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-card {
+        padding: 10px;
+    }
+
     .stat-value {
-        font-size: 24px;
+        font-size: 20px;
+    }
+
+    /* Control buttons - larger */
+    .control-button,
+    .next-station-btn {
+        min-height: 56px;
+        font-size: 18px;
+    }
+
+    /* Train status items */
+    .train-status-item {
+        padding: 10px;
+    }
+
+    .status-value {
+        font-size: 15px;
+    }
+
+    /* Action cards */
+    .action-card {
+        padding: 14px;
+    }
+
+    .action-card-title {
+        font-size: 14px;
+    }
+}
+
+/* Landscape orientation (tablets) */
+@media (max-width: 1024px) and (orientation: landscape) {
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .train-controls {
+        flex-direction: row;
+    }
+
+    .control-button {
+        width: auto;
+        flex: 1;
     }
 }

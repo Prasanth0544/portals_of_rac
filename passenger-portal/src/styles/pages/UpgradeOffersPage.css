@@ -312,17 +312,218 @@
 }
 
 @media (max-width: 768px) {
-    .offers-grid {
-        grid-template-columns: 1fr;
+    /* Page container */
+    .offers-page {
+        padding: 15px;
     }
 
+    /* Page header */
     .page-header {
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
+        text-align: center;
+        padding: 15px;
+    }
+
+    .page-title {
+        font-size: 22px;
+    }
+
+    .page-subtitle {
+        font-size: 14px;
+    }
+
+    /* Offers grid - single column */
+    .offers-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    /* Offer cards */
+    .offer-card {
+        padding: 18px;
+    }
+
+    .offer-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    /* Berth info - prominent */
+    .berth-info {
+        width: 100%;
         text-align: center;
     }
 
-    .offer-actions {
+    .berth-number {
+        font-size: 28px;
+    }
+
+    .berth-type {
+        font-size: 13px;
+    }
+
+    /* Timer - very prominent */
+    .timer-section {
+        width: 100%;
+        padding: 18px;
+        text-align: center;
+    }
+
+    .timer {
+        font-size: 32px;
+        font-weight: 700;
+    }
+
+    .timer-label {
+        font-size: 14px;
+        margin-top: 6px;
+    }
+
+    /* Offer details */
+    .offer-details {
+        margin-top: 15px;
+    }
+
+    .detail-row {
         flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 10px 0;
+    }
+
+    .detail-label {
+        font-size: 12px;
+    }
+
+    .detail-value {
+        font-size: 16px;
+    }
+
+    /* Journey route */
+    .journey-route {
+        font-size: 17px;
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .journey-arrow {
+        transform: rotate(90deg);
+        font-size: 20px;
+    }
+
+    /* Offer actions - stack vertically */
+    .offer-actions {
+        flex-direction: column-reverse;
+        gap: 12px;
+        margin-top: 18px;
+    }
+
+    .btn-accept,
+    .btn-deny {
+        width: 100%;
+        min-height: 56px;
+        font-size: 18px;
+        font-weight: 700;
+        padding: 16px 24px;
+    }
+
+    .btn-accept {
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+    }
+
+    .btn-deny {
+        min-height: 48px;
+        font-size: 16px;
+    }
+
+    /* Status badges */
+    .offer-status {
+        font-size: 13px;
+        padding: 8px 16px;
+    }
+
+    /* Empty state */
+    .empty-offers {
+        padding: 60px 20px;
+    }
+
+    .empty-icon {
+        font-size: 64px;
+    }
+
+    .empty-title {
+        font-size: 20px;
+    }
+
+    .empty-message {
+        font-size: 15px;
+    }
+
+    /* Loading state */
+    .loading-container {
+        padding: 60px 20px;
+    }
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+    }
+
+    .loading-text {
+        font-size: 15px;
+    }
+
+    /* Countdown pulse animation - more visible */
+    @keyframes pulse-mobile {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+    }
+
+    .timer.urgent {
+        animation: pulse-mobile 1s infinite;
+        color: #e74c3c;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Extra small screens */
+    .offers-page {
+        padding: 10px;
+    }
+
+    .offer-card {
+        padding: 15px;
+    }
+
+    .page-title {
+        font-size: 20px;
+    }
+
+    .berth-number {
+        font-size: 26px;
+    }
+
+    .timer {
+        font-size: 28px;
+    }
+
+    .btn-accept {
+        min-height: 58px;
+        font-size: 19px;
+    }
+
+    .detail-value {
+        font-size: 15px;
+    }
+
+    .journey-route {
+        font-size: 16px;
     }
 }

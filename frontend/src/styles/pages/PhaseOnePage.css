@@ -420,7 +420,8 @@
   }
 }
 
-/* Responsive */
+/* ENHANCED MOBILE RESPONSIVENESS */
+
 @media (max-width: 1024px) {
   .dual-hashmap-container {
     grid-template-columns: 1fr;
@@ -428,18 +429,156 @@
 }
 
 @media (max-width: 768px) {
+  /* Page container */
+  .phase-one-page {
+    padding: 15px;
+  }
+
+  /* Tabs - horizontal scroll */
+  .tabs-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  .tab-btn {
+    min-width: 140px;
+    white-space: nowrap;
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+
+  /* Header */
   .matching-header {
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
+    padding: 15px;
   }
 
   .header-actions {
     width: 100%;
-    justify-content: stretch;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .header-actions button {
-    flex: 1;
+    width: 100%;
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  /* Form inputs - stack vertically */
+  .input-row,
+  .form-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .input-group {
+    width: 100%;
+  }
+
+  input,
+  select {
+    width: 100%;
+    font-size: 16px; /* Prevent iOS zoom */
+    min-height: 44px;
+    padding: 10px;
+  }
+
+  label {
+    font-size: 13px;
+  }
+
+  /* Tables - horizontal scroll */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 700px;
+    font-size: 11px;
+  }
+
+  table th,
+  table td {
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  /* Cards grid */
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Hashmap sections */
+  .hashmap-section {
+    padding: 15px;
+  }
+
+  .hashmap-header h3 {
+    font-size: 16px;
+  }
+
+  /* Action buttons */
+  .action-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    min-height: 50px;
+    font-size: 16px;
+  }
+
+  /* Stats */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  /* Section headers */
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .section-header h2 {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .phase-one-page {
+    padding: 10px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tab-btn {
+    min-width: 120px;
+    font-size: 13px;
+    padding: 10px 16px;
+  }
+
+  table {
+    font-size: 10px;
   }
 }
 

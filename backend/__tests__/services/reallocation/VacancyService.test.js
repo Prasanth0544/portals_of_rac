@@ -151,15 +151,19 @@ describe('VacancyService', () => {
     });
 
     describe('getLongestVacancies', () => {
-        it('should return vacancies sorted by duration', () => {
+        it('should return longest vacancies sorted by duration', () => {
+            const trainState = createMockTrainState();
+            const result = VacancyService.getLongestVacancies(trainState, 3);
+
+            expect(result.length).toBeLessThanOrEqual(3);
+        });
+
+        it('should sort by duration in descending order', () => {
             const trainState = createMockTrainState();
             const result = VacancyService.getLongestVacancies(trainState, 5);
 
-            expect(Array.isArray(result)).toBe(true);
-
-            // Check that they are sorted by duration (descending)
             for (let i = 1; i < result.length; i++) {
-                const prevDuration = result[i - 1].toIdx - result[i - 1].fromIdx;
+                const prevDuration = result[i-1].toIdx - result[i-1].fromIdx;
                 const currDuration = result[i].toIdx - result[i].fromIdx;
                 expect(prevDuration).toBeGreaterThanOrEqual(currDuration);
             }

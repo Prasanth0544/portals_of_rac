@@ -440,8 +440,78 @@
     cursor: not-allowed;
 }
 
-@media (max-width: 600px) {
+/* ENHANCED MOBILE RESPONSIVENESS */
+@media (max-width: 768px) {
+    .view-ticket-page {
+        padding: 15px;
+    }
+
+    .ticket-card {
+        padding: 18px;
+        margin: 10px;
+    }
+
+    .ticket-header {
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .qr-section {
+        padding: 20px;
+    }
+
+    .qr-code-wrapper {
+        width: 180px;
+        height: 180px;
+    }
+
+    .ticket-details-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .detail-item {
+        padding: 10px 0;
+    }
+
+    .detail-label {
+        font-size: 12px;
+    }
+
+    .detail-value {
+        font-size: 16px;
+    }
+
+    .journey-route {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+
     .action-buttons-row {
         grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .btn-download,
+    .btn-share {
+        min-height: 50px;
+        font-size: 16px;
+    }
+
+    .berth-display {
+        font-size: 32px;
+    }
+}
+
+@media (max-width: 600px) {
+    .qr-code-wrapper {
+        width: 160px;
+        height: 160px;
+    }
+
+    .berth-display {
+        font-size: 28px;
     }
 }

@@ -537,28 +537,171 @@
   font-size: 15px;
 }
 
-/* ========== RESPONSIVE ========== */
+/* ========== ENHANCED MOBILE RESPONSIVENESS ========== */
+
 @media (max-width: 768px) {
+  /* Page container */
+  .visualization-page {
+    padding: 15px;
+  }
+
+  /* Section headers */
   .section-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 15px;
+    gap: 12px;
+    padding: 15px;
   }
 
+  .section-header h2 {
+    font-size: 18px;
+  }
+
+  /* Schedule stats */
   .schedule-stats {
     flex-wrap: wrap;
+    gap: 10px;
   }
 
+  .stat-item {
+    flex: 1 1 45%;
+    min-width: 140px;
+    padding: 10px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
+  /* Info cards grid */
   .info-cards-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .info-card {
+    padding: 15px;
+  }
+
+  /* Charts - scrollable container */
+  .chart-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 15px;
+  }
+
+  .chart-wrapper {
+    min-width: 600px; /* Force horizontal scroll for charts */
+  }
+
+  /* Legend - wrap on mobile */
+  .chart-legend {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .legend-item {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  /* Station schedule table - horizontal scroll */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .station-schedule-table {
+    min-width: 700px;
     font-size: 11px;
   }
 
   .station-schedule-table th,
   .station-schedule-table td {
     padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  /* Timeline visualization */
+  .timeline-container {
+    overflow-x: auto;
+    padding-bottom: 15px;
+  }
+
+  .timeline {
+    min-width: 800px;
+  }
+
+  .timeline-station {
+    min-width: 80px;
+  }
+
+  /* Filters */
+  .filters {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .filter-select {
+    width: 100%;
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  /* Action buttons */
+  .action-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-export,
+  .btn-refresh {
+    width: 100%;
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  /* Data cards */
+  .data-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .data-card {
+    padding: 15px;
+  }
+
+  .data-card-title {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .visualization-page {
+    padding: 10px;
+  }
+
+  .stat-item {
+    flex: 1 1 100%;
+  }
+
+  .chart-wrapper {
+    min-width: 500px;
+  }
+
+  .station-schedule-table {
+    font-size: 10px;
+  }
+
+  .section-header h2 {
+    font-size: 16px;
   }
 }
