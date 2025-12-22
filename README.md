@@ -9,7 +9,8 @@ A **real-time Railway RAC (Reservation Against Cancellation) seat reallocation s
 | Document | Purpose |
 |----------|---------|
 | **[QUICKSTART.md](QUICKSTART.md)** | Complete setup guide, installation, and first-time configuration |
-| **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** | Detailed architecture and file structure |
+| **[SECURITY_TODO.md](SECURITY_TODO.md)** | Security features and test coverage status |
+| **[dot_md_files/](dot_md_files/)** | Technical documentation and architecture details |
 
 ---
 
@@ -31,6 +32,23 @@ RAC-Reallocation-System/
 | **Frontend** | Vite, React 19, Material-UI, Axios, WebSocket Client |
 | **Database** | MongoDB with dynamic collections |
 | **Notifications** | Web Push (VAPID), Email (Nodemailer) |
+| **Testing** | Jest, Supertest, 1,153 tests ✅ |
+
+### Test Coverage
+
+| Category | Coverage | Status |
+|----------|----------|--------|
+| **Overall** | **79.57%** | ✅ Exceeds target (70%) |
+| Services | 88.37% | ✅ |
+| Reallocation | 89.71% | ✅ |
+| Utils | 71.55% | ✅ |
+| Controllers | 68.58% | 🟡 |
+
+**Test Stats:**
+- 50 test suites (all passing)
+- 1,153 unit & integration tests ✅
+- Coverage report: `backend/coverage/index.html`
+
 
 ---
 

@@ -233,6 +233,23 @@ kubectl logs <pod-name> -n rac-system --previous
 
 ---
 
+## 🧪 Pre-Deployment Testing
+
+### Run Tests Before Deploying
+
+```bash
+cd backend
+npm test                  # Run all 1153 tests
+npm run test:coverage     # Verify 79.57% coverage
+```
+
+**Expected Results:**
+- ✅ 50 test suites pass
+- ✅ 1153 tests pass
+- ✅ Coverage ≥ 79%
+
+---
+
 ## 🔐 Security Checklist
 
 - [ ] Change all default passwords
@@ -242,3 +259,7 @@ kubectl logs <pod-name> -n rac-system --previous
 - [ ] Configure firewall rules
 - [ ] Enable MongoDB authentication
 - [ ] Set up backup automation
+
+---
+
+**Last Updated:** December 23, 2025

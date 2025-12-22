@@ -18,10 +18,16 @@ global.console = {
 afterAll(async () => {
     // Clear all mocks
     jest.clearAllMocks();
-    // Clear all timers
+
+    // Clear all timers (prevents ReferenceError from pending setTimeout)
     jest.clearAllTimers();
+    jest.useRealTimers();
+
     // Reset modules to clear any cached state
     jest.resetModules();
+
+    // Small delay to allow any pending async operations to complete
+    await new Promise(resolve => setImmediate(resolve));
 });
 
 // Mock trainState for testing

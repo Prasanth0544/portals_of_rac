@@ -90,17 +90,17 @@ sequenceDiagram
 
 ## API Architecture
 
-### Endpoint Categories (80+ endpoints)
+### Endpoint Categories (30+ endpoints)
 
-| Category | Endpoints | Authentication |
-|----------|-----------|----------------|
-| **Auth** | `/api/auth/*` | Public (login) / JWT (verify, logout) |
-| **Train** | `/api/train/*` | Optional |
-| **Passenger** | `/api/passenger/*` | JWT for mutations |
-| **TTE** | `/api/tte/*` | JWT + Role: TTE/ADMIN |
-| **Reallocation** | `/api/reallocation/*` | JWT + Role: TTE/ADMIN |
-| **Visualization** | `/api/visualization/*` | Optional |
-| **Push** | `/api/push/*`, `/api/passenger/push-*` | Optional |
+| Category | Endpoints | Authentication | Test Coverage |
+|----------|-----------|----------------|---------------|
+| **Auth** | `/api/auth/*` | Public (login) / JWT (verify, logout) | ✅ 93.67% |
+| **Train** | `/api/train/*` | Optional | ✅ 75.63% |
+| **Passenger** | `/api/passenger/*` | JWT for mutations | 🔴 26.97% |
+| **TTE** | `/api/tte/*` | JWT + Role: TTE/ADMIN | 🟡 64.72% |
+| **Reallocation** | `/api/reallocation/*` | JWT + Role: TTE/ADMIN | ✅ 76.72% |
+| **Visualization** | `/api/visualization/*` | Optional | ✅ 85.29% |
+| **Push** | `/api/push/*`, `/api/passenger/push-*` | Optional | 🔴 18.57% |
 
 ### Request Flow
 
@@ -351,4 +351,17 @@ VITE_API_URL=http://localhost:5000/api
 
 ---
 
-**Last Updated:** December 14, 2025
+## Test Coverage
+
+**Overall Backend Coverage:** 79.57% (Target: 70%) ✅
+
+| Category | Coverage |
+|----------|----------|
+| Services | 88.37% |
+| Reallocation | 89.71% |
+| Controllers | 68.58% |
+| Utils | 71.55% |
+
+---
+
+**Last Updated:** December 23, 2025

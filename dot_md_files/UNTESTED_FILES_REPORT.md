@@ -1,7 +1,7 @@
 # 🔴 Untested & Low Coverage Files Report
 
-**Generated:** December 19, 2025  
-**Overall Coverage:** 75.08% ✅ (Target: 70%)  
+**Generated:** December 23, 2025  
+**Overall Coverage:** 79.57% ✅ (Target: 70%)  
 **Target Threshold:** 70% minimum
 
 ---
@@ -10,11 +10,11 @@
 
 | Category | Coverage | Status |
 |----------|----------|--------|
-| **Overall** | 75.08% | ✅ Above Target |
-| **Services** | 85.89% | ✅ Above Target |
+| **Overall** | 79.57% | ✅ **Above Target (+9.57%)** |
+| **Services** | 88.37% | ✅ Above Target |
 | **Reallocation Services** | 89.71% | ✅ Above Target |
 | **Utils** | 71.55% | ✅ Above Target |
-| **Controllers** | 58.73% | 🔴 Below Target |
+| **Controllers** | 68.58% | 🟡 Close to Target (-1.42%) |
 
 ---
 
@@ -184,65 +184,8 @@ For reference, these files have achieved full coverage:
 
 ---
 
-## 🎯 Coverage by Category
-
-### Overall Project Metrics
-- **Statements:** 79.77%
-- **Branches:** 71.32%
-- **Functions:** 87.59%
-- **Lines:** 79.80%
-
-### Files at 100% Coverage
-1. ✅ OTPService.js (26 tests)
-2. ✅ VisualizationService.js (18 tests)
-3. ✅ RACHashMapService.js (comprehensive suite)
-4. ✅ RefreshTokenService.js (complete coverage)
-5. ✅ configController.js (full coverage)
-
-### Files at 70%+ Coverage
-6. ✅ tteController.js (81.69%)
-7. ✅ PushSubscriptionService.js (94%)
-
 ---
 
-## ⚠️ REMAINING WORK
+**Last Updated:** December 23, 2025, 00:36 AM IST
 
-### Critical File Still Below Target
-- **passengerController.js** - 41.78% / 70% target
-  - Gap: -28.22%
-  - Uncovered: lines 228-474, 1282-1411, 1435-1653
-  - Estimated: 60-80 more integration tests needed
-  - Complexity: High (large file with complex async flows)
-
----
-
-## 📈 Testing Achievements
-
-### Tests Added This Session (~96 new tests)
-- ✅ OTPService: +21 tests (0% → 100%)
-- ✅ tteController: +34 tests (46% → 81.69%)
-- ✅ VisualizationService: +18 tests (2% → 100%)
-- ✅ passengerController: +23 tests (27% → 41.78%)
-
-### Quality Metrics
-- Zero flaky tests
-- 100% test pass rate
-- Comprehensive error path coverage
-- Full async/await handling
-
----
-
-## 🎯 Next Steps (Optional)
-
-### To Reach 70% on passengerController.js
-1. Add comprehensive `addPassenger` validation tests
-2. Add `changeBoardingStation` flow tests
-3. Add `selfCancelTicket` integration tests
-4. Cover async error paths
-5. Test WebSocket broadcast scenarios
-
-**Estimated Effort:** 4-6 hours for full 70% coverage
-
----
-
-**Last Updated:** December 19, 2025, 01:49 AM IST
+**Backend Test Coverage:** 79.57% | 1,153 tests | 50 suites ✅
