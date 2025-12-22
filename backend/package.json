@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:chaos": "jest --testPathPattern=chaos --runInBand",
+    "test:load": "echo 'Run: k6 run k6/scenarios/reallocation-load.js'"
   },
   "keywords": [
     "rac",
@@ -40,7 +42,6 @@
     "nodemailer": "^7.0.11",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
-    "twilio": "^5.10.6",
     "web-push": "^3.6.7",
     "ws": "^8.14.2",
     "zod": "^4.1.13"

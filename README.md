@@ -30,7 +30,7 @@ RAC-Reallocation-System/
 | **Backend** | Node.js, Express.js, MongoDB, WebSocket (ws), JWT Auth |
 | **Frontend** | Vite, React 19, Material-UI, Axios, WebSocket Client |
 | **Database** | MongoDB with dynamic collections |
-| **Notifications** | Web Push (VAPID), Email (Nodemailer), SMS (Twilio) |
+| **Notifications** | Web Push (VAPID), Email (Nodemailer) |
 
 ---
 
@@ -149,9 +149,8 @@ Full API documentation available at `/api-docs` when backend is running.
 |------|------------|---------------|
 | **Push** | Web Push API (VAPID) | Generate keys: `npx web-push generate-vapid-keys` |
 | **Email** | Nodemailer (Gmail SMTP) | Gmail App Password required |
-| **SMS** | Twilio | Twilio API credentials |
 
-> **Note**: Only Push notifications are required. Email/SMS are optional.
+> **Note**: Only Push notifications are required. Email is optional.
 
 ---
 

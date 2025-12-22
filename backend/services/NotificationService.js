@@ -1,6 +1,5 @@
 // backend/services/NotificationService.js
 const nodemailer = require('nodemailer');
-const twilio = require('twilio');
 
 class NotificationService {
     constructor() {
@@ -13,14 +12,8 @@ class NotificationService {
             }
         });
 
-        // Twilio SMS client
-        this.twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
-            ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
-            : null;
-
         console.log('📧 NotificationService initialized');
         console.log('   Email:', process.env.EMAIL_USER ? '✓ Configured' : '✗ Not configured');
-        console.log('   SMS:', this.twilioClient ? '✓ Configured' : '✗ Not configured');
     }
 
     /**
@@ -28,8 +21,7 @@ class NotificationService {
      */
     async sendUpgradeNotification(passenger, oldStatus, newBerth) {
         const results = {
-            email: { sent: false, error: null },
-            sms: { sent: false, error: null }
+            email: { sent: false, error: null }
         };
 
         // 1. Send Email
@@ -44,17 +36,7 @@ class NotificationService {
             }
         }
 
-        // 2. Send SMS
-        if (passenger.mobile && this.twilioClient) {
-            try {
-                await this.sendSMS(passenger, newBerth);
-                results.sms.sent = true;
-                console.log(`📱 SMS sent to ${passenger.mobile}`);
-            } catch (error) {
-                results.sms.error = error.message;
-                console.error('❌ SMS failed:', error.message);
-            }
-        }
+
 
         return results;
     }
@@ -140,26 +122,14 @@ class NotificationService {
         return this.emailTransporter.sendMail(mailOptions);
     }
 
-    /**
-     * Send SMS notification for upgrade
-     */
-    async sendSMS(passenger, newBerth) {
-        const message = `IRCTC: Congratulations! Your RAC ticket (PNR: ${passenger.pnr}) is now CONFIRMED. New berth: ${newBerth.fullBerthNo || `${newBerth.coachNo}-${newBerth.berthNo}`}, Coach: ${newBerth.coachNo}. Happy Journey!`;
 
-        return this.twilioClient.messages.create({
-            body: message,
-            from: process.env.TWILIO_PHONE_NUMBER,
-            to: passenger.mobile
-        });
-    }
 
     /**
      * Send NO-SHOW marked notification (both online and offline passengers)
      */
     async sendNoShowMarkedNotification(pnr, passenger) {
         const results = {
-            email: { sent: false, error: null },
-            sms: { sent: false, error: null }
+            email: { sent: false, error: null }
         };
 
         console.log(`📢 Sending NO-SHOW notification for PNR: ${pnr} (${passenger.passengerStatus})`);
@@ -256,24 +226,7 @@ class NotificationService {
             }
         }
 
-        // Send SMS (for both online and offline)
-        if (passenger.mobile && this.twilioClient) {
-            try {
-                const message = `IRCTC ALERT: You have been marked as NO-SHOW for PNR ${pnr}, Berth ${passenger.coach}-${passenger.berth}. If present on train, contact TTE immediately or login to passenger portal to revert. Indian Railways`;
 
-                await this.twilioClient.messages.create({
-                    body: message,
-                    from: process.env.TWILIO_PHONE_NUMBER,
-                    to: passenger.mobile
-                });
-
-                results.sms.sent = true;
-                console.log(`📱 NO-SHOW SMS sent to ${passenger.mobile}`);
-            } catch (error) {
-                results.sms.error = error.message;
-                console.error('❌ NO-SHOW SMS failed:', error.message);
-            }
-        }
 
         return results;
     }
@@ -283,8 +236,7 @@ class NotificationService {
      */
     async sendNoShowRevertedNotification(pnr, passenger) {
         const results = {
-            email: { sent: false, error: null },
-            sms: { sent: false, error: null }
+            email: { sent: false, error: null }
         };
 
         console.log(`✅ Sending NO-SHOW REVERTED notification for PNR: ${pnr}`);
@@ -363,24 +315,7 @@ class NotificationService {
             }
         }
 
-        // Send SMS
-        if (passenger.mobile && this.twilioClient) {
-            try {
-                const message = `IRCTC: Your NO-SHOW status has been cleared for PNR ${pnr}. You are confirmed as boarded on ${passenger.coach}-${passenger.berth}. Happy Journey! Indian Railways`;
 
-                await this.twilioClient.messages.create({
-                    body: message,
-                    from: process.env.TWILIO_PHONE_NUMBER,
-                    to: passenger.mobile
-                });
-
-                results.sms.sent = true;
-                console.log(`📱 NO-SHOW revert SMS sent to ${passenger.mobile}`);
-            } catch (error) {
-                results.sms.error = error.message;
-                console.error('❌ Revert SMS failed:', error.message);
-            }
-        }
 
         return results;
     }

@@ -1540,8 +1540,7 @@ if __name__ == '__main__':
 
   Event Trigger  →  Backend Process  →  ┬→ WebSocket Push (immediate)
                                         ├→ Web Push Notification
-                                        ├→ Email (Nodemailer/SMTP)
-                                        └→ SMS (Twilio) [optional]
+                                        └→ Email (Nodemailer/SMTP)
 ```
 
 ---

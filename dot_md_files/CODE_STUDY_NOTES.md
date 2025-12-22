@@ -27,7 +27,7 @@ RAC-Reallocation-System/
 | **Database** | MongoDB (2 DBs: `rac` + `PassengerDB`) |
 | **Real-time** | WebSocket for live updates |
 | **Auth** | JWT (jsonwebtoken 9.0), bcrypt 6.0 |
-| **Notifications** | Web Push API (VAPID), Nodemailer, Twilio |
+| **Notifications** | Web Push API (VAPID), Nodemailer |
 | **Testing** | Jest 30.2, Supertest 7.1 |
 | **DevOps** | Docker, Kubernetes (k8s/), Docker Compose |
 
@@ -607,7 +607,7 @@ POST   /api/otp/verify   - Verify OTP
 **Channels:**
 - 📱 Web Push (via WebPushService)
 - 📧 Email (via Nodemailer)
-- 📲 SMS (via Twilio)
+- 📧 Email (via Nodemailer)
 - 🔔 In-app notifications
 
 **Key Methods:**
@@ -708,7 +708,7 @@ VAPID_SUBJECT=mailto:admin@example.com
 | Method | Description |
 |--------|-------------|
 | `generateOTP(length)` | Generate random OTP |
-| `sendOTP(recipient, channel)` | Send via email/sms |
+| `sendOTP(recipient, channel)` | Send via email |
 | `verifyOTP(recipient, otp)` | Verify OTP |
 | `clearOTP(recipient)` | Clear after verification |
 
@@ -977,7 +977,7 @@ src/
 2. **Web Push:** Send via WebPushService
 3. **In-App:** Insert into `in_app_notifications`
 4. **Email:** Send via Nodemailer (optional)
-5. **SMS:** Send via Twilio (optional)
+
 6. Passenger receives notification with 5-minute countdown
 
 #### Phase 7: Passenger Response
@@ -1086,11 +1086,7 @@ EMAIL_PASS=your-app-password
 EMAIL_FROM="RAC System <noreply@rac.com>"
 ```
 
-**SMS (Twilio):**
-```env
-TWILIO_ACCOUNT_SID=ACxxxxx
-TWILIO_AUTH_TOKEN=xxxxx
-TWILIO_PHONE_NUMBER=+1234567890
+
 ```
 
 **Server:**

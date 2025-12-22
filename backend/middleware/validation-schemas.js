@@ -8,7 +8,7 @@ const Joi = require('joi');
 
 const schemas = {
   // ============= TRAIN CONFIGURATION =============
-  
+
   trainInitialize: Joi.object({
     trainNo: Joi.string().required().messages({
       'string.empty': 'Train number is required'
@@ -123,7 +123,7 @@ const schemas = {
 
   sendNotification: Joi.object({
     pnr: Joi.string().required(),
-    type: Joi.string().valid('EMAIL', 'SMS', 'WEBSOCKET', 'IN_APP').required(),
+    type: Joi.string().valid('EMAIL', 'WEBSOCKET', 'IN_APP').required(),
     message: Joi.string().required(),
     subject: Joi.string().optional(),
     metadata: Joi.object().optional()

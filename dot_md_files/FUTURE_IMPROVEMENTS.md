@@ -69,7 +69,7 @@ npm install cypress --save-dev
 ```bash
 npm install bull
 ```
-**Use Case:** Queue email/SMS notifications instead of blocking API calls
+**Use Case:** Queue email notifications instead of blocking API calls
 
 ---
 

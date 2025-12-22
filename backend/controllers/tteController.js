@@ -641,7 +641,7 @@ class TTEController {
                         irctcId: passengerFromDB?.IRCTC_ID
                     };
 
-                    // Send email/SMS
+                    // Send email
                     await NotificationService.sendNoShowMarkedNotification(pnr, fullPassenger);
                     console.log(`📧 NO-SHOW notification sent to passenger ${pnr}`);
 

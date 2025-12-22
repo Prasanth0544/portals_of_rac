@@ -6,11 +6,12 @@ const rateLimit = require('express-rate-limit');
 /**
  * Authentication Rate Limiter
  * For login endpoints - strict limit to prevent brute force attacks
- * 5 attempts per 15 minutes per IP
+ * Development: 50 attempts per 15 minutes per IP
+ * Production: 5 attempts per 15 minutes per IP
  */
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 requests per window
+    max: process.env.NODE_ENV === 'production' ? 5 : 50, // Lenient in dev
     message: {
         success: false,
         message: 'Too many login attempts from this IP. Please try again after 15 minutes.',
@@ -27,7 +28,7 @@ const authLimiter = rateLimit({
 
 /**
  * OTP Rate Limiter
- * For OTP sending endpoints - very strict to prevent SMS/email spam
+ * For OTP sending endpoints - very strict to prevent email spam
  * 3 requests per hour per IP
  */
 const otpLimiter = rateLimit({
@@ -49,11 +50,12 @@ const otpLimiter = rateLimit({
 /**
  * General API Rate Limiter
  * For all API endpoints - moderate limit to prevent abuse
- * 100 requests per 15 minutes per IP
+ * Development: 1000 requests per 15 minutes per IP
+ * Production: 100 requests per 15 minutes per IP
  */
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per window
+    max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Lenient in dev
     message: {
         success: false,
         message: 'Too many requests from this IP. Please try again later.',
