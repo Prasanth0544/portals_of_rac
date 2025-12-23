@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Opens at: **http://localhost:5173**
+Opens at: **http://localhost:3000**
 
 ---
 
@@ -22,27 +22,30 @@ Opens at: **http://localhost:5173**
 
 | Feature | Description |
 |---------|-------------|
-| **Train Initialization** | Load train data from MongoDB |
-| **Journey Control** | Start journey, advance stations, reset |
+| **Train Initialization** | Load train data from MongoDB with dynamic configuration |
+| **Journey Control** | Start journey, advance stations, reset train state |
 | **Dashboard** | Real-time statistics (passengers, RAC queue, vacant berths) |
-| **Coach Visualization** | Interactive 9-coach × 72-berth layout |
-| **Passenger Management** | Search, filter, view all passengers |
-| **No-Show Handling** | Mark passengers as no-show |
-| **RAC Queue** | View prioritized waiting list |
-| **Reallocation** | Eligibility matrix and manual allocation |
+| **Coach Visualization** | Interactive 9-coach × 72-berth layout with color coding |
+| **Passenger Management** | Search, filter, view all 648+ passengers |
+| **No-Show Handling** | Mark passengers as no-show with reason selection |
+| **RAC Queue** | View prioritized waiting list (RAC 1 → RAC 2 → ...) |
+| **Reallocation** | Eligibility matrix and manual allocation controls |
 | **Segment Visualization** | Occupancy matrix by journey segment |
 | **Station-Wise Phases** | Dynamic reallocation phase controls |
+| **Current Station Matching** | HashMap-based RAC-to-berth matching with TTE approval |
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Vite** - Build tool and dev server
-- **React 19** - UI framework
-- **Material-UI** - Component library
-- **Axios** - HTTP client
-- **WebSocket** - Real-time updates
-- **React Router** - Navigation
+| Technology | Purpose |
+|------------|---------|
+| **Vite 6.4** | Build tool and dev server |
+| **React 19** | UI framework |
+| **Material-UI 7** | Component library |
+| **Axios** | HTTP client with interceptors |
+| **WebSocket** | Real-time updates |
+| **React Router** | Navigation |
 
 ---
 
@@ -51,13 +54,25 @@ Opens at: **http://localhost:5173**
 ```
 frontend/
 ├── src/
-│   ├── components/     # Reusable UI components
-│   ├── pages/          # Page components (23 pages)
-│   ├── services/       # API and WebSocket services
-│   ├── App.jsx         # Main router
-│   └── main.jsx        # Entry point
-├── public/             # Static assets
-├── vite.config.js      # Vite configuration
+│   ├── components/         # Reusable UI components
+│   │   ├── CoachVisualization/  # Coach layout rendering
+│   │   ├── PassengerTable/      # Passenger data grid
+│   │   └── StatsCards/          # Dashboard stat cards
+│   ├── pages/              # 23 page components
+│   │   ├── Dashboard.jsx
+│   │   ├── CoachView.jsx
+│   │   ├── PassengerSearch.jsx
+│   │   ├── RACQueue.jsx
+│   │   ├── SegmentMatrix.jsx
+│   │   ├── StationMatching.jsx
+│   │   └── ...
+│   ├── services/           # API and WebSocket services
+│   │   ├── api.js          # Axios instance with config
+│   │   └── websocket.js    # WebSocket connection
+│   ├── App.jsx             # Main router
+│   └── main.jsx            # Entry point
+├── public/                 # Static assets
+├── vite.config.js          # Vite configuration (port 3000)
 └── package.json
 ```
 
@@ -67,7 +82,7 @@ frontend/
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server (port 5173) |
+| `npm run dev` | Start development server (port 3000) |
 | `npm run build` | Build for production |
 | `npm run preview` | Preview production build |
 | `npm run lint` | Run ESLint |
@@ -85,8 +100,56 @@ VITE_WS_URL=ws://localhost:5000
 
 ---
 
+## 📊 Pages Overview
+
+| Page | Description |
+|------|-------------|
+| **Dashboard** | Train stats, journey progress, quick actions |
+| **Coach View** | Visual 72-berth layout per coach |
+| **All Passengers** | Full passenger list with filters |
+| **Passenger Search** | Search by PNR, name, coach |
+| **RAC Queue** | RAC passengers sorted by priority |
+| **Vacant Berths** | Currently vacant berths |
+| **Segment Matrix** | Occupancy by segment visualization |
+| **Station Matching** | Current station RAC-berth matching |
+| **Pending Approvals** | TTE approval queue |
+| **Event Logs** | Station arrival/departure events |
+
+---
+
+## 🔄 Workflow
+
+### Train Initialization Flow
+
+1. **Select Train** → Choose from available trains in MongoDB
+2. **Initialize** → Load stations, passengers, coaches
+3. **Start Journey** → Begin from first station
+4. **Navigate Stations** → Board passengers, process deboarding
+5. **Handle No-Shows** → Mark and generate vacant berths
+6. **Match RAC** → Send eligible reallocations to TTE
+
+---
+
+## 🎨 UI Components
+
+| Component | Purpose |
+|-----------|---------|
+| `CoachVisualization` | Interactive berth layout with tooltips |
+| `PassengerTable` | Data grid with sorting, filtering, pagination |
+| `StatsCards` | Dashboard KPI cards |
+| `StationProgress` | Journey progress indicator |
+| `SegmentOccupancyMatrix` | Visual segment-based occupancy |
+
+---
+
 ## 🔗 Related
 
 - [Root Documentation](../README.md)
 - [QUICKSTART.md](../QUICKSTART.md)
-- [Backend](../backend/)
+- [Backend API](../backend/README.md)
+- [TTE Portal](../tte-portal/README.md)
+- [Passenger Portal](../passenger-portal/README.md)
+
+---
+
+**Last Updated:** 2025-12-23

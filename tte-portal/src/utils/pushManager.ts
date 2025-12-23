@@ -2,6 +2,16 @@
 // Handles subscription for offline passenger upgrade notifications
 
 /**
+ * Get CSRF token from cookies
+ */
+function getCsrfToken(): string | null {
+    const value = `; ${document.cookie}`;
+    const parts = value.split('; csrfToken=');
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    return null;
+}
+
+/**
  * Request notification permission and subscribe TTE to push
  * @param tteId - TTE user ID
  * @returns Success status
@@ -46,10 +56,17 @@ export async function subscribeTTEToPush(tteId: string): Promise<boolean> {
             console.log('✅ TTE already subscribed');
         }
 
-        // Send subscription to backend
+        // Send subscription to backend with auth token and CSRF
+        const token = localStorage.getItem('token');
+        const csrfToken = getCsrfToken();
         await fetch('http://localhost:5000/api/tte/push-subscribe', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : '',
+                ...(csrfToken && { 'X-CSRF-Token': csrfToken })
+            },
             body: JSON.stringify({
                 tteId,
                 subscription: subscription.toJSON()
@@ -94,9 +111,16 @@ export async function unsubscribeTTEFromPush(tteId: string): Promise<boolean> {
         if (subscription) {
             await subscription.unsubscribe();
 
+            const token = localStorage.getItem('token');
+            const csrfToken = getCsrfToken();
             await fetch('http://localhost:5000/api/tte/push-unsubscribe', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : '',
+                    ...(csrfToken && { 'X-CSRF-Token': csrfToken })
+                },
                 body: JSON.stringify({ tteId })
             });
 

@@ -47,26 +47,28 @@ class TrainController {
       console.log(`\n🚂 Initializing train ${train} for date ${date}...`);
 
       // ═══════════════════════════════════════════════════════════
-      // CLEAR STALE DATA FROM PREVIOUS SESSIONS
+      // CLEAR ALL STALE DATA FROM PREVIOUS SESSIONS
+      // This ensures a fresh start with no duplicate reallocations
       // ═══════════════════════════════════════════════════════════
       try {
-        const racDb = await db.getDb();
+        // Use passengersDb where station_reallocations is stored
+        const passengersDb = db.getPassengersDb();
 
-        // Clear all pending upgrade notifications
-        const upgradeNotifications = racDb.collection('upgrade_notifications');
-        const notifResult = await upgradeNotifications.deleteMany({ status: 'PENDING' });
+        // Clear ALL upgrade notifications (not just pending)
+        const upgradeNotifications = passengersDb.collection('upgrade_notifications');
+        const notifResult = await upgradeNotifications.deleteMany({});
         if (notifResult.deletedCount > 0) {
-          console.log(`   🗑️ Cleared ${notifResult.deletedCount} stale upgrade notifications`);
+          console.log(`   🗑️ Cleared ${notifResult.deletedCount} upgrade notifications`);
         }
 
-        // Clear all pending station reallocations
-        const stationReallocations = racDb.collection('station_reallocations');
-        const reallocResult = await stationReallocations.deleteMany({ status: 'pending' });
+        // Clear ALL station reallocations (pending, approved, rejected)
+        const stationReallocations = passengersDb.collection('station_reallocations');
+        const reallocResult = await stationReallocations.deleteMany({});
         if (reallocResult.deletedCount > 0) {
-          console.log(`   🗑️ Cleared ${reallocResult.deletedCount} stale station reallocations`);
+          console.log(`   🗑️ Cleared ${reallocResult.deletedCount} station reallocations`);
         }
 
-        console.log('   ✅ Stale session data cleared');
+        console.log('   ✅ Previous session data cleared - starting fresh');
       } catch (cleanupError) {
         console.warn('   ⚠️ Could not clear stale data:', cleanupError.message);
         // Continue with initialization even if cleanup fails

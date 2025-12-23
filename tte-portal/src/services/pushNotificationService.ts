@@ -3,6 +3,17 @@
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
+/**
+ * Get CSRF token from cookies
+ */
+const getCsrfToken = (): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split('; csrfToken=');
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    return null;
+};
+
+
 interface PushSubscriptionResult {
     success: boolean;
     error?: string;
@@ -109,11 +120,14 @@ export const subscribeToPushNotifications = async (): Promise<PushSubscriptionRe
 
         // Send subscription to backend
         const token = localStorage.getItem('token');
+        const csrfToken = getCsrfToken();
         const response = await fetch(`${API_BASE_URL}/tte/push-subscribe`, {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                ...(csrfToken && { 'X-CSRF-Token': csrfToken })
             },
             body: JSON.stringify({ subscription })
         });

@@ -244,8 +244,8 @@ class StationWiseApprovalService {
 
     /**
      * Save pending reallocations to MongoDB
-     * STRATEGY: Delete all existing pending for this station, then insert fresh batch
-     * This ensures old/stale entries are cleared when frontend restarts
+     * STRATEGY: Delete ALL existing pending reallocations, then insert fresh batch
+     * This ensures old/stale entries from ALL stations are cleared
      */
     async _savePendingReallocations(pendingReallocations) {
         try {
@@ -256,23 +256,20 @@ class StationWiseApprovalService {
                 return { insertedCount: 0, deletedCount: 0 };
             }
 
-            // Get the station index from the first entry (all should be same station)
-            const stationIdx = pendingReallocations[0].stationIdx;
             const trainId = pendingReallocations[0].trainId;
 
-            // STEP 1: Delete all existing PENDING reallocations for this station
-            // This clears old/stale entries (e.g., from frontend crashes)
+            // STEP 1: Delete ALL existing PENDING reallocations for this train
+            // This prevents accumulation of stale entries from previous stations
             const deleteResult = await collection.deleteMany({
                 trainId: trainId,
-                stationIdx: stationIdx,
                 status: 'pending'
             });
 
             if (deleteResult.deletedCount > 0) {
-                console.log(`   🗑️ Cleared ${deleteResult.deletedCount} old pending entries for station ${stationIdx}`);
+                console.log(`   🗑️ Cleared ${deleteResult.deletedCount} old pending entries`);
             }
 
-            // STEP 2: Insert the fresh batch
+            // STEP 2: Insert the fresh batch for current station
             const insertResult = await collection.insertMany(pendingReallocations);
 
             console.log(`   💾 Saved ${insertResult.insertedCount} pending reallocations to MongoDB`);

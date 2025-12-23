@@ -88,8 +88,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response: AxiosResponse) => response,
     async (error) => {
-        if (error.response?.status === 401) {
-            const data = error.response?.data;
+        const status = error.response?.status;
+        const data = error.response?.data;
+
+        // Handle 401 Unauthorized - try to refresh token
+        if (status === 401) {
             const isExpiredToken = data?.message?.toLowerCase().includes('expired') ||
                 data?.message?.toLowerCase().includes('jwt');
 
@@ -117,10 +120,24 @@ api.interceptors.response.use(
             // If refresh fails or no refresh token, logout
             localStorage.removeItem('token');
             localStorage.removeItem('refreshToken');
-            localStorage.removeItem('tteId');
+            localStorage.removeItem('user');
             alert('⚠️ Session expired. Please login again.');
             window.location.href = '/login';
         }
+
+        // Handle 403 Forbidden - role check failed, token is invalid
+        if (status === 403) {
+            console.error('[TTE API] 403 Forbidden - Role check failed:', data);
+            console.log('[TTE API] Debug info:', data?.debug);
+
+            // Clear tokens and redirect to login - the token is invalid
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            alert('⚠️ Access denied. Please login again with proper credentials.');
+            window.location.href = '/login';
+        }
+
         return Promise.reject(error);
     }
 );

@@ -9,8 +9,9 @@ A **real-time Railway RAC (Reservation Against Cancellation) seat reallocation s
 | Document | Purpose |
 |----------|---------|
 | **[QUICKSTART.md](QUICKSTART.md)** | Complete setup guide, installation, and first-time configuration |
-| **[SECURITY_TODO.md](SECURITY_TODO.md)** | Security features and test coverage status |
+| **[SECURITY_TODO.md](SECURITY_TODO.md)** | Security features and implementation status |
 | **[dot_md_files/](dot_md_files/)** | Technical documentation and architecture details |
+| **[backend/README.md](backend/README.md)** | Backend API documentation |
 
 ---
 
@@ -19,7 +20,7 @@ A **real-time Railway RAC (Reservation Against Cancellation) seat reallocation s
 ```
 RAC-Reallocation-System/
 ├── backend/              # Express.js REST API + WebSocket Server (Port 5000)
-├── frontend/             # Vite + React Admin Portal (Port 5173)
+├── frontend/             # Vite + React Admin Portal (Port 3000)
 ├── passenger-portal/     # Vite + React Passenger Portal (Port 5175)
 └── tte-portal/           # Vite + React TTE Portal (Port 5174)
 ```
@@ -28,11 +29,12 @@ RAC-Reallocation-System/
 
 | Layer | Technologies |
 |-------|--------------|
-| **Backend** | Node.js, Express.js, MongoDB, WebSocket (ws), JWT Auth |
-| **Frontend** | Vite, React 19, Material-UI, Axios, WebSocket Client |
-| **Database** | MongoDB with dynamic collections |
-| **Notifications** | Web Push (VAPID), Email (Nodemailer) |
-| **Testing** | Jest, Supertest, 1,153 tests ✅ |
+| **Backend** | Node.js, Express.js 4.18, MongoDB 6.3, WebSocket (ws), JWT Auth |
+| **Frontend** | Vite 6.4, React 19, Material-UI 7, Axios, WebSocket Client |
+| **Database** | MongoDB with dynamic collections per train/date |
+| **Notifications** | Web Push (VAPID), Email (Nodemailer), In-App (WebSocket) |
+| **Security** | CSRF protection, rate limiting, JWT refresh tokens, bcrypt |
+| **Testing** | Jest 30, Supertest, 1,153 unit & integration tests |
 
 ### Test Coverage
 
@@ -49,14 +51,13 @@ RAC-Reallocation-System/
 - 1,153 unit & integration tests ✅
 - Coverage report: `backend/coverage/index.html`
 
-
 ---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js v14+ and npm
-- MongoDB v4+ running locally
+- Node.js v18+ and npm
+- MongoDB v6+ running locally
 - Git (optional)
 
 ### Installation
@@ -78,7 +79,7 @@ cd backend && node scripts/createTestAccounts.js && cd ..
 ### Start All Servers (4 terminals)
 
 ```bash
-# Terminal 1: Backend
+# Terminal 1: Backend API
 cd backend && npm run dev
 
 # Terminal 2: Admin Portal
@@ -95,7 +96,7 @@ cd tte-portal && npm run dev
 
 | Portal | URL | Default Login |
 |--------|-----|---------------|
-| **Admin Portal** | http://localhost:5173 | `ADMIN_01` / `Prasanth@123` |
+| **Admin Portal** | http://localhost:3000 | `ADMIN_01` / `Prasanth@123` |
 | **TTE Portal** | http://localhost:5174 | `TTE_01` / `Prasanth@123` |
 | **Passenger Portal** | http://localhost:5175 | `IR_0001` / `Prasanth@123` |
 | **API Docs** | http://localhost:5000/api-docs | - |
@@ -109,7 +110,7 @@ cd tte-portal && npm run dev
 - Real-time upgrade notifications with countdown timers
 - Accept/deny upgrade offers
 - QR code boarding pass generation
-- Push notification support
+- Push notification support (works even when browser is closed)
 
 ### 👮 TTE Portal
 - Dashboard with train statistics
@@ -117,6 +118,7 @@ cd tte-portal && npm run dev
 - No-show marking with reasons
 - RAC reallocation approval workflow
 - Station-by-station journey progression
+- Action history with undo capability
 
 ### 🔐 Admin Portal
 - Complete train initialization
@@ -125,26 +127,31 @@ cd tte-portal && npm run dev
 - RAC queue management
 - Station-wise reallocation phase controls
 
-### ⚙️ Backend
-- 30+ REST API endpoints
+### ⚙️ Backend API
+- 50+ REST API endpoints
 - Real-time WebSocket broadcasting
 - Automatic RAC-to-CNF upgrades
 - Segment-based berth tracking
 - Multi-train support
+- Comprehensive test coverage
 
 ---
 
 ## 📊 Core Concepts
 
 ### Segment-Based Occupancy
-The system tracks berth occupancy per journey segment (station-to-station), allowing the same berth to be used by different passengers on non-overlapping journey segments.
+The system tracks berth occupancy per journey segment (station-to-station), allowing the same berth to be used by different passengers on non-overlapping journey segments. This maximizes berth utilization.
 
-### RAC Reallocation Logic
-1. Berth becomes vacant (no-show/cancellation)
-2. System identifies eligible RAC passengers (boarded + journey overlap)
-3. TTE approves reallocation
-4. Passenger receives push notification with upgrade offer
-5. Upon acceptance, passenger status upgrades from RAC to CNF
+### RAC Priority System
+RAC passengers are processed in strict order:
+- **RAC 1** has highest priority → upgraded first
+- **RAC 2** is next → upgraded second
+- And so on...
+
+### Dual-Approval Workflow
+1. **System identifies** eligible RAC passengers (boarded + journey overlap)
+2. **TTE approves** the reallocation from the TTE Portal
+3. **Passenger confirms** the upgrade from their portal
 
 ---
 
@@ -154,8 +161,9 @@ The system tracks berth occupancy per journey segment (station-to-station), allo
 |----------|-------------------|
 | **Train** | `POST /api/train/initialize`, `GET /api/train/state` |
 | **Passenger** | `GET /api/passenger/search/:pnr`, `POST /api/passenger/no-show` |
-| **Reallocation** | `GET /api/reallocation/eligibility`, `POST /api/reallocation/apply` |
-| **Auth** | `POST /api/auth/login`, `POST /api/auth/register` |
+| **Reallocation** | `GET /api/reallocation/pending`, `POST /api/reallocation/approve-batch` |
+| **Auth** | `POST /api/auth/staff/login`, `POST /api/auth/passenger/login` |
+| **TTE** | `GET /api/tte/passengers`, `POST /api/tte/mark-no-show` |
 
 Full API documentation available at `/api-docs` when backend is running.
 
@@ -167,16 +175,17 @@ Full API documentation available at `/api-docs` when backend is running.
 |------|------------|---------------|
 | **Push** | Web Push API (VAPID) | Generate keys: `npx web-push generate-vapid-keys` |
 | **Email** | Nodemailer (Gmail SMTP) | Gmail App Password required |
+| **In-App** | WebSocket | Automatic - no config needed |
 
-> **Note**: Only Push notifications are required. Email is optional.
+> **Note**: Only Push notifications are required for full functionality. Email is optional.
 
 ---
 
 ## 📁 Environment Variables
 
-The only required `.env` file is `backend/.env`. See [QUICKSTART.md](QUICKSTART.md) for complete configuration.
+The **only required** `.env` file is `backend/.env`. See [QUICKSTART.md](QUICKSTART.md) for complete configuration.
 
-Key variables:
+**Essential variables:**
 ```env
 MONGODB_URI=mongodb://localhost:27017
 JWT_SECRET=your-secret-key
@@ -191,9 +200,25 @@ VAPID_PRIVATE_KEY=your-vapid-private-key
 | Issue | Solution |
 |-------|----------|
 | MongoDB connection failed | Ensure MongoDB is running: `mongod` |
-| CORS errors | Backend already has CORS enabled |
+| CORS errors | Backend has CORS enabled for development |
 | Login fails | Run `node scripts/createTestAccounts.js` |
 | Push notifications not working | Regenerate VAPID keys and restart backend |
+| Duplicate reallocations | Restart backend - auto-cleanup on startup |
+| 403 Forbidden errors | Token expired - re-login or check role |
+
+---
+
+## 📊 Project Statistics
+
+| Metric | Value |
+|--------|-------|
+| **Total Lines of Code** | 40,000+ (excluding deps) |
+| **Backend Services** | 20+ services |
+| **API Endpoints** | 50+ routes |
+| **Frontend Pages** | 23 (Admin), 17 (TTE), 10 (Passenger) |
+| **Test Suites** | 50 |
+| **Unit Tests** | 1,153 |
+| **Test Coverage** | 79.57% |
 
 ---
 
@@ -204,3 +229,5 @@ ISC
 ---
 
 **Built for Indian Railways - Train 17225 Amaravathi Express** 🚂
+
+**Last Updated:** 2025-12-23

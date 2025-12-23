@@ -81,7 +81,7 @@ describe('trainController', () => {
             const mockCollection = {
                 deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
             };
-            db.getDb.mockResolvedValue({
+            db.getPassengersDb.mockReturnValue({
                 collection: jest.fn().mockReturnValue(mockCollection)
             });
 
@@ -139,7 +139,7 @@ describe('trainController', () => {
             const mockCollection = {
                 deleteMany: jest.fn().mockResolvedValue({ deletedCount: 5 })
             };
-            db.getDb.mockResolvedValue({
+            db.getPassengersDb.mockReturnValue({
                 collection: jest.fn().mockReturnValue(mockCollection)
             });
             DataService.loadTrainData.mockResolvedValue(mockTrainState);
@@ -155,7 +155,7 @@ describe('trainController', () => {
                 journeyDate: '2025-12-20'
             };
 
-            db.getDb.mockResolvedValue({
+            db.getPassengersDb.mockReturnValue({
                 collection: jest.fn().mockReturnValue({
                     deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
                 })
@@ -182,7 +182,7 @@ describe('trainController', () => {
 
             req.body = {};
 
-            db.getDb.mockResolvedValue({
+            db.getPassengersDb.mockReturnValue({
                 collection: jest.fn().mockReturnValue({
                     deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
                 })
@@ -205,7 +205,7 @@ describe('trainController', () => {
         beforeEach(async () => {
             // Initialize train first
             req.body = { trainNo: '17225', journeyDate: '2025-12-20' };
-            db.getDb.mockResolvedValue({
+            db.getPassengersDb.mockReturnValue({
                 collection: jest.fn().mockReturnValue({
                     deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
                 })
@@ -274,7 +274,7 @@ describe('trainController', () => {
             ];
             // Initialize train
             req.body = { trainNo: '17225', journeyDate: '2025-12-20' };
-            db.getDb.mockResolvedValue({
+            db.getPassengersDb.mockReturnValue({
                 collection: jest.fn().mockReturnValue({
                     deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
                 })
@@ -324,7 +324,7 @@ describe('trainController', () => {
         beforeEach(async () => {
             // Initialize and start journey
             req.body = { trainNo: '17225', journeyDate: '2025-12-20' };
-            db.getDb.mockResolvedValue({
+            db.getPassengersDb.mockReturnValue({
                 collection: jest.fn().mockReturnValue({
                     deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
                 })
@@ -400,7 +400,7 @@ describe('trainController', () => {
         beforeEach(async () => {
             // Initialize train first
             req.body = { trainNo: '17225', journeyDate: '2025-12-20' };
-            db.getDb.mockResolvedValue({
+            db.getPassengersDb.mockReturnValue({
                 collection: jest.fn().mockReturnValue({
                     deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
                 })
@@ -439,7 +439,7 @@ describe('trainController', () => {
         beforeEach(async () => {
             // Initialize train
             req.body = { trainNo: '17225', journeyDate: '2025-12-20' };
-            db.getDb.mockResolvedValue({
+            db.getPassengersDb.mockReturnValue({
                 collection: jest.fn().mockReturnValue({
                     deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
                 })
@@ -532,7 +532,7 @@ describe('trainController', () => {
             ];
             // Initialize train
             req.body = { trainNo: '17225', journeyDate: '2025-12-20' };
-            db.getDb.mockResolvedValue({
+            db.getPassengersDb.mockReturnValue({
                 collection: jest.fn().mockReturnValue({
                     deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })
                 })

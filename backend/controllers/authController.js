@@ -7,7 +7,7 @@ const RefreshTokenService = require('../services/RefreshTokenService');
 
 // JWT Secret (in production, use environment variable)
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = '15m'; // Short-lived access token (15 minutes)
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h'; // Access token expiry (1 hour for dev, configure shorter in production)
 
 /**
  * Authentication Controller

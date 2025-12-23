@@ -79,6 +79,7 @@ const requireRole = (...allowedRoles) => {
         const roles = Array.isArray(allowedRoles[0]) ? allowedRoles[0] : allowedRoles;
 
         if (!roles.includes(req.user.role)) {
+            console.log(`[AUTH] Role check failed: "${req.user.role}" not in [${roles.join(', ')}] for ${req.method} ${req.path}`);
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Insufficient permissions.'

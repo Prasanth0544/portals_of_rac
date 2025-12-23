@@ -158,6 +158,34 @@ async function startServer() {
     // Try DB connect using global config (may be absent on first boot)
     try {
       await db.connect(global.RAC_CONFIG);
+
+      // ═══════════════════════════════════════════════════════════
+      // CLEANUP OLD SESSION DATA ON SERVER START
+      // This ensures no duplicate reallocations from previous sessions
+      // ═══════════════════════════════════════════════════════════
+      try {
+        // Use passengersDb where station_reallocations is stored
+        const passengersDb = db.getPassengersDb();
+
+        // Clear all pending station reallocations
+        const stationReallocations = passengersDb.collection('station_reallocations');
+        const reallocResult = await stationReallocations.deleteMany({});
+        if (reallocResult.deletedCount > 0) {
+          console.log(`🗑️ Server start: Cleared ${reallocResult.deletedCount} old reallocations`);
+        }
+
+        // Clear all upgrade notifications
+        const upgradeNotifications = passengersDb.collection('upgrade_notifications');
+        const notifResult = await upgradeNotifications.deleteMany({});
+        if (notifResult.deletedCount > 0) {
+          console.log(`🗑️ Server start: Cleared ${notifResult.deletedCount} old notifications`);
+        }
+
+        console.log('✅ Old session data cleared - fresh start');
+      } catch (cleanupErr) {
+        console.warn('⚠️ Could not clear old data on startup:', cleanupErr.message);
+      }
+
     } catch (error) {
       console.warn('⚠️ DB not connected at startup:', error.message);
       console.warn('You can POST /api/config/setup to configure runtime.');
