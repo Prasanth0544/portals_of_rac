@@ -220,8 +220,14 @@ class ValidationMiddleware {
     req.body.trainDetailsCollection =
       trainDetailsCollection || "Trains_Details";
 
+    // If mongoUri not provided, use backend .env (auto-configuration)
+    if (!mongoUri) {
+      req.body.mongoUri = process.env.MONGODB_URI;
+    }
+
+    // Validate required fields (mongoUri now optional - comes from backend if not provided)
     if (
-      !mongoUri ||
+      !req.body.mongoUri ||
       !stationsDb ||
       !stationsCollection ||
       !effectivePassengersDb ||
@@ -229,7 +235,7 @@ class ValidationMiddleware {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Mongo URI, databases, and collections are required",
+        message: "Missing required configuration: databases and collections are required",
       });
     }
 

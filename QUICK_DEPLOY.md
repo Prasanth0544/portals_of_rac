@@ -192,7 +192,7 @@ Add these (click "+ Add Environment Variable" for each):
 MONGODB_URI=mongodb+srv://rac-admin:PASSWORD@rac-cluster.xxxxx.mongodb.net/rac?retryWrites=true&w=majority
 STATIONS_DB=rac
 STATIONS_COLLECTION=17225
-PASSENGERS_DB=rac
+PASSENGERS_DB=PassengersDB
 PASSENGERS_COLLECTION=17225_passengers
 TRAIN_DETAILS_DB=rac
 TRAIN_DETAILS_COLLECTION=Trains_Details

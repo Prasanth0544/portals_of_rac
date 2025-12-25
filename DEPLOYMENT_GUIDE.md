@@ -238,7 +238,7 @@ STATIONS_DB=rac
 STATIONS_COLLECTION=17225
 
 # Passengers Database
-PASSENGERS_DB=rac
+PASSENGERS_DB=PassengersDB
 PASSENGERS_COLLECTION=17225_passengers
 
 # Train Details
@@ -651,7 +651,7 @@ In Render dashboard, add these environment variables:
 MONGODB_URI=mongodb+srv://rac-admin:password@rac-cluster.xxxxx.mongodb.net/rac?retryWrites=true&w=majority
 STATIONS_DB=rac
 STATIONS_COLLECTION=17225
-PASSENGERS_DB=rac
+PASSENGERS_DB=PassengersDB
 PASSENGERS_COLLECTION=17225_passengers
 TRAIN_DETAILS_DB=rac
 TRAIN_DETAILS_COLLECTION=Trains_Details

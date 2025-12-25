@@ -4,7 +4,6 @@ import { setupConfig, initializeTrain, getTrains } from "../services/apiWithErro
 import "../styles/pages/ConfigPage.css";
 
 interface FormState {
-    mongoUri: string;
     stationsDb: string;
     stationsCollection: string;
     passengersDb: string;
@@ -29,14 +28,13 @@ interface ConfigPageProps {
 
 function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactElement {
     const [form, setForm] = useState<FormState>({
-        mongoUri: "mongodb://localhost:27017",
         stationsDb: "rac",
         stationsCollection: "",
         passengersDb: "PassengersDB",
-        passengersCollection: "",
-        trainNo: "",
+        passengersCollection: "P_1",
+        trainNo: "17225",
         trainName: "",
-        journeyDate: "",
+        journeyDate: "2025-11-15",
     });
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -77,7 +75,7 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
             }
 
             const payload = {
-                mongoUri: form.mongoUri,
+                // MongoDB URI comes from backend .env - not from frontend!
                 stationsDb: form.stationsDb,
                 stationsCollection: stationsCollection,
                 passengersDb: form.passengersDb,
@@ -136,16 +134,12 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
                 {error && <div className="error-banner">{error}</div>}
 
                 <div className="form-section">
-                    <h3>MongoDB</h3>
-                    <label>
-                        Mongo URI
-                        <input
-                            type="text"
-                            value={form.mongoUri}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => update("mongoUri", e.target.value)}
-                            required
-                        />
-                    </label>
+                    <h3>ℹ️ Configuration</h3>
+                    <p style={{ color: '#666', fontSize: '14px' }}>
+                        MongoDB connection is configured in backend <code>.env</code> file.
+                        <br />
+                        Update the fields below to test different trains or collections.
+                    </p>
                 </div>
 
                 <div className="form-section">

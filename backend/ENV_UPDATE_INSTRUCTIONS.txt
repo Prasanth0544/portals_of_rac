@@ -1,0 +1,33 @@
+# ADD OR UPDATE THESE LINES IN YOUR backend/.env FILE:
+
+# ═══════════════════════════════════════════════════════
+# DEFAULT VALUES FOR AUTO-CONFIGURATION
+# ═══════════════════════════════════════════════════════
+
+# Passengers Collection (P_1 instead of 17225_passengers)
+PASSENGERS_COLLECTION=P_1
+
+# Default Train Number
+DEFAULT_TRAIN_NO=17225
+
+# Default Journey Date (format: YYYY-MM-DD)
+DEFAULT_JOURNEY_DATE=2025-11-15
+
+# ═══════════════════════════════════════════════════════
+# IMPORTANT: Make sure you have these set too:
+# ═══════════════════════════════════════════════════════
+
+MONGODB_URI=mongodb+srv://prasanth0544:YOUR_PASSWORD@cluster0.1k4cf.mongodb.net/?retryWrites=true&w=majority
+STATIONS_DB=rac
+PASSENGERS_DB=PassengersDB
+TRAIN_DETAILS_DB=rac
+STATIONS_COLLECTION=17225
+TRAIN_DETAILS_COLLECTION=Trains_Details
+
+# JWT (REQUIRED - add if missing!)
+JWT_SECRET=rac-reallocation-secret-key-change-this-in-production-min-32-chars
+
+# VAPID keys (already set)
+VAPID_PUBLIC_KEY=BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U
+VAPID_PRIVATE_KEY=UUxI4O8-FbRouAf7-7PVTv1qCIqAThH7t6lFQCRVnDY
+VAPID_EMAIL=admin@example.com

@@ -110,7 +110,7 @@ MONGODB_URI=mongodb://localhost:27017
 
 # Database Names
 STATIONS_DB=rac
-PASSENGERS_DB=rac
+PASSENGERS_DB=PassengersDB
 TRAIN_DETAILS_DB=rac
 
 # Collection Names

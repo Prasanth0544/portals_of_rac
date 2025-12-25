@@ -76,8 +76,9 @@ function App(): React.ReactElement {
     const [trainData, setTrainData] = useState<TrainData | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [currentPage, setCurrentPage] = useState<PageType>('config');
+    const [currentPage, setCurrentPage] = useState<PageType>('home');
     const [journeyStarted, setJourneyStarted] = useState<boolean>(false);
+    const [autoInitAttempted, setAutoInitAttempted] = useState<boolean>(false);
     const [wsConnected, setWsConnected] = useState<boolean>(false);
     const [menuOpen, setMenuOpen] = useState<boolean>(false);
 
@@ -99,6 +100,49 @@ function App(): React.ReactElement {
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Auto-initialize from backend config on app load
+    useEffect(() => {
+        if (isAuthenticated && !autoInitAttempted) {
+            autoInitializeFromBackend();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthenticated]);
+
+    const autoInitializeFromBackend = async (): Promise<void> => {
+        setAutoInitAttempted(true);
+
+        try {
+            console.log('🔧 Attempting auto-initialization from backend config...');
+
+            // Check if backend is configured
+            const configResponse = await fetch('http://localhost:5000/api/config/current');
+            const config = await configResponse.json();
+
+            if (config.success && config.data.isConfigured) {
+                console.log('✅ Backend is configured, auto-initializing train...');
+                console.log('   Train:', config.data.trainNo);
+                console.log('   Date:', config.data.journeyDate);
+
+                // Try to initialize train
+                const response = await api.initializeTrain(config.data.trainNo, config.data.journeyDate);
+
+                if (response.success) {
+                    console.log('✅ Train auto-initialized successfully!');
+                    await loadTrainState();
+                    setCurrentPage('home');
+                } else {
+                    console.warn('⚠️ Auto-initialization failed:', response.error);
+                    // Don't show error, just stay on home page - user can configure if needed
+                }
+            } else {
+                console.log('ℹ️ Backend not configured - user will need to use config page');
+            }
+        } catch (error: any) {
+            console.warn('⚠️ Auto-initialization error:', error.message);
+            // Silent fail - user can manually configure if needed
+        }
+    };
 
     const setupWebSocket = (): void => {
         const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
@@ -450,6 +494,15 @@ function App(): React.ReactElement {
                                 <p className="user-role">{user?.role || 'ADMIN'}</p>
                             </div>
                             <hr />
+                            <button
+                                onClick={() => {
+                                    setCurrentPage('config');
+                                    setMenuOpen(false);
+                                }}
+                                className="menu-item"
+                            >
+                                ⚙️ Configuration
+                            </button>
                             <button onClick={handleLogout} className="menu-item logout">
                                 🚪 Logout
                             </button>

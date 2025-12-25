@@ -178,6 +178,29 @@ router.post('/config/setup',
   (req, res) => configController.setup(req, res)
 );
 
+// Get current config (sanitized - no password)
+router.get('/config/current', (req, res) => {
+  try {
+    const config = global.RAC_CONFIG || {};
+
+    res.json({
+      success: true,
+      data: {
+        hasMongoUri: !!config.mongoUri,  // Don't expose the actual URI!
+        stationsDb: config.stationsDb || null,
+        passengersDb: config.passengersDb || null,
+        stationsCollection: config.stationsCollection || null,
+        passengersCollection: config.passengersCollection || null,
+        trainNo: config.trainNo || null,
+        journeyDate: config.journeyDate || null,
+        isConfigured: !!(config.mongoUri && config.stationsDb && config.passengersDb)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.post('/train/initialize',
   validationMiddleware.sanitizeBody,
   validationMiddleware.validateTrainInit,

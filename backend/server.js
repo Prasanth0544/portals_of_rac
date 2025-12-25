@@ -155,6 +155,32 @@ app.use(errorHandler);
 // Start server
 async function startServer() {
   try {
+    // ═══════════════════════════════════════════════════════════
+    // AUTO-CONFIGURATION FROM ENVIRONMENT VARIABLES
+    // If .env has database config, use it automatically
+    // ═══════════════════════════════════════════════════════════
+    if (process.env.MONGODB_URI && !global.RAC_CONFIG) {
+      console.log('\n🔧 Auto-configuring from environment variables...\n');
+
+      global.RAC_CONFIG = {
+        mongoUri: process.env.MONGODB_URI,
+        stationsDb: process.env.STATIONS_DB || 'rac',
+        passengersDb: process.env.PASSENGERS_DB || 'PassengersDB',
+        trainDetailsDb: process.env.TRAIN_DETAILS_DB || 'rac',
+        stationsCollection: process.env.STATIONS_COLLECTION || '17225',
+        passengersCollection: process.env.PASSENGERS_COLLECTION || 'P_1',
+        trainDetailsCollection: process.env.TRAIN_DETAILS_COLLECTION || 'Trains_Details',
+        trainNo: process.env.DEFAULT_TRAIN_NO || '17225',
+        journeyDate: process.env.DEFAULT_JOURNEY_DATE || '2025-11-15'
+      };
+
+      console.log('✅ Auto-configuration loaded:');
+      console.log(`   📦 Stations: ${global.RAC_CONFIG.stationsDb}/${global.RAC_CONFIG.stationsCollection}`);
+      console.log(`   📦 Passengers: ${global.RAC_CONFIG.passengersDb}/${global.RAC_CONFIG.passengersCollection}`);
+      console.log(`   🚂 Train: ${global.RAC_CONFIG.trainNo}`);
+      console.log(`   📅 Date: ${global.RAC_CONFIG.journeyDate}\n`);
+    }
+
     // Try DB connect using global config (may be absent on first boot)
     try {
       await db.connect(global.RAC_CONFIG);
