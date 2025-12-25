@@ -159,11 +159,13 @@ async function startServer() {
     // AUTO-CONFIGURATION FROM ENVIRONMENT VARIABLES
     // If .env has database config, use it automatically
     // ═══════════════════════════════════════════════════════════
-    if (process.env.MONGODB_URI && !global.RAC_CONFIG) {
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+    if (mongoUri && !global.RAC_CONFIG) {
       console.log('\n🔧 Auto-configuring from environment variables...\n');
 
       global.RAC_CONFIG = {
-        mongoUri: process.env.MONGODB_URI,
+        mongoUri: mongoUri,
         stationsDb: process.env.STATIONS_DB || 'rac',
         passengersDb: process.env.PASSENGERS_DB || 'PassengersDB',
         trainDetailsDb: process.env.TRAIN_DETAILS_DB || 'rac',
