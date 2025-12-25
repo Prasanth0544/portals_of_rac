@@ -95,7 +95,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
             fetchUpgradedPassengers();
         }, 3000);
 
-        const ws = new WebSocket('ws://localhost:5000');
+        const ws = new WebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:5000');
 
         ws.onopen = (): void => {
             console.log('PhaseOnePage WebSocket connected');

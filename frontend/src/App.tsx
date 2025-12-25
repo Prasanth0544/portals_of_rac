@@ -116,7 +116,7 @@ function App(): React.ReactElement {
             console.log('🔧 Attempting auto-initialization from backend config...');
 
             // Check if backend is configured
-            const configResponse = await fetch('http://localhost:5000/api/config/current');
+            const configResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/config/current`);
             const config = await configResponse.json();
 
             if (config.success && config.data.isConfigured) {

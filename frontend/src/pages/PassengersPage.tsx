@@ -144,7 +144,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
     useEffect(() => {
         loadData();
 
-        const ws = new WebSocket('ws://localhost:5000');
+        const ws = new WebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:5000');
 
         ws.onopen = (): void => {
             console.log('PassengersPage WebSocket connected');
