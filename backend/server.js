@@ -21,6 +21,12 @@ validateEnv();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy for production (Render, Heroku, etc.)
+// Required for express-rate-limit to work behind reverse proxies
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || [
