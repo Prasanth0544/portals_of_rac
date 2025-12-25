@@ -26,6 +26,9 @@ const csrfProtection = (req, res, next) => {
         '/api/otp/verify',
         '/api/config/setup',
         '/api/train/initialize',
+        '/api/train/start-journey',
+        '/api/train/next-station',
+        '/api/train/reset',
         '/api/tte/push-subscribe',
         '/api/passenger/push-subscribe',
         '/api/push-subscribe'
@@ -62,10 +65,14 @@ const csrfProtection = (req, res, next) => {
 const getCsrfToken = (req, res) => {
     const token = generateToken();
 
+    // For cross-origin deployments (e.g., Vercel frontend + Render backend),
+    // sameSite must be 'none' with secure: true
+    const isProduction = process.env.NODE_ENV === 'production';
+
     res.cookie('csrfToken', token, {
         httpOnly: false, // Must be readable by JavaScript
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
