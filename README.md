@@ -17,6 +17,21 @@ A **real-time Railway RAC (Reservation Against Cancellation) seat reallocation s
 
 ---
 
+## 🌐 Live Demo
+
+> **Try the live application!** Deployed on Render (backend) + Vercel (frontends).
+
+| Portal | Live URL | Login |
+|--------|----------|-------|
+| **Admin Portal** | [rac-admin-portal.vercel.app](https://rac-admin-portal.vercel.app) | `ADMIN_01` / `Prasanth@123` |
+| **TTE Portal** | [rac-tte.vercel.app](https://rac-tte.vercel.app) | `TTE_01` / `Prasanth@123` |
+| **Passenger Portal** | [rac-passenger-portal.vercel.app](https://rac-passenger-portal.vercel.app) | PNR: `1722500001` |
+| **Backend API** | [poratls-of-rac-4u83.onrender.com](https://poratls-of-rac-4u83.onrender.com) | - |
+
+> ⚠️ **Note**: Backend is on Render's free tier and may take ~30 seconds to wake up after inactivity.
+
+---
+
 ## 🏗️ System Architecture
 
 ```
@@ -232,4 +247,4 @@ ISC
 
 **Built for Indian Railways - Train 17225 Amaravathi Express** 🚂
 
-**Last Updated:** 2025-12-23
+**Last Updated:** 2025-12-25

@@ -3,7 +3,7 @@
 Get up and running with the **Dynamic RAC Reallocation System** on your local machine.
 
 > [!IMPORTANT]
-> This guide is for **LOCAL DEVELOPMENT ONLY** (running on your computer). For deploying to the cloud where anyone can access it, see **[QUICK_DEPLOY.md](QUICK_DEPLOY.md)**.
+> This guide is for **LOCAL DEVELOPMENT ONLY** (running on your computer). The application is already deployed live - see **[README.md](README.md#-live-demo)** for live URLs.
 
 ---
 
@@ -522,6 +522,6 @@ After successful setup:
 
 **Built for Indian Railways - Train 17225 Amaravathi Express** 🚂
 
-*Last Updated: December 23, 2025*
+*Last Updated: December 25, 2025*
 
 **Test Coverage:** 79.57% | 1,153 tests | 50 suites ✅
