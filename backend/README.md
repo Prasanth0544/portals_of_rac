@@ -119,7 +119,7 @@ backend/
 
 ---
 
-## 🌐 API Endpoints (50+)
+## 🌐 API Endpoints (84 Total: 39 GET, 45 POST)
 
 ### Authentication
 | Method | Endpoint | Description |

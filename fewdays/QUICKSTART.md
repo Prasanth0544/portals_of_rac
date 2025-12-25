@@ -1,9 +1,9 @@
-# 🚀 RAC Reallocation System - Quick Start Guide
+# 🚀 RAC Reallocation System - Local Development Quick Start
 
-Get up and running with the **Dynamic RAC Reallocation System** in minutes.
+Get up and running with the **Dynamic RAC Reallocation System** on your local machine.
 
 > [!IMPORTANT]
-> This guide reflects the **actual** project structure. All commands have been verified against the codebase.
+> This guide is for **LOCAL DEVELOPMENT ONLY** (running on your computer). For deploying to the cloud where anyone can access it, see **[QUICK_DEPLOY.md](QUICK_DEPLOY.md)**.
 
 ---
 
@@ -30,11 +30,12 @@ mongod --version # Should show v6+
 ```
 RAC-Reallocation-System/
 ├── backend/              # Express.js API + WebSocket (Port 5000)
-├── frontend/             # Admin Portal - Vite + React (Port 5173)
-├── passenger-portal/     # Passenger Portal - Vite + React (Port 5175)
+├── frontend/             # Admin Portal - Vite + React (Port 3000)
 ├── tte-portal/           # TTE Portal - Vite + React (Port 5174)
-├── docker-compose.yml    # Docker deployment
-└── k8s/                  # Kubernetes manifests
+├── passenger-portal/     # Passenger Portal - Vite + React (Port 5175)
+├── QUICKSTART.md         # This setup guide
+├── README.md             # Project overview
+└── PORTFOLIO_SUMMARY.md  # Portfolio summary
 ```
 
 ### Technology Stack
@@ -55,20 +56,21 @@ RAC-Reallocation-System/
 ### Step 1: Install All Dependencies
 
 ```bash
-# Navigate to project root
-cd c:\Users\prasa\Desktop\RAC\zip_2
+# Clone the repository (or download ZIP)
+git clone https://github.com/YOUR_USERNAME/rac-reallocation-system.git
+cd rac-reallocation-system
 
 # Install Backend
 cd backend && npm install && cd ..
 
-# Install Admin Portal
+# Install Admin Portal (Port 3000)
 cd frontend && npm install && cd ..
 
-# Install Passenger Portal
-cd passenger-portal && npm install && cd ..
-
-# Install TTE Portal
+# Install TTE Portal (Port 5174)
 cd tte-portal && npm install && cd ..
+
+# Install Passenger Portal (Port 5175)
+cd passenger-portal && npm install && cd ..
 ```
 
 > [!TIP]
@@ -190,7 +192,7 @@ Open **4 separate terminals** and run:
 # Terminal 1: Backend API + WebSocket (Port 5000)
 cd backend && npm run dev
 
-# Terminal 2: Admin Portal (Port 5173)
+# Terminal 2: Admin Portal (Port 3000)
 cd frontend && npm run dev
 
 # Terminal 3: TTE Portal (Port 5174)
@@ -209,7 +211,7 @@ cd passenger-portal && npm run dev
 | Portal | URL | Default Login |
 |--------|-----|---------------|
 | **Backend API** | http://localhost:5000 | - |
-| **Admin Portal** | http://localhost:5173 | `ADMIN_01` / `Prasanth@123` |
+| **Admin Portal** | http://localhost:3000 | `ADMIN_01` / `Prasanth@123` |
 | **TTE Portal** | http://localhost:5174 | `TTE_01` / `Prasanth@123` |
 | **Passenger Portal** | http://localhost:5175 | `IR_0001` / `Prasanth@123` |
 | **Swagger API Docs** | http://localhost:5000/api-docs | - |
@@ -449,7 +451,7 @@ docker-compose build --no-cache
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | **Backend API** | http://localhost:5000 | - |
-| **Admin Portal** | http://localhost:5173 | `ADMIN_01` / `Prasanth@123` |
+| **Admin Portal** | http://localhost:3000 | `ADMIN_01` / `Prasanth@123` |
 | **TTE Portal** | http://localhost:5174 | `TTE_01` / `Prasanth@123` |
 | **Passenger Portal** | http://localhost:5175 | `IR_0001` / `Prasanth@123` |
 | **MongoDB** | localhost:27017 | - |

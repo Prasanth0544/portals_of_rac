@@ -8,7 +8,9 @@ A **real-time Railway RAC (Reservation Against Cancellation) seat reallocation s
 
 | Document | Purpose |
 |----------|---------|
-| **[QUICKSTART.md](QUICKSTART.md)** | Complete setup guide, installation, and first-time configuration |
+| **[QUICKSTART.md](QUICKSTART.md)** | Local development setup and installation |
+| **[QUICK_DEPLOY.md](QUICK_DEPLOY.md)** | ⚡ Deploy to cloud in 30 minutes (FREE) |
+| **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** | Comprehensive deployment options (Docker, Kubernetes, etc.) |
 | **[SECURITY_TODO.md](SECURITY_TODO.md)** | Security features and implementation status |
 | **[dot_md_files/](dot_md_files/)** | Technical documentation and architecture details |
 | **[backend/README.md](backend/README.md)** | Backend API documentation |
@@ -128,7 +130,7 @@ cd tte-portal && npm run dev
 - Station-wise reallocation phase controls
 
 ### ⚙️ Backend API
-- 50+ REST API endpoints
+- 84 REST API endpoints (39 GET, 45 POST)
 - Real-time WebSocket broadcasting
 - Automatic RAC-to-CNF upgrades
 - Segment-based berth tracking
