@@ -613,42 +613,13 @@ function DashboardPage(): React.ReactElement {
 
     return (
         <Container maxWidth="lg" sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 }, px: { xs: 2, sm: 3, md: 4 } }}>
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box sx={{ textAlign: 'center', flex: 1 }}>
-                    <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
-                        Welcome, {passenger?.Name || 'Passenger'}!
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary">
-                        Your digital boarding pass is ready
-                    </Typography>
-                </Box>
-
-                <IconButton
-                    onClick={handleSettingsClick}
-                    sx={{
-                        backgroundColor: '#f5f5f5',
-                        '&:hover': { backgroundColor: '#e0e0e0' }
-                    }}
-                >
-                    <MoreVertIcon />
-                </IconButton>
-                <Menu
-                    anchorEl={settingsAnchor}
-                    open={Boolean(settingsAnchor)}
-                    onClose={handleSettingsClose}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                >
-                    <MenuItem onClick={handleOpenSettings}>
-                        <SettingsIcon sx={{ mr: 1, fontSize: 20 }} />
-                        Settings
-                    </MenuItem>
-                    <Divider />
-                    <MenuItem onClick={handleLogout} sx={{ color: '#e74c3c' }}>
-                        <LogoutIcon sx={{ mr: 1, fontSize: 20 }} />
-                        Logout
-                    </MenuItem>
-                </Menu>
+            <Box sx={{ mb: 4, textAlign: 'center' }}>
+                <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
+                    Welcome, {passenger?.Name || 'Passenger'}!
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                    Your digital boarding pass is ready
+                </Typography>
             </Box>
 
             {/* Settings Dialog */}

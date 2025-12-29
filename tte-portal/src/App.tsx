@@ -19,6 +19,9 @@ import './UserMenu.css';
 // Push notification service for TTE alerts
 import { initializePushNotifications } from './services/pushNotificationService';
 
+// API Base URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 // User interface
 interface User {
     username?: string;
@@ -70,7 +73,7 @@ function App(): React.ReactElement {
     const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
         try {
             console.log('[TTE Auth] Attempting to refresh access token...');
-            const response = await fetch('http://localhost:5000/api/auth/refresh', {
+            const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refreshToken })
@@ -108,7 +111,7 @@ function App(): React.ReactElement {
             if (token && userData) {
                 try {
                     // Verify token is still valid by calling /auth/verify
-                    const response = await fetch('http://localhost:5000/api/auth/verify', {
+                    const response = await fetch(`${API_BASE_URL}/auth/verify`, {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }

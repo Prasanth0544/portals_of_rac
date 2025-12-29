@@ -13,9 +13,86 @@
 /* Large Desktop: 1025px+ */
 
 /* ============================================
+   CRITICAL MOBILE VIEWPORT FIXES
+   ============================================ */
+/* Prevent horizontal overflow on all devices */
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Mobile-specific root scaling */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+
+  body {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  /* Force all containers to respect viewport */
+  * {
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+
+  /* Prevent any element from causing overflow */
+  .page,
+  [class*="-page"],
+  .container,
+  .wrapper,
+  .content {
+    width: 100% !important;
+    max-width: 100vw !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    overflow-x: hidden;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 13px;
+  }
+
+  body {
+    font-size: 13px;
+  }
+
+  /* Tighter padding on very small screens */
+  .page,
+  [class*="-page"],
+  .container,
+  .wrapper,
+  .content {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  html {
+    font-size: 12px;
+  }
+
+  .page,
+  [class*="-page"],
+  .container,
+  .wrapper,
+  .content {
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+}
+
+/* ============================================
    GLOBAL TABLE RESPONSIVENESS
    ============================================ */
 @media (max-width: 768px) {
+
   /* Make all tables scrollable horizontally */
   .table-container,
   table {
@@ -42,30 +119,32 @@
    GLOBAL BUTTON TOUCH TARGETS
    ============================================ */
 @media (max-width: 768px) {
-  /* Ensure all buttons meet 44x44px minimum touch target */
+
+  /* SMALLER buttons for mobile - properly scaled down */
   button,
   .btn,
   .button,
   a.btn {
-    min-height: 44px;
-    min-width: 44px;
-    padding: 10px 16px;
-    font-size: 14px;
+    height: auto !important;
+    min-height: 36px !important;
+    max-height: 44px !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
   }
 
-  /* Icon-only buttons */
+  /* Icon-only buttons - smaller */
   button.icon-only,
   .btn-icon {
-    width: 44px;
-    height: 44px;
-    padding: 10px;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 6px !important;
   }
 
   /* Button groups stack vertically */
   .button-group,
   .action-buttons {
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
   }
 
@@ -75,10 +154,51 @@
   }
 }
 
+@media (max-width: 480px) {
+
+  /* Even smaller buttons on very small screens */
+  button,
+  .btn,
+  .button,
+  a.btn {
+    min-height: 32px !important;
+    max-height: 40px !important;
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+  }
+
+  button.icon-only,
+  .btn-icon {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 5px !important;
+  }
+}
+
+@media (max-width: 360px) {
+
+  button,
+  .btn,
+  .button,
+  a.btn {
+    min-height: 28px !important;
+    max-height: 36px !important;
+    padding: 5px 8px !important;
+    font-size: 10px !important;
+  }
+
+  button.icon-only,
+  .btn-icon {
+    width: 28px !important;
+    height: 28px !important;
+  }
+}
+
 /* ============================================
    GLOBAL FORM RESPONSIVENESS
    ============================================ */
 @media (max-width: 768px) {
+
   /* Forms stack vertically */
   .form-row,
   .form-group {
@@ -114,6 +234,7 @@
    GLOBAL GRID RESPONSIVENESS
    ============================================ */
 @media (max-width: 1024px) {
+
   /* 2-column grids on tablet */
   .grid-3,
   .grid-4 {
@@ -122,6 +243,7 @@
 }
 
 @media (max-width: 768px) {
+
   /* Single column grids on mobile */
   .grid-2,
   .grid-3,
@@ -141,6 +263,7 @@
    GLOBAL NAVIGATION (SIDEBAR)
    ============================================ */
 @media (max-width: 768px) {
+
   /* Hide sidebar by default on mobile */
   .sidebar,
   .navigation-sidebar {
@@ -196,7 +319,8 @@
   .main-content,
   .app-content {
     margin-left: 0 !important;
-    padding-top: 60px; /* Space for hamburger button */
+    padding-top: 60px;
+    /* Space for hamburger button */
   }
 }
 
@@ -204,6 +328,7 @@
    GLOBAL TEXT & TYPOGRAPHY
    ============================================ */
 @media (max-width: 768px) {
+
   /* Scale down headings */
   h1 {
     font-size: 24px !important;
@@ -237,24 +362,62 @@
 }
 
 @media (max-width: 480px) {
+
   /* Further scale down on very small screens */
   h1 {
-    font-size: 20px !important;
+    font-size: 18px !important;
   }
 
   h2 {
-    font-size: 18px !important;
+    font-size: 16px !important;
+  }
+
+  h3 {
+    font-size: 14px !important;
+  }
+
+  h4 {
+    font-size: 13px !important;
   }
 
   body,
   p {
-    font-size: 13px;
+    font-size: 12px !important;
   }
 
   /* More compact padding */
   .container,
   .content-wrapper {
-    padding: 10px;
+    padding: 8px !important;
+  }
+}
+
+@media (max-width: 360px) {
+
+  /* Even smaller on tiny screens */
+  h1 {
+    font-size: 16px !important;
+  }
+
+  h2 {
+    font-size: 14px !important;
+  }
+
+  h3,
+  h4 {
+    font-size: 12px !important;
+  }
+
+  body,
+  p,
+  span {
+    font-size: 11px !important;
+  }
+
+  /* Very compact padding */
+  .container,
+  .content-wrapper {
+    padding: 5px !important;
   }
 }
 
@@ -262,6 +425,7 @@
    GLOBAL CARD RESPONSIVENESS
    ============================================ */
 @media (max-width: 768px) {
+
   /* Cards stack vertically */
   .card-grid {
     grid-template-columns: 1fr !important;
@@ -286,6 +450,7 @@
    GLOBAL MODAL RESPONSIVENESS
    ============================================ */
 @media (max-width: 768px) {
+
   /* Modals take full screen on mobile */
   .modal,
   .modal-container {
@@ -319,6 +484,7 @@
    GLOBAL FLEXBOX HELPERS
    ============================================ */
 @media (max-width: 768px) {
+
   /* Force flex items to stack */
   .flex-row-mobile-column {
     flex-direction: column !important;
@@ -340,6 +506,7 @@
    GLOBAL UTILITIES
    ============================================ */
 @media (max-width: 768px) {
+
   /* Hide on mobile */
   .hide-mobile {
     display: none !important;
@@ -372,6 +539,7 @@
    GLOBAL ACCESSIBILITY
    ============================================ */
 @media (max-width: 768px) {
+
   /* Increase tap target spacing */
   a,
   button {
@@ -396,6 +564,7 @@
    LANDSCAPE ORIENTATION
    ============================================ */
 @media (max-width: 768px) and (orientation: landscape) {
+
   /* Adjust for landscape mobile */
   .page-header {
     padding: 10px 15px;
@@ -411,6 +580,7 @@
    PRINT STYLES (BONUS)
    ============================================ */
 @media print {
+
   /* Hide navigation and non-essential elements */
   .sidebar,
   .hamburger-menu,

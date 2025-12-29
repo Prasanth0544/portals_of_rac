@@ -172,9 +172,8 @@ function PassengersPage(): React.ReactElement {
         }
 
         try {
-            // Fetch vacant berths from backend API
-            const response = await fetch('http://localhost:5000/api/train/vacant-berths');
-            const data = await response.json();
+            // Fetch vacant berths from backend API using tteAPI
+            const data = await tteAPI.getVacantBerths();
 
             console.log('🔍 TTE Portal - Vacant Berths API Response (ALL segments):', data);
 

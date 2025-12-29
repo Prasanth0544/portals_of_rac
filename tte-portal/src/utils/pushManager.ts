@@ -1,6 +1,9 @@
 // Push Notification Manager for TTE Portal
 // Handles subscription for offline passenger upgrade notifications
 
+// API Base URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 /**
  * Get CSRF token from cookies
  */
@@ -39,7 +42,7 @@ export async function subscribeTTEToPush(tteId: string): Promise<boolean> {
         console.log('✅ TTE Service Worker ready');
 
         // Get VAPID public key
-        const response = await fetch('http://localhost:5000/api/push/vapid-public-key');
+        const response = await fetch(`${API_BASE_URL}/push/vapid-public-key`);
         const { publicKey } = await response.json();
 
         // Check existing subscription
@@ -59,7 +62,7 @@ export async function subscribeTTEToPush(tteId: string): Promise<boolean> {
         // Send subscription to backend with auth token and CSRF
         const token = localStorage.getItem('token');
         const csrfToken = getCsrfToken();
-        await fetch('http://localhost:5000/api/tte/push-subscribe', {
+        await fetch(`${API_BASE_URL}/tte/push-subscribe`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -113,7 +116,7 @@ export async function unsubscribeTTEFromPush(tteId: string): Promise<boolean> {
 
             const token = localStorage.getItem('token');
             const csrfToken = getCsrfToken();
-            await fetch('http://localhost:5000/api/tte/push-unsubscribe', {
+            await fetch(`${API_BASE_URL}/tte/push-unsubscribe`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
