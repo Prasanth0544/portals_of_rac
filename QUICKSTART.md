@@ -459,6 +459,93 @@ docker-compose build --no-cache
 > [!NOTE]
 > Docker images are built with production optimizations (Nginx for frontends).
 
+### 🔧 Useful Docker Commands
+
+#### Build & Run
+```bash
+# Build and start all containers (first time or after changes)
+docker-compose up -d --build
+
+# Start containers (if already built)
+docker-compose up -d
+
+# Start specific service only
+docker-compose up -d backend
+```
+
+#### Logs & Monitoring
+```bash
+# View all logs (follow mode)
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f backend
+docker-compose logs -f admin-portal
+
+# View last 50 lines of logs
+docker-compose logs --tail=50 backend
+
+# Check container health status
+docker-compose ps
+```
+
+#### Container Management
+```bash
+# Stop all containers (keep data)
+docker-compose stop
+
+# Stop and remove containers (keep images & volumes)
+docker-compose down
+
+# Stop, remove containers AND volumes (fresh start)
+docker-compose down -v
+
+# Restart all containers
+docker-compose restart
+
+# Restart specific service
+docker-compose restart backend
+```
+
+#### Debugging
+```bash
+# Enter container shell (backend)
+docker exec -it rac-backend sh
+
+# Enter container shell (MongoDB)
+docker exec -it rac-mongodb mongosh
+
+# Check container resource usage
+docker stats
+
+# Inspect container details
+docker inspect rac-backend
+```
+
+#### Cleanup
+```bash
+# Remove unused images
+docker image prune
+
+# Remove all stopped containers
+docker container prune
+
+# Full cleanup (unused images, containers, networks)
+docker system prune -a
+
+# View disk usage
+docker system df
+```
+
+#### Production Deployment
+```bash
+# Build and run with production config
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+# Scale backend to 2 replicas
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --scale backend=2
+```
+
 ---
 
 ## 📦 Available Scripts

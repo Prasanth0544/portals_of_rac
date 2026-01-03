@@ -10,11 +10,13 @@ import MapIcon from '@mui/icons-material/Map';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
+import UpgradeIcon from '@mui/icons-material/TrendingUp';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import PNRSearchPage from './pages/PNRSearchPage';
 
 import JourneyVisualizationPage from './pages/JourneyVisualizationPage';
+import UpgradeOffersPage from './pages/UpgradeOffersPage';
 import NotificationBell from './components/NotificationBell';
 import './App.css';
 import './UserMenu.css';
@@ -59,6 +61,7 @@ function Navigation({ user, onLogout }: NavigationProps): React.ReactElement {
             case '/': return 0;
             case '/pnr-search': return 1;
             case '/journey': return 2;
+            case '/upgrades': return 3;
             default: return 0;
         }
     };
@@ -116,6 +119,13 @@ function Navigation({ user, onLogout }: NavigationProps): React.ReactElement {
                         label="Journey"
                         component={Link}
                         to="/journey"
+                        iconPosition="start"
+                    />
+                    <Tab
+                        icon={<UpgradeIcon />}
+                        label="Upgrades"
+                        component={Link}
+                        to="/upgrades"
                         iconPosition="start"
                     />
                 </Tabs>
@@ -195,6 +205,7 @@ function App(): React.ReactElement {
                             <Route path="/" element={<DashboardPage />} />
                             <Route path="/pnr-search" element={<PNRSearchPage />} />
                             <Route path="/journey" element={<JourneyVisualizationPage />} />
+                            <Route path="/upgrades" element={<UpgradeOffersPage />} />
                         </Routes>
                     </Box>
 
