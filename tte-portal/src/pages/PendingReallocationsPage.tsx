@@ -284,7 +284,7 @@ const PendingReallocationsPage: React.FC = () => {
                                                     }}
                                                     disabled={processing}
                                                 >
-                                                    ✅ Approve
+                                                    ✅ Select
                                                 </button>
                                                 <button
                                                     className="btn-reject-small"

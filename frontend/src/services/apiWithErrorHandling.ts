@@ -47,24 +47,36 @@ const getCookie = (name: string): string | null => {
     return null;
 };
 
-// Explicitly fetch token if missing (e.g. first load)
-const ensureCsrfToken = async () => {
-    if (!getCookie('csrfToken')) {
-        try {
-            await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
-        } catch (error) {
-            console.warn('[API] Failed to fetch CSRF token:', error);
-        }
+// Fetch CSRF token from server
+const fetchCsrfToken = async (): Promise<boolean> => {
+    try {
+        console.log('[API] Fetching CSRF token...');
+        const response = await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
+        console.log('[API] CSRF token fetched successfully:', !!getCookie('csrfToken'));
+        return !!getCookie('csrfToken');
+    } catch (error) {
+        console.error('[API] Failed to fetch CSRF token:', error);
+        return false;
     }
 };
 
-// Initialize CSRF token check
+// Ensure CSRF token exists, fetch if missing
+const ensureCsrfToken = async (): Promise<boolean> => {
+    const existingToken = getCookie('csrfToken');
+    if (existingToken) {
+        console.log('[API] CSRF token already present');
+        return true;
+    }
+    return await fetchCsrfToken();
+};
+
+// Initialize CSRF token on load
 ensureCsrfToken();
 
 // ========================== REQUEST INTERCEPTOR ==========================
 
 api.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
+    async (config: InternalAxiosRequestConfig) => {
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -72,9 +84,22 @@ api.interceptors.request.use(
 
         // Add CSRF token for state-changing requests
         if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
-            const csrfToken = getCookie('csrfToken');
+            let csrfToken = getCookie('csrfToken');
+
+            // If CSRF token is missing, try to fetch it
+            if (!csrfToken) {
+                console.warn('[API] CSRF token missing, fetching now...');
+                await ensureCsrfToken();
+                csrfToken = getCookie('csrfToken');
+            }
+
             if (csrfToken) {
                 config.headers['X-CSRF-Token'] = csrfToken;
+                if (import.meta.env.DEV) {
+                    console.log('[API] CSRF token attached:', csrfToken.substring(0, 10) + '...');
+                }
+            } else {
+                console.error('[API] CSRF token still missing after fetch attempt');
             }
         }
 
@@ -164,6 +189,26 @@ api.interceptors.response.use(
 
         if (status === 403) {
             console.error('[API] Forbidden:', data);
+
+            // If CSRF token error, try to refetch and retry
+            const isCsrfError = data.message?.toLowerCase().includes('csrf');
+            if (isCsrfError && !error.config._retry) {
+                console.log('[API] CSRF error detected, attempting to refetch token and retry...');
+                error.config._retry = true;
+
+                try {
+                    await fetchCsrfToken();
+                    const newCsrfToken = getCookie('csrfToken');
+                    if (newCsrfToken) {
+                        error.config.headers['X-CSRF-Token'] = newCsrfToken;
+                        return api.request(error.config);
+                    }
+                } catch (retryError) {
+                    console.error('[API] CSRF token refetch failed:', retryError);
+                }
+            }
+
+            errorToast('Forbidden', data.message || 'Access forbidden');
             return Promise.reject({
                 type: 'FORBIDDEN',
                 message: data.message || 'Access forbidden',

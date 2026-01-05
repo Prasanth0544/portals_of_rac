@@ -47,23 +47,35 @@ const getCookie = (name: string): string | null => {
     return null;
 };
 
-// Ensure CSRF token exists
-const ensureCsrfToken = async () => {
-    if (!getCookie('csrfToken')) {
-        try {
-            await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
-        } catch (error) {
-            console.warn('[TTE API] Failed to fetch CSRF token:', error);
-        }
+// Fetch CSRF token from server
+const fetchCsrfToken = async (): Promise<boolean> => {
+    try {
+        console.log('[TTE API] Fetching CSRF token...');
+        await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
+        console.log('[TTE API] CSRF token fetched successfully:', !!getCookie('csrfToken'));
+        return !!getCookie('csrfToken');
+    } catch (error) {
+        console.error('[TTE API] Failed to fetch CSRF token:', error);
+        return false;
     }
 };
 
-// Initialize CSRF token check
+// Ensure CSRF token exists, fetch if missing
+const ensureCsrfToken = async (): Promise<boolean> => {
+    const existingToken = getCookie('csrfToken');
+    if (existingToken) {
+        console.log('[TTE API] CSRF token already present');
+        return true;
+    }
+    return await fetchCsrfToken();
+};
+
+// Initialize CSRF token on load
 ensureCsrfToken();
 
 // Add request interceptor to attach token and CSRF to all requests
 api.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
+    async (config: InternalAxiosRequestConfig) => {
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -71,9 +83,19 @@ api.interceptors.request.use(
 
         // Add CSRF token for state-changing requests
         if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
-            const csrfToken = getCookie('csrfToken');
+            let csrfToken = getCookie('csrfToken');
+
+            // If CSRF token is missing, try to fetch it
+            if (!csrfToken) {
+                console.warn('[TTE API] CSRF token missing, fetching now...');
+                await ensureCsrfToken();
+                csrfToken = getCookie('csrfToken');
+            }
+
             if (csrfToken) {
                 config.headers['X-CSRF-Token'] = csrfToken;
+            } else {
+                console.error('[TTE API] CSRF token still missing after fetch attempt');
             }
         }
 
@@ -125,17 +147,38 @@ api.interceptors.response.use(
             window.location.href = '/login';
         }
 
-        // Handle 403 Forbidden - role check failed, token is invalid
+        // Handle 403 Forbidden
         if (status === 403) {
-            console.error('[TTE API] 403 Forbidden - Role check failed:', data);
-            console.log('[TTE API] Debug info:', data?.debug);
+            console.error('[TTE API] 403 Forbidden:', data);
 
-            // Clear tokens and redirect to login - the token is invalid
-            localStorage.removeItem('token');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
-            alert('⚠️ Access denied. Please login again with proper credentials.');
-            window.location.href = '/login';
+            // If CSRF token error, try to refetch and retry
+            const isCsrfError = data.message?.toLowerCase().includes('csrf');
+            if (isCsrfError && !error.config._retry) {
+                console.log('[TTE API] CSRF error detected, attempting to refetch token and retry...');
+                error.config._retry = true;
+
+                try {
+                    await fetchCsrfToken();
+                    const newCsrfToken = getCookie('csrfToken');
+                    if (newCsrfToken) {
+                        error.config.headers['X-CSRF-Token'] = newCsrfToken;
+                        return api.request(error.config);
+                    }
+                } catch (retryError) {
+                    console.error('[TTE API] CSRF token refetch failed:', retryError);
+                }
+            }
+
+            // For non-CSRF 403 errors (role check failed)
+            if (!isCsrfError) {
+                console.log('[TTE API] Debug info:', data?.debug);
+                // Clear tokens and redirect to login - the token is invalid
+                localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('user');
+                alert('⚠️ Access denied. Please login again with proper credentials.');
+                window.location.href = '/login';
+            }
         }
 
         return Promise.reject(error);

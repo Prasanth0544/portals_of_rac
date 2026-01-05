@@ -350,7 +350,7 @@ const AddPassengerPage = ({ trainData, onClose }: AddPassengerPageProps): React.
                                     <option value="Online">Online</option>
                                     <option value="Offline">Offline</option>
                                 </select>
-                                <span className="field-hint">Online = Mobile app user</span>
+                                <span className="field-hint">Online = User with internet enable device</span>
                             </div>
                         </div>
                     </div>

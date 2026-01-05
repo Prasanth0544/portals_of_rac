@@ -240,6 +240,13 @@
   box-shadow: 0 2px 8px rgba(189, 195, 199, 0.3);
 }
 
+/* Journey Started State - Green success styling */
+.btn-start-journey.journey-started {
+  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  cursor: default;
+}
+
 /* 3. MAIN ACTIONS GRID - 3 Compact Cards */
 .main-actions-grid {
   display: grid;

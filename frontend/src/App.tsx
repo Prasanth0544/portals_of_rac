@@ -1,8 +1,9 @@
 // frontend/src/App.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as api from './services/apiWithErrorHandling';
 import wsService from './services/websocket';
+import { saveAppState, loadAppState, clearAppState } from './services/StateStore';
 import ToastContainer from './components/ToastContainer';
 import APIDocumentationLink from './components/APIDocumentationLink';
 import LoginPage from './pages/LoginPage';
@@ -81,6 +82,89 @@ function App(): React.ReactElement {
     const [autoInitAttempted, setAutoInitAttempted] = useState<boolean>(false);
     const [wsConnected, setWsConnected] = useState<boolean>(false);
     const [menuOpen, setMenuOpen] = useState<boolean>(false);
+    const [stateRestored, setStateRestored] = useState<boolean>(false);
+    const isInitialMount = useRef(true);
+
+    // Restore persisted state on mount AND verify with backend
+    useEffect(() => {
+        const restoreState = async () => {
+            const saved = await loadAppState();
+            let restoredPage: PageType = 'home';
+            let restoredJourneyStarted = false;
+            let restoredAutoInit = false;
+
+            if (saved) {
+                console.log('[App] Restoring persisted state...');
+                restoredPage = saved.currentPage as PageType || 'home';
+                restoredJourneyStarted = saved.journeyStarted || false;
+                restoredAutoInit = saved.autoInitAttempted || false;
+            }
+
+            // Verify with backend FIRST before applying restored state
+            try {
+                const response = await api.getTrainState();
+                if (response && response.success && response.data) {
+                    const backendJourneyStarted = response.data.journeyStarted || false;
+
+                    // Use backend state as source of truth
+                    if (restoredJourneyStarted !== backendJourneyStarted) {
+                        console.log('[App] State mismatch! Frontend:', restoredJourneyStarted, '| Backend:', backendJourneyStarted);
+                        restoredJourneyStarted = backendJourneyStarted;
+
+                        // If backend says journey not started, go to home page
+                        if (!backendJourneyStarted && restoredPage !== 'home' && restoredPage !== 'config') {
+                            console.log('[App] Journey not started on backend, redirecting to home');
+                            restoredPage = 'home';
+                        }
+                    }
+
+                    // Apply verified state
+                    setTrainData(response.data);
+                    setCurrentPage(restoredPage);
+                    setJourneyStarted(backendJourneyStarted);
+                    setAutoInitAttempted(restoredAutoInit);
+
+                    // Save corrected state
+                    saveAppState({
+                        currentPage: restoredPage,
+                        journeyStarted: backendJourneyStarted,
+                        autoInitAttempted: restoredAutoInit
+                    });
+                } else {
+                    // Backend returned no valid data, reset to safe defaults
+                    console.log('[App] Backend returned no valid data, resetting state');
+                    setCurrentPage('home');
+                    setJourneyStarted(false);
+                    setAutoInitAttempted(false);
+                    await clearAppState();
+                }
+            } catch (err) {
+                console.warn('[App] Could not verify backend state:', err);
+                // On error, reset to safe defaults (don't keep stale state)
+                setCurrentPage('home');
+                setJourneyStarted(false);
+                setAutoInitAttempted(false);
+                await clearAppState();
+            }
+
+            // Only mark as restored AFTER verification is complete
+            setStateRestored(true);
+        };
+        restoreState();
+    }, []);
+
+    // Save state to IndexedDB when key states change
+    useEffect(() => {
+        // Skip saving on initial mount
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+        // Only save after state has been restored
+        if (stateRestored) {
+            saveAppState({ currentPage, journeyStarted, autoInitAttempted });
+        }
+    }, [currentPage, journeyStarted, autoInitAttempted, stateRestored]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -325,6 +409,8 @@ function App(): React.ReactElement {
 
             if (response.success) {
                 setJourneyStarted(false);
+                setAutoInitAttempted(false);
+                await clearAppState(); // Clear persisted state on reset
                 await loadTrainState();
                 alert('✅ Train reset successfully!');
             } else {
@@ -361,14 +447,16 @@ function App(): React.ReactElement {
         setCurrentPage(page);
     };
 
-    const handleLogout = (): void => {
+    const handleLogout = async (): Promise<void> => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        await clearAppState(); // Clear persisted state on logout
         setIsAuthenticated(false);
         setUser(null);
         setMenuOpen(false);
         setTrainData(null);
         setJourneyStarted(false);
+        setAutoInitAttempted(false);
         setCurrentPage('config');
     };
 
@@ -376,6 +464,29 @@ function App(): React.ReactElement {
         setCurrentPage('home');
         loadTrainState();
     };
+
+    // Show loading while state is being restored from IndexedDB and verified with backend
+    if (!stateRestored) {
+        return (
+            <div className="App">
+                <div className="app-header">
+                    <div className="header-content">
+                        <h1>🚂 RAC Reallocation System</h1>
+                        <h2>Restoring Session...</h2>
+                    </div>
+                </div>
+                <div className="app-content">
+                    <div className="initialization-screen">
+                        <div className="init-card">
+                            <h3>Verifying State</h3>
+                            <div className="spinner-large"></div>
+                            <p>Syncing with backend...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (!isAuthenticated) {
         return <LoginPage />;
@@ -531,7 +642,7 @@ function App(): React.ReactElement {
                     />
                 )}
 
-                {currentPage === 'rac-queue' && (
+                {currentPage === 'rac-queue' && journeyStarted && (
                     <RACQueuePage
                         trainData={trainData}
                         onClose={handleClosePage}
@@ -545,7 +656,7 @@ function App(): React.ReactElement {
                     />
                 )}
 
-                {currentPage === 'passengers' && (
+                {currentPage === 'passengers' && journeyStarted && (
                     <PassengersPage
                         trainData={trainData}
                         onClose={handleClosePage}
@@ -553,7 +664,7 @@ function App(): React.ReactElement {
                     />
                 )}
 
-                {currentPage === 'reallocation' && (
+                {currentPage === 'reallocation' && journeyStarted && (
                     <ReallocationPage
                         trainData={trainData}
                         onClose={handleClosePage}
@@ -561,7 +672,7 @@ function App(): React.ReactElement {
                     />
                 )}
 
-                {currentPage === 'visualization' && (
+                {currentPage === 'visualization' && journeyStarted && (
                     <VisualizationPage
                         trainData={trainData}
                         onClose={handleClosePage}
@@ -575,10 +686,30 @@ function App(): React.ReactElement {
                     />
                 )}
 
-                {currentPage === 'phase1' && (
+                {currentPage === 'phase1' && journeyStarted && (
                     <PhaseOnePage
                         onClose={handleClosePage}
                     />
+                )}
+
+                {currentPage === 'phase1' && !journeyStarted && (
+                    <div className="not-started-notice">
+                        <div className="notice-card">
+                            <h3>⚠️ Journey Not Started</h3>
+                            <p>Please start the journey first to access this page.</p>
+                            <button onClick={handleClosePage} className="btn-primary">Go to Home</button>
+                        </div>
+                    </div>
+                )}
+
+                {(['rac-queue', 'passengers', 'reallocation', 'visualization'].includes(currentPage)) && !journeyStarted && (
+                    <div className="not-started-notice">
+                        <div className="notice-card">
+                            <h3>⚠️ Journey Not Started</h3>
+                            <p>Please start the journey first to access this page.</p>
+                            <button onClick={handleClosePage} className="btn-primary">Go to Home</button>
+                        </div>
+                    </div>
                 )}
 
                 {currentPage === 'diagnostics' && (

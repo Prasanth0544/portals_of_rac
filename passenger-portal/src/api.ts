@@ -21,23 +21,35 @@ const getCookie = (name: string): string | null => {
     return null;
 };
 
-// Ensure CSRF token exists
-const ensureCsrfToken = async () => {
-    if (!getCookie('csrfToken')) {
-        try {
-            await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
-        } catch (error) {
-            console.warn('[Passenger API] Failed to fetch CSRF token:', error);
-        }
+// Fetch CSRF token from server
+const fetchCsrfToken = async (): Promise<boolean> => {
+    try {
+        console.log('[Passenger API] Fetching CSRF token...');
+        await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
+        console.log('[Passenger API] CSRF token fetched successfully:', !!getCookie('csrfToken'));
+        return !!getCookie('csrfToken');
+    } catch (error) {
+        console.error('[Passenger API] Failed to fetch CSRF token:', error);
+        return false;
     }
 };
 
-// Initialize CSRF token check
+// Ensure CSRF token exists, fetch if missing
+const ensureCsrfToken = async (): Promise<boolean> => {
+    const existingToken = getCookie('csrfToken');
+    if (existingToken) {
+        console.log('[Passenger API] CSRF token already present');
+        return true;
+    }
+    return await fetchCsrfToken();
+};
+
+// Initialize CSRF token on load
 ensureCsrfToken();
 
 // Add request interceptor to attach token and CSRF to all requests
 api.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
+    async (config: InternalAxiosRequestConfig) => {
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -45,9 +57,19 @@ api.interceptors.request.use(
 
         // Add CSRF token for state-changing requests
         if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
-            const csrfToken = getCookie('csrfToken');
+            let csrfToken = getCookie('csrfToken');
+
+            // If CSRF token is missing, try to fetch it
+            if (!csrfToken) {
+                console.warn('[Passenger API] CSRF token missing, fetching now...');
+                await ensureCsrfToken();
+                csrfToken = getCookie('csrfToken');
+            }
+
             if (csrfToken) {
                 config.headers['X-CSRF-Token'] = csrfToken;
+            } else {
+                console.error('[Passenger API] CSRF token still missing after fetch attempt');
             }
         }
 
@@ -62,8 +84,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response: AxiosResponse) => response,
     async (error) => {
-        if (error.response?.status === 401) {
-            const data = error.response?.data;
+        const status = error.response?.status;
+        const data = error.response?.data;
+
+        if (status === 401) {
             const isExpiredToken = data?.message?.toLowerCase().includes('expired') ||
                 data?.message?.toLowerCase().includes('jwt');
 
@@ -94,6 +118,30 @@ api.interceptors.response.use(
             localStorage.removeItem('passengerPNR');
             console.warn('⚠️ Session expired. Please login again.');
         }
+
+        // Handle 403 Forbidden (CSRF errors)
+        if (status === 403) {
+            console.error('[Passenger API] 403 Forbidden:', data);
+
+            // If CSRF token error, try to refetch and retry
+            const isCsrfError = data.message?.toLowerCase().includes('csrf');
+            if (isCsrfError && !error.config._retry) {
+                console.log('[Passenger API] CSRF error detected, attempting to refetch token and retry...');
+                error.config._retry = true;
+
+                try {
+                    await fetchCsrfToken();
+                    const newCsrfToken = getCookie('csrfToken');
+                    if (newCsrfToken) {
+                        error.config.headers['X-CSRF-Token'] = newCsrfToken;
+                        return api.request(error.config);
+                    }
+                } catch (retryError) {
+                    console.error('[Passenger API] CSRF token refetch failed:', retryError);
+                }
+            }
+        }
+
         return Promise.reject(error);
     }
 );

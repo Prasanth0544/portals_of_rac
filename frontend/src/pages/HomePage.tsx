@@ -115,15 +115,13 @@ function HomePage({
                 </div>
             </div>
 
-            {!journeyStarted && (
-                <button
-                    onClick={onStartJourney}
-                    disabled={loading}
-                    className="btn-start-journey"
-                >
-                    {loading ? 'Starting...' : '🚀 Start Journey'}
-                </button>
-            )}
+            <button
+                onClick={onStartJourney}
+                disabled={loading || journeyStarted}
+                className={`btn-start-journey ${journeyStarted ? 'journey-started' : ''}`}
+            >
+                {loading ? 'Starting...' : journeyStarted ? '✅ Journey Started' : '🚀 Start Journey'}
+            </button>
 
             <div className="main-actions-grid">
                 <div className="action-card-compact simulation-card">
