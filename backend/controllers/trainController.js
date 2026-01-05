@@ -2,6 +2,7 @@
 
 const DataService = require('../services/DataService');
 const StationEventService = require('../services/StationEventService');
+const RuntimeStateService = require('../services/RuntimeStateService');
 const db = require('../config/db');
 
 let trainState = null;
@@ -76,6 +77,56 @@ class TrainController {
 
       trainState = await DataService.loadTrainData(train, date, name);
 
+      // ═══════════════════════════════════════════════════════════
+      // RESTORE RUNTIME STATE FROM MONGODB (survives server restart)
+      // ═══════════════════════════════════════════════════════════
+      const savedState = await RuntimeStateService.loadState(train, date);
+      if (savedState) {
+        console.log(`   🔄 Restoring saved state: journeyStarted=${savedState.journeyStarted}, stationIdx=${savedState.currentStationIdx}`);
+        trainState.journeyStarted = savedState.journeyStarted;
+
+        // If we have a saved station index > 0, re-process stations to rebuild passenger states
+        // This is necessary because boarding/deboarding data is not persisted
+        if (savedState.currentStationIdx > 0 && savedState.journeyStarted) {
+          console.log(`   🔄 Rebuilding state to station ${savedState.currentStationIdx}...`);
+
+          // STEP 1: Pre-board ALL passengers whose fromIdx < savedStationIdx
+          // (They should already be on the train but their boarded flag is false after fresh load)
+          let preBoarded = 0;
+          trainState.coaches.forEach(coach => {
+            coach.berths.forEach(berth => {
+              berth.passengers.forEach(p => {
+                if (p.fromIdx < savedState.currentStationIdx && !p.boarded && !p.noShow) {
+                  p.boarded = true;
+                  preBoarded++;
+                }
+              });
+            });
+          });
+          trainState.racQueue.forEach(rac => {
+            if (rac.fromIdx < savedState.currentStationIdx && !rac.boarded && !rac.noShow) {
+              rac.boarded = true;
+              preBoarded++;
+            }
+          });
+          console.log(`      ✓ Pre-boarded ${preBoarded} passengers already on train`);
+
+          // STEP 2: Process each station to handle deboarding and calculate vacancies
+          for (let i = 0; i < savedState.currentStationIdx; i++) {
+            try {
+              await StationEventService.processStationArrival(trainState);
+              trainState.currentStationIdx++;
+            } catch (stationError) {
+              console.error(`      ❌ Error processing station ${i}:`, stationError.message);
+            }
+          }
+          console.log(`   ✅ State rebuilt - now at station ${trainState.currentStationIdx} (${trainState.getCurrentStation().name})`);
+          trainState.updateStats();
+        } else {
+          trainState.currentStationIdx = savedState.currentStationIdx;
+        }
+      }
+
       const responseData = {
         trainNo: trainState.trainNo,
         trainName: trainState.trainName,
@@ -112,7 +163,7 @@ class TrainController {
   /**
    * Start journey
    */
-  startJourney(req, res) {
+  async startJourney(req, res) {
     try {
       if (!trainState) {
         return res.status(400).json({
@@ -135,6 +186,14 @@ class TrainController {
         currentStation: trainState.getCurrentStation().name,
         currentStationIdx: trainState.currentStationIdx
       };
+
+      // Persist state to MongoDB
+      await RuntimeStateService.saveState({
+        trainNo: trainState.trainNo,
+        journeyDate: trainState.journeyDate,
+        journeyStarted: true,
+        currentStationIdx: trainState.currentStationIdx
+      });
 
       // Broadcast journey started
       if (wsManager) {
@@ -278,6 +337,14 @@ class TrainController {
         data: result
       });
 
+      // Persist updated state to MongoDB (after response to avoid blocking)
+      RuntimeStateService.saveState({
+        trainNo: trainState.trainNo,
+        journeyDate: trainState.journeyDate,
+        journeyStarted: trainState.journeyStarted,
+        currentStationIdx: trainState.currentStationIdx
+      });
+
     } catch (error) {
       console.error("❌ Error moving to next station:", error);
       res.status(500).json({
@@ -323,6 +390,9 @@ class TrainController {
         message: "Train reset to initial state",
         data: responseData
       });
+
+      // Clear persisted state on reset
+      await RuntimeStateService.clearState();
 
     } catch (error) {
       console.error("❌ Error resetting train:", error);
