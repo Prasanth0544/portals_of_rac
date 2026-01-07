@@ -32,7 +32,8 @@ Opens at: **http://localhost:3000**
 | **Reallocation** | Eligibility matrix and manual allocation controls |
 | **Segment Visualization** | Occupancy matrix by journey segment |
 | **Station-Wise Phases** | Dynamic reallocation phase controls |
-| **Current Station Matching** | HashMap-based RAC-to-berth matching with TTE approval |
+| **Station Matching** | Current station RAC-berth matching with TTE approval |
+| **State Persistence** | **IndexedDB Integration** auto-restores session state on refresh |
 
 ---
 
@@ -127,6 +128,13 @@ VITE_WS_URL=ws://localhost:5000
 4. **Navigate Stations** → Board passengers, process deboarding
 5. **Handle No-Shows** → Mark and generate vacant berths
 6. **Match RAC** → Send eligible reallocations to TTE
+
+### 💾 State Persistence
+The Admin Portal uses **IndexedDB** (`StateStore.ts`) to persist session state:
+- **Saves:** `currentPage`, `journeyStarted`
+- **Restores:** Automatically on page refresh
+- **Syncs:** Verifies with backend on load to ensure Single Source of Truth
+- **Expires:** Auto-clears after 24 hours
 
 ---
 

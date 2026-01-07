@@ -7,6 +7,7 @@
 // Mock dependencies BEFORE requiring controller
 jest.mock('../../services/DataService');
 jest.mock('../../services/StationEventService');
+jest.mock('../../services/RuntimeStateService');
 jest.mock('../../config/db');
 jest.mock('../../config/websocket', () => ({
     broadcastTrainUpdate: jest.fn(),
@@ -215,8 +216,8 @@ describe('trainController', () => {
             jest.clearAllMocks();
         });
 
-        it('should start journey successfully', () => {
-            trainController.startJourney(req, res);
+        it('should start journey successfully', async () => {
+            await trainController.startJourney(req, res);
 
             expect(mockTrainState.startJourney).toHaveBeenCalled();
             expect(res.json).toHaveBeenCalledWith(
@@ -229,10 +230,10 @@ describe('trainController', () => {
 
         // Test removed - can't uninitialize after initialization in singleton pattern
 
-        it('should return 400 if journey already started', () => {
+        it('should return 400 if journey already started', async () => {
             mockTrainState.journeyStarted = true;
 
-            trainController.startJourney(req, res);
+            await trainController.startJourney(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
             expect(res.json).toHaveBeenCalledWith(
@@ -242,12 +243,12 @@ describe('trainController', () => {
             );
         });
 
-        it('should handle errors gracefully', () => {
+        it('should handle errors gracefully', async () => {
             mockTrainState.startJourney.mockImplementation(() => {
                 throw new Error('Journey start failed');
             });
 
-            trainController.startJourney(req, res);
+            await trainController.startJourney(req, res);
 
             expect(res.status).toHaveBeenCalledWith(500);
         });
@@ -332,7 +333,7 @@ describe('trainController', () => {
             mockTrainState.journeyStarted = false;
             DataService.loadTrainData.mockResolvedValue(mockTrainState);
             await trainController.initializeTrain(req, res);
-            trainController.startJourney(req, res);
+            await trainController.startJourney(req, res);
             mockTrainState.journeyStarted = true;
             jest.clearAllMocks();
         });

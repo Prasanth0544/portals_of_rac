@@ -168,6 +168,11 @@ RAC passengers are processed in strict order:
 2. **TTE approves** the reallocation from the TTE Portal
 3. **Passenger confirms** the upgrade from their portal
 
+### Robust State Persistence
+The system uses a multi-layer persistence strategy:
+- **Backend:** **MongoDB** persists critical journey state (Current Station, Journey Started) to survive server restarts.
+- **Frontend:** **IndexedDB** caches session state to handle browser refreshes seamlessly.
+
 ---
 
 ## 🔌 API Overview

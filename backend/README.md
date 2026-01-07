@@ -34,6 +34,7 @@ API Docs: **http://localhost:5000/api-docs**
 | **Passenger Operations** | Search, booking status, no-show marking, boarding verification |
 | **RAC Reallocation** | Eligibility checking, TTE approval workflow, passenger notifications |
 | **Notifications** | Web Push (VAPID), Email (Nodemailer), In-app real-time via WebSocket |
+| **State Persistence** | **MongoDB-based runtime state** (survives server restarts) |
 | **Security** | CSRF protection, rate limiting, input sanitization |
 
 ---
@@ -169,6 +170,18 @@ backend/
 | POST | `/api/tte/undo` | Undo last action |
 
 Full documentation at `/api-docs` when server is running.
+
+---
+
+## 💾 State Persistence
+
+The system implements **Robust State Persistence** to ensure data integrity during server restarts or crashes.
+
+| Component | Persistence Mechanism |
+|-----------|-----------------------|
+| **Runtime State** | `RuntimeStateService.js` saves journey state (`journeyStarted`, `currentStationIdx`) to MongoDB collection `runtime_state`. |
+| **Logic** | - **Save:** On journey start & every station advance.<br>- **Restore:** On train initialization.<br>- **Rebuild:** Re-processes all stations and re-boards passengers to restore exact state. |
+| **Reset** | State is automatically cleared when the train is reset. |
 
 ---
 
