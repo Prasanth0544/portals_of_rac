@@ -1,9 +1,13 @@
 // frontend/src/pages/LoginPage.tsx
 import React, { useState, FormEvent, ChangeEvent } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import '../styles/pages/LoginPage.css';
 
-function LoginPage(): React.ReactElement {
+interface LoginPageProps {
+    onSwitchToSignUp?: () => void;
+}
+
+function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
     const [employeeId, setEmployeeId] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [error, setError] = useState<string>('');
@@ -15,7 +19,7 @@ function LoginPage(): React.ReactElement {
         setLoading(true);
 
         try {
-            const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/staff/login`, {
+            const response = await api.post('/auth/staff/login', {
                 employeeId,
                 password
             });
@@ -29,7 +33,7 @@ function LoginPage(): React.ReactElement {
                 window.location.reload();
             }
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Login failed. Please try again.');
+            setError(err.message || 'Login failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -80,6 +84,14 @@ function LoginPage(): React.ReactElement {
                 <div className="login-footer">
                     <p>Admin & TTE Portal</p>
                     <small>Test Credentials: ADMIN_01 / Prasanth@123</small>
+                    {onSwitchToSignUp && (
+                        <p style={{ marginTop: '12px' }}>
+                            Don't have an account?{' '}
+                            <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToSignUp(); }} style={{ color: '#667eea', fontWeight: 600 }}>
+                                Sign Up
+                            </a>
+                        </p>
+                    )}
                 </div>
             </div>
         </div>
@@ -87,4 +99,3 @@ function LoginPage(): React.ReactElement {
 }
 
 export default LoginPage;
-

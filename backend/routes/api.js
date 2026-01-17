@@ -49,6 +49,13 @@ router.post('/auth/refresh',
   (req, res) => authController.refresh(req, res)
 );
 
+// Staff Registration (Admin + TTE) ✅ NEW
+router.post('/auth/staff/register',
+  authLimiter, // Rate limit to prevent abuse
+  validationMiddleware.sanitizeBody,
+  (req, res) => authController.staffRegister(req, res)
+);
+
 // Mark passenger as NO_SHOW
 router.post('/tte/mark-no-show',
   authMiddleware,

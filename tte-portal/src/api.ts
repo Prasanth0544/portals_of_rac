@@ -285,6 +285,18 @@ export const tteAPI = {
         return response.data;
     },
 
+    // Staff registration (TTE)
+    register: async (employeeId: string, password: string, confirmPassword: string, name?: string): Promise<ApiResponse> => {
+        const response = await api.post('/auth/staff/register', {
+            employeeId,
+            password,
+            confirmPassword,
+            role: 'TTE',
+            name
+        });
+        return response.data;
+    },
+
     // ========== Boarding Verification ==========
     // Get boarding verification queue
     getBoardingQueue: async (): Promise<ApiResponse> => {

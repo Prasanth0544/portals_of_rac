@@ -7,6 +7,7 @@ import { saveAppState, loadAppState, clearAppState } from './services/StateStore
 import ToastContainer from './components/ToastContainer';
 import APIDocumentationLink from './components/APIDocumentationLink';
 import LoginPage from './pages/LoginPage';
+import SignUpPage from './pages/SignUpPage';
 import HomePage from './pages/HomePage';
 import RACQueuePage from './pages/RACQueuePage';
 import CoachesPage from './pages/CoachesPage';
@@ -82,6 +83,7 @@ function App(): React.ReactElement {
     const [autoInitAttempted, setAutoInitAttempted] = useState<boolean>(false);
     const [wsConnected, setWsConnected] = useState<boolean>(false);
     const [menuOpen, setMenuOpen] = useState<boolean>(false);
+    const [showSignUp, setShowSignUp] = useState<boolean>(false);
     const [stateRestored, setStateRestored] = useState<boolean>(false);
     const isInitialMount = useRef(true);
 
@@ -489,7 +491,10 @@ function App(): React.ReactElement {
     }
 
     if (!isAuthenticated) {
-        return <LoginPage />;
+        if (showSignUp) {
+            return <SignUpPage onSwitchToLogin={() => setShowSignUp(false)} />;
+        }
+        return <LoginPage onSwitchToSignUp={() => setShowSignUp(true)} />;
     }
 
     if (!trainData && loading) {

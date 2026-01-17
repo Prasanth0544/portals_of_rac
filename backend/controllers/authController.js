@@ -130,6 +130,127 @@ class AuthController {
     }
 
     /**
+     * Admin/TTE Registration
+     * POST /api/auth/staff/register
+     * Body: { employeeId, password, confirmPassword, role, name }
+     */
+    async staffRegister(req, res) {
+        try {
+            const { employeeId, password, confirmPassword, role, name } = req.body;
+
+            // Validate required fields
+            if (!employeeId || !password || !confirmPassword || !role) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Employee ID, password, confirm password, and role are required'
+                });
+            }
+
+            // Validate role
+            const validRoles = ['ADMIN', 'TTE'];
+            if (!validRoles.includes(role.toUpperCase())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Role must be either ADMIN or TTE'
+                });
+            }
+
+            const normalizedRole = role.toUpperCase();
+
+            // Validate Employee ID prefix matches role
+            // Admin IDs must start with ADMIN_, TTE IDs must start with TTE_
+            if (normalizedRole === 'ADMIN' && !employeeId.toUpperCase().startsWith('ADMIN_')) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Admin Employee ID must start with ADMIN_ (e.g., ADMIN_02)'
+                });
+            }
+            if (normalizedRole === 'TTE' && !employeeId.toUpperCase().startsWith('TTE_')) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'TTE Employee ID must start with TTE_ (e.g., TTE_02)'
+                });
+            }
+
+            // Validate passwords match
+            if (password !== confirmPassword) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Passwords do not match'
+                });
+            }
+
+            // Validate password strength (min 8 chars, 1 uppercase, 1 lowercase, 1 number)
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+            if (!passwordRegex.test(password)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 number'
+                });
+            }
+
+            // Check if employee ID already exists
+            const racDb = await db.getDb();
+            const tteUsersCollection = racDb.collection('tte_users');
+            const existingUser = await tteUsersCollection.findOne({
+                employeeId: { $regex: new RegExp(`^${employeeId}$`, 'i') }
+            });
+
+            if (existingUser) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Employee ID already exists. Please choose a different ID.'
+                });
+            }
+
+            // Hash password
+            const passwordHash = await bcrypt.hash(password, 12);
+
+            // Set permissions based on role
+            const permissions = normalizedRole === 'ADMIN'
+                ? ['ALL']
+                : ['MARK_BOARDING', 'MARK_NO_SHOW', 'VIEW_PASSENGERS'];
+
+            // Create user document
+            const newUser = {
+                employeeId: employeeId.toUpperCase(),
+                passwordHash,
+                email: null,
+                name: name || employeeId.toUpperCase(),
+                role: normalizedRole,
+                active: true,
+                trainAssigned: normalizedRole === 'TTE' ? null : null,
+                phone: null,
+                permissions,
+                createdAt: new Date(),
+                lastLogin: null
+            };
+
+            // Insert into database
+            await tteUsersCollection.insertOne(newUser);
+
+            console.log(`✅ New ${normalizedRole} registered: ${employeeId.toUpperCase()}`);
+
+            res.status(201).json({
+                success: true,
+                message: `${normalizedRole} account created successfully! You can now login.`,
+                user: {
+                    employeeId: newUser.employeeId,
+                    name: newUser.name,
+                    role: newUser.role
+                }
+            });
+
+        } catch (error) {
+            console.error('Staff registration error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error during registration'
+            });
+        }
+    }
+
+    /**
      * Passenger Login
      * POST /api/auth/passenger/login
      * Body: { irctcId, password } OR { email, password }

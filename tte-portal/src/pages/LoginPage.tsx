@@ -3,7 +3,11 @@ import React, { useState, FormEvent, ChangeEvent } from 'react';
 import { tteAPI } from '../api';
 import '../styles/pages/LoginPage.css';
 
-function LoginPage(): React.ReactElement {
+interface LoginPageProps {
+    onSwitchToSignUp?: () => void;
+}
+
+function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
     const [employeeId, setEmployeeId] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [error, setError] = useState<string>('');
@@ -85,6 +89,14 @@ function LoginPage(): React.ReactElement {
                 <div className="login-footer">
                     <p>TTE Portal</p>
                     <small>Test Credentials: TTE_01 / Prasanth@123</small>
+                    {onSwitchToSignUp && (
+                        <p style={{ marginTop: '12px' }}>
+                            Don't have an account?{' '}
+                            <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToSignUp(); }} style={{ color: '#3498db', fontWeight: 600 }}>
+                                Sign Up
+                            </a>
+                        </p>
+                    )}
                 </div>
             </div>
         </div>

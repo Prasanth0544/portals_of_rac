@@ -5,7 +5,7 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
 start = r'c:\Users\prasa\Desktop\RAC\zip_2'
-ignore = {'.git', 'node_modules', '__pycache__', 'dist', 'build', '.vscode', '.idea', 'coverage', '.DS_Store'}
+ignore = {'.git', 'node_modules', '__pycache__', 'learnings', 'env_files', '.github', 'dist', 'Architecture_Diagrams', 'build', '.vscode', '.idea', 'coverage', '.DS_Store'}
 
 def print_tree(dir_path, prefix=''):
     try:
