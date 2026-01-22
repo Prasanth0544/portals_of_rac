@@ -7,13 +7,21 @@
 const webPush = require('web-push');
 const PushSubscriptionService = require('./PushSubscriptionService');
 
-// VAPID keys (generated with: npx web-push generate-vapid-keys)
-const VAPID_PUBLIC_KEY = 'BDhughPM_m3I7tBaCjTi0HYcaFI8o9jSDLTLGizLXFF7iE16_i1wfxXuo36m4MF2GE2YkVeBSrOk-dauMETi98c';
-const VAPID_PRIVATE_KEY = 'KHEcVQEhhay_aPNDTMtQpXWuBjRjDPV06p-jog2veZk';
+// VAPID keys from environment variables (generate with: npx web-push generate-vapid-keys)
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:admin@indianrailways.com';
+
+// Validate VAPID keys are configured
+if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.error('❌ VAPID keys not configured! Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in .env');
+    console.error('   Generate new keys: npx web-push generate-vapid-keys');
+    throw new Error('VAPID keys required for Web Push Service');
+}
 
 // Configure VAPID
 webPush.setVapidDetails(
-    'mailto:admin@indianrailways.com',
+    VAPID_EMAIL,
     VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY
 );

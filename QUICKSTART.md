@@ -138,8 +138,8 @@ JWT_EXPIRES_IN=24h
 # WEB PUSH VAPID KEYS (REQUIRED for push notifications)
 # Generate: npx web-push generate-vapid-keys
 # ═══════════════════════════════════════════════════════
-VAPID_PUBLIC_KEY=BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U
-VAPID_PRIVATE_KEY=UUxI4O8-FbRouAf7-7PVTv1qCIqAThH7t6lFQCRVnDY
+VAPID_PUBLIC_KEY=YOUR_VAPID_PUBLIC_KEY_HERE
+VAPID_PRIVATE_KEY=YOUR_VAPID_PRIVATE_KEY_HERE
 VAPID_EMAIL=mailto:admin@example.com
 
 # ═══════════════════════════════════════════════════════

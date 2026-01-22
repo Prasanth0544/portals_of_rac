@@ -208,9 +208,9 @@ The **only required** `.env` file is `backend/.env`. See [QUICKSTART.md](QUICKST
 **Essential variables:**
 ```env
 MONGODB_URI=mongodb://localhost:27017
-JWT_SECRET=your-secret-key
-VAPID_PUBLIC_KEY=your-vapid-public-key
-VAPID_PRIVATE_KEY=your-vapid-private-key
+JWT_SECRET=<generate-random-secret-here>
+VAPID_PUBLIC_KEY=<your-vapid-public-key>
+VAPID_PRIVATE_KEY=<your-vapid-private-key>
 ```
 
 ---

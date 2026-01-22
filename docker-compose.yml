@@ -2,7 +2,7 @@
 # RAC Reallocation System - Docker Compose
 # Development Configuration
 # ============================================
-# 
+#
 # Usage:
 #   docker-compose up -d        # Start all services
 #   docker-compose logs -f      # View logs
@@ -30,7 +30,7 @@ services:
     networks:
       - rac-network
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,21 +58,23 @@ services:
       - PASSENGERS_COLLECTION=17225_passengers
       - TRAIN_DETAILS_COLLECTION=Trains_Details
       - DEFAULT_TRAIN_NO=17225
-      - JWT_SECRET=rac-docker-dev-secret-change-in-prod
+      # JWT Secret - NEVER use default in production! Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      - JWT_SECRET=${JWT_SECRET:-GENERATE_STRONG_SECRET_FOR_PRODUCTION}
       - JWT_EXPIRES_IN=24h
       - LOG_LEVEL=INFO
       - ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175
-      # VAPID keys for push notifications (generate your own for production)
-      - VAPID_PUBLIC_KEY=BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U
-      - VAPID_PRIVATE_KEY=UUxI4O8-FbRouAf7-7PVTv1qCIqAThH7t6lFQCRVnDY
-      - VAPID_EMAIL=mailto:admin@example.com
+      # VAPID keys for push notifications (generate your own: npx web-push generate-vapid-keys)
+      # WARNING: Never commit real keys! Use .env file or Docker secrets in production
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-YOUR_VAPID_PUBLIC_KEY_HERE}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-YOUR_VAPID_PRIVATE_KEY_HERE}
+      - VAPID_EMAIL=${VAPID_EMAIL:-mailto:admin@example.com}
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
       - rac-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -94,7 +96,7 @@ services:
     networks:
       - rac-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -115,7 +117,7 @@ services:
     networks:
       - rac-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -136,7 +138,7 @@ services:
     networks:
       - rac-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/" ]
       interval: 30s
       timeout: 10s
       retries: 3
