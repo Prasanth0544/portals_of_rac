@@ -1042,25 +1042,32 @@ class PassengerController {
     try {
       const { irctcId, subscription } = req.body;
 
+      console.log('🔔 Push subscribe request received:', { irctcId: irctcId ? '✓' : '✗', subscription: subscription ? '✓' : '✗' });
+
       if (!irctcId || !subscription) {
+        console.error('❌ Missing required fields:', { irctcId, hasSubscription: !!subscription });
         return res.status(400).json({
           success: false,
-          message: 'IRCTC ID and subscription are required'
+          message: 'IRCTC ID and subscription are required',
+          received: { irctcId: !!irctcId, subscription: !!subscription }
         });
       }
 
       const PushSubscriptionService = require('../services/PushSubscriptionService');
       await PushSubscriptionService.addSubscription(irctcId, subscription, req.headers['user-agent']);
 
+      console.log(`✅ Passenger ${irctcId} subscribed to push notifications`);
       res.json({
         success: true,
-        message: 'Subscribed to push notifications (stored in MongoDB)'
+        message: 'Subscribed to push notifications (stored in MongoDB)',
+        irctcId
       });
     } catch (error) {
       console.error('❌ Error subscribing to push:', error);
       res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message,
+        details: error.toString()
       });
     }
   }

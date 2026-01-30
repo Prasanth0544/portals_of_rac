@@ -637,7 +637,11 @@ class TrainState {
       passenger = racPassenger;
     }
 
-    if (!passenger.boarded) {
+    // Check if passenger should be on train (either boarded OR scheduled to have boarded by now)
+    const shouldBeOnTrain = passenger.boarded ||
+      (passenger.fromIdx !== undefined && passenger.fromIdx <= this.currentStationIdx && passenger.toIdx > this.currentStationIdx);
+
+    if (!shouldBeOnTrain) {
       throw new Error(`Passenger ${pnr} is not boarded`);
     }
 

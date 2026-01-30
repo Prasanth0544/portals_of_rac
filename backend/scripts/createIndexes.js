@@ -109,11 +109,12 @@ async function createIndexes() {
 
         const pushSubsCollection = racDb.collection('push_subscriptions');
 
+        // Compound unique index on type, userId, and endpoint (matches upsert query)
         await pushSubsCollection.createIndex(
-            { identifier: 1 },
-            { unique: true, name: 'idx_push_subscriptions_identifier' }
+            { type: 1, userId: 1, 'subscription.endpoint': 1 },
+            { unique: true, name: 'idx_push_subscriptions_compound' }
         );
-        console.log('   ✅ Unique index on identifier\n');
+        console.log('   ✅ Compound unique index on type + userId + endpoint\n');
 
         // ==================== Upgrade Notifications Collection ====================
         console.log('📁 Creating indexes on upgrade_notifications collection...');

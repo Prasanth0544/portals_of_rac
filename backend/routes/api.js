@@ -830,5 +830,229 @@ router.get('/push/vapid-key', (req, res) => {
   });
 });
 
+// Check current subscription count
+router.get('/push/subscriptions-count', async (req, res) => {
+  try {
+    const PushSubscriptionService = require('../services/PushSubscriptionService');
+    const count = await PushSubscriptionService.getTotalCount();
+    
+    const adminSubs = await PushSubscriptionService.getAllAdminSubscriptions();
+    const tteSubs = await PushSubscriptionService.getAllTTESubscriptions();
+    const collection = await PushSubscriptionService.getCollection();
+    const passengerSubs = await collection.find({ type: 'passenger' }).toArray();
+
+    res.json({
+      success: true,
+      total: count,
+      breakdown: {
+        admin: adminSubs.length,
+        passenger: passengerSubs.length,
+        tte: tteSubs.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// TEST ENDPOINT: Send test push notification to all subscribed clients
+router.post('/push/test', async (req, res) => {
+  try {
+    const { title = 'Test Notification', body = 'This is a test', tag = 'test-notification' } = req.body;
+
+    console.log('🔔 Sending test push notification to all subscribers...');
+
+    const PushSubscriptionService = require('../services/PushSubscriptionService');
+    
+    // Get all subscriptions
+    const adminSubs = await PushSubscriptionService.getAllAdminSubscriptions();
+    const tteSubs = await PushSubscriptionService.getAllTTESubscriptions();
+    
+    // Get all passenger subscriptions (need to query collection directly)
+    const collection = await PushSubscriptionService.getCollection();
+    const passengerSubs = await collection.find({ type: 'passenger' }).toArray();
+
+    const allSubscriptions = [...adminSubs, ...passengerSubs, ...tteSubs];
+
+    if (allSubscriptions.length === 0) {
+      return res.json({ 
+        success: false, 
+        message: 'No subscriptions found',
+        details: { admin: 0, passenger: 0, tte: 0 }
+      });
+    }
+
+    const payload = {
+      title,
+      body,
+      tag,
+      url: 'http://localhost:3000',
+      data: {
+        type: 'TEST_NOTIFICATION',
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const sub of allSubscriptions) {
+      try {
+        await WebPushService.sendPush(sub.subscription, payload);
+        successCount++;
+      } catch (error) {
+        console.error('❌ Push to subscription failed:', error.message);
+        failureCount++;
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Test push sent to ${successCount} subscribers`,
+      details: {
+        total: allSubscriptions.length,
+        sent: successCount,
+        failed: failureCount,
+        subscriptions: {
+          admin: adminSubs.length,
+          passenger: passengerSubs.length,
+          tte: tteSubs.length
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Test push error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      error: error.toString()
+    });
+  }
+});
+
+// TEST ENDPOINT: Send test email
+router.post('/test-email', async (req, res) => {
+  try {
+    const { recipientEmail, testType } = req.body;
+    
+    if (!recipientEmail) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'recipientEmail is required' 
+      });
+    }
+
+    const notificationService = require('../services/NotificationService');
+
+    let mailOptions = {};
+
+    if (testType === 'upgrade') {
+      // Test upgrade notification
+      mailOptions = {
+        from: `"Indian Railways RAC System" <${process.env.EMAIL_USER}>`,
+        to: recipientEmail,
+        subject: '🎉 [TEST] RAC Ticket Confirmed - Indian Railways',
+        html: `
+          <html><body>
+            <h1>✅ TEST EMAIL - Upgrade Notification</h1>
+            <p>If you received this email, the email system is working correctly!</p>
+            <p><strong>From:</strong> ${process.env.EMAIL_USER}</p>
+            <p><strong>To:</strong> ${recipientEmail}</p>
+            <p><strong>Type:</strong> Upgrade Notification Test</p>
+            <hr/>
+            <p>This is an automated test message from Indian Railways RAC Reallocation System</p>
+          </body></html>
+        `
+      };
+    } else if (testType === 'noshow') {
+      // Test NO-SHOW notification
+      mailOptions = {
+        from: `"Indian Railways Alert" <${process.env.EMAIL_USER}>`,
+        to: recipientEmail,
+        subject: '⚠️ [TEST] NO-SHOW Alert - Immediate Action Required',
+        html: `
+          <html><body>
+            <h1>✅ TEST EMAIL - NO-SHOW Notification</h1>
+            <p>If you received this email, the email system is working correctly!</p>
+            <p><strong>From:</strong> ${process.env.EMAIL_USER}</p>
+            <p><strong>To:</strong> ${recipientEmail}</p>
+            <p><strong>Type:</strong> NO-SHOW Notification Test</p>
+            <hr/>
+            <p>This is an automated test message from Indian Railways RAC Reallocation System</p>
+          </body></html>
+        `
+      };
+    } else {
+      // Generic test
+      mailOptions = {
+        from: `"Indian Railways" <${process.env.EMAIL_USER}>`,
+        to: recipientEmail,
+        subject: '✅ [TEST] Email System Working',
+        html: `
+          <html><body style="font-family: Arial; margin: 20px;">
+            <div style="background: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px; padding: 20px;">
+              <h1 style="color: #0ea5e9; margin-top: 0;">✅ TEST EMAIL SUCCESS</h1>
+              <p>If you're reading this, the email notification system is working!</p>
+              
+              <div style="background: white; border: 1px solid #e0e0e0; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <p><strong>📧 Email Configuration:</strong></p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                  <li><strong>From (Sender):</strong> ${process.env.EMAIL_USER}</li>
+                  <li><strong>To (Recipient):</strong> ${recipientEmail}</li>
+                  <li><strong>Service:</strong> Gmail SMTP</li>
+                  <li><strong>Status:</strong> ✅ ACTIVE</li>
+                </ul>
+              </div>
+
+              <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 15px 0;">
+                <p><strong>🎯 Next Steps:</strong></p>
+                <ol style="margin: 10px 0; padding-left: 20px;">
+                  <li>Check your email inbox for this message</li>
+                  <li>If received ✅ → Email notifications are working</li>
+                  <li>If NOT received ❌ → Check spam folder or email configuration</li>
+                </ol>
+              </div>
+
+              <div style="background: #fef3c7; border-left: 4px solid #eab308; padding: 15px; margin: 15px 0;">
+                <p><strong>⚠️ Notes:</strong></p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                  <li>Check spam/promotions folder if not in inbox</li>
+                  <li>Ensure Gmail "Less Secure Apps" is enabled or using App Password</li>
+                  <li>Real notifications will have passenger details and booking info</li>
+                </ul>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;"/>
+              <p style="color: #666; font-size: 12px; margin-bottom: 0;">
+                This is an automated test message from Indian Railways RAC Reallocation System.<br/>
+                Please do not reply to this email.
+              </p>
+            </div>
+          </body></html>
+        `
+      };
+    }
+
+    await notificationService.emailTransporter.sendMail(mailOptions);
+    
+    res.json({ 
+      success: true, 
+      message: `Test email sent from ${process.env.EMAIL_USER} to ${recipientEmail}`,
+      details: {
+        from: process.env.EMAIL_USER,
+        to: recipientEmail,
+        type: testType || 'generic'
+      }
+    });
+  } catch (error) {
+    console.error('❌ Test email error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      error: error.toString()
+    });
+  }
+});
 
 module.exports = router;

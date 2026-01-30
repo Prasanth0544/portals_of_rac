@@ -1,19 +1,19 @@
 // Service Worker for Passenger Portal
-// Handles push notifications even when browser is closed
+// Handles push notifications for RAC upgrades and alerts
 
 self.addEventListener('install', (event) => {
-    console.log('📦 Service Worker installing...');
+    console.log('📦 Passenger Service Worker installing...');
     self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-    console.log('✅ Service Worker activated');
+    console.log('✅ Passenger Service Worker activated');
     event.waitUntil(clients.claim());
 });
 
-// Listen for push events from server
+// Listen for push events
 self.addEventListener('push', (event) => {
-    console.log('📨 Push notification received');
+    console.log('📨 Passenger Push notification received');
 
     if (!event.data) {
         console.log('❌ No data in push event');
@@ -21,34 +21,48 @@ self.addEventListener('push', (event) => {
     }
 
     const data = event.data.json();
-    console.log('📨 Push data:', data);
+    console.log('📨 Passenger Push data:', data);
 
     const options = {
         body: data.body || 'You have a new notification',
-        icon: '/logo192.png',
-        badge: '/badge72.png',
-        // Use unique tag with timestamp so repeated notifications show up
-        tag: data.tag ? `${data.tag}-${Date.now()}` : `notification-${Date.now()}`,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: data.tag || 'passenger-notification',
         requireInteraction: true,
-        renotify: true, // This ensures notification shows even if same tag
         data: {
             url: data.url || 'http://localhost:5175',
-            pnr: data.pnr
+            type: data.data?.type || 'GENERAL',
+            ...data.data
         },
-        actions: data.actions || [
+        actions: [
             { action: 'view', title: 'View' },
             { action: 'dismiss', title: 'Dismiss' }
-        ]
+        ],
+        vibrate: [200, 100, 200]
     };
 
+    // Show notification
     event.waitUntil(
-        self.registration.showNotification(data.title || 'RAC Notification', options)
+        self.registration.showNotification(data.title || 'Notification', options)
+            .then(() => {
+                // Broadcast refresh message to all Passenger clients
+                if (data.data?.type === 'DUAL_APPROVAL_UPGRADE_OFFER' || data.data?.type === 'NO_SHOW_MARKED') {
+                    return self.clients.matchAll({ type: 'window' }).then((clients) => {
+                        clients.forEach((client) => {
+                            client.postMessage({
+                                type: 'REFRESH_PAGE',
+                                data: data.data
+                            });
+                        });
+                    });
+                }
+            })
     );
 });
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
-    console.log('🖱️ Notification clicked:', event.action);
+    console.log('🖱️ Passenger Notification clicked:', event.action);
 
     event.notification.close();
 
@@ -61,22 +75,18 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then((clientList) => {
-                // Check if a window is already open
+                // Check if Passenger portal window is already open
                 for (const client of clientList) {
-                    if (client.url === urlToOpen && 'focus' in client) {
+                    if (client.url.includes('5175') && 'focus' in client) {
+                        // Send refresh message before focusing
+                        client.postMessage({ type: 'REFRESH_PAGE' });
                         return client.focus();
                     }
                 }
-                // Open new window if none exists
+                // Open Passenger portal if not open
                 if (clients.openWindow) {
-                    return clients.openWindow(urlToOpen);
+                    return clients.openWindow(urlToOpen || 'http://localhost:5175');
                 }
             })
     );
-});
-
-// Handle push subscription changes
-self.addEventListener('pushsubscriptionchange', (event) => {
-    console.log('🔄 Push subscription changed');
-    // Could re-subscribe here if needed
 });

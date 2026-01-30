@@ -18,6 +18,7 @@ import PNRSearchPage from './pages/PNRSearchPage';
 import JourneyVisualizationPage from './pages/JourneyVisualizationPage';
 import UpgradeOffersPage from './pages/UpgradeOffersPage';
 import NotificationBell from './components/NotificationBell';
+import { initializePushNotifications } from './services/pushNotificationService';
 import './App.css';
 import './UserMenu.css';
 
@@ -178,6 +179,8 @@ function App(): React.ReactElement {
         if (token && userData) {
             setAuthenticated(true);
             setUser(JSON.parse(userData));
+            // Initialize push notifications for passenger portal
+            initializePushNotifications();
         }
     }, []);
 

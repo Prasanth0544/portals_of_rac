@@ -2,18 +2,23 @@
 /**
  * Push Subscription Service
  * Manages browser push notification subscriptions
- * Uses in-memory storage (subscriptions lost on restart, but simplifies setup)
+ * Uses MongoDB for persistent storage
  */
+
+const db = require('../config/db');
 
 class PushSubscriptionService {
     constructor() {
-        // Store subscriptions by IRCTC ID (passengers)
-        this.subscriptions = new Map(); // irctcId -> [subscription objects]
+        console.log('📱 PushSubscriptionService initialized (MongoDB persistent)');
+    }
 
-        // Store TTE subscriptions by TTE ID
-        this.tteSubscriptions = new Map(); // tteId -> [subscription objects]
-
-        console.log('📱 PushSubscriptionService initialized (in-memory)');
+    /**
+     * Get the push subscriptions collection
+     * Uses 'rac' database (same as auth)
+     */
+    async getCollection() {
+        const racDb = await db.getDb();
+        return racDb.collection('push_subscriptions');
     }
 
     /**
@@ -28,107 +33,160 @@ class PushSubscriptionService {
             throw new Error('Invalid subscription object');
         }
 
-        // Initialize array if doesn't exist
-        if (!this.subscriptions.has(irctcId)) {
-            this.subscriptions.set(irctcId, []);
+        try {
+            const collection = await this.getCollection();
+
+            // Check if subscription already exists (same endpoint)
+            const query = {
+                type: 'passenger',
+                userId: irctcId,
+                'subscription.endpoint': subscription.endpoint
+            };
+
+            const update = {
+                $set: {
+                    type: 'passenger',
+                    userId: irctcId,
+                    subscription: subscription,
+                    userAgent: userAgent,
+                    updatedAt: new Date()
+                },
+                $setOnInsert: {
+                    createdAt: new Date()
+                }
+            };
+
+            await collection.updateOne(query, update, { upsert: true });
+            console.log(`✅ Added/Updated push subscription for ${irctcId}`);
+            return true;
+        } catch (error) {
+            console.error(`❌ Failed to add subscription: ${error.message}`);
+            throw error;
         }
-
-        // Check if subscription already exists (same endpoint)
-        const existing = this.subscriptions.get(irctcId);
-        const isDuplicate = existing.some(sub => sub.endpoint === subscription.endpoint);
-
-        if (!isDuplicate) {
-            this.subscriptions.get(irctcId).push(subscription);
-            console.log(`✅ Added push subscription for ${irctcId}`);
-        } else {
-            console.log(`ℹ️  Subscription already exists for ${irctcId}`);
-        }
-
-        return true;
     }
 
     /**
      * Get all subscriptions for a passenger
      */
     async getSubscriptions(irctcId) {
-        return this.subscriptions.get(irctcId) || [];
+        try {
+            const collection = await this.getCollection();
+            const docs = await collection.find({
+                type: 'passenger',
+                userId: irctcId
+            }).toArray();
+
+            return docs.map(doc => doc.subscription);
+        } catch (error) {
+            console.error(`❌ Failed to get subscriptions: ${error.message}`);
+            return [];
+        }
     }
 
     /**
      * Remove a specific subscription
      */
     async removeSubscription(irctcId, endpoint) {
-        const subs = this.subscriptions.get(irctcId);
+        try {
+            const collection = await this.getCollection();
+            const result = await collection.deleteOne({
+                type: 'passenger',
+                userId: irctcId,
+                'subscription.endpoint': endpoint
+            });
 
-        if (!subs) {
+            if (result.deletedCount > 0) {
+                console.log(`🗑️  Removed subscription for ${irctcId}`);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error(`❌ Failed to remove subscription: ${error.message}`);
             return false;
         }
-
-        const index = subs.findIndex(sub => sub.endpoint === endpoint);
-
-        if (index !== -1) {
-            subs.splice(index, 1);
-            console.log(`🗑️  Removed subscription for ${irctcId}`);
-
-            // Clean up empty arrays
-            if (subs.length === 0) {
-                this.subscriptions.delete(irctcId);
-            }
-
-            return true;
-        }
-
-        return false;
     }
 
     /**
      * Delete a subscription by endpoint (for invalid subscriptions)
      */
     async deleteSubscription(endpoint) {
-        for (const [irctcId, subs] of this.subscriptions.entries()) {
-            const index = subs.findIndex(sub => sub.endpoint === endpoint);
-            if (index !== -1) {
-                subs.splice(index, 1);
-                if (subs.length === 0) {
-                    this.subscriptions.delete(irctcId);
-                }
+        try {
+            const collection = await this.getCollection();
+            const result = await collection.deleteOne({
+                'subscription.endpoint': endpoint
+            });
+
+            if (result.deletedCount > 0) {
                 console.log(`🗑️  Deleted invalid subscription`);
                 return true;
             }
+            return false;
+        } catch (error) {
+            console.error(`❌ Failed to delete subscription: ${error.message}`);
+            return false;
         }
-        return false;
     }
 
     /**
      * Remove all subscriptions for a passenger
      */
     async clearSubscriptions(irctcId) {
-        const deleted = this.subscriptions.delete(irctcId);
-        if (deleted) {
-            console.log(`🗑️  Cleared all subscriptions for ${irctcId}`);
+        try {
+            const collection = await this.getCollection();
+            const result = await collection.deleteMany({
+                type: 'passenger',
+                userId: irctcId
+            });
+
+            if (result.deletedCount > 0) {
+                console.log(`🗑️  Cleared all subscriptions for ${irctcId}`);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error(`❌ Failed to clear subscriptions: ${error.message}`);
+            return false;
         }
-        return deleted;
     }
 
     /**
      * Get total subscription count
      */
-    getTotalCount() {
-        let total = 0;
-        for (const subs of this.subscriptions.values()) {
-            total += subs.length;
+    async getTotalCount() {
+        try {
+            const collection = await this.getCollection();
+            return await collection.countDocuments({ type: 'passenger' });
+        } catch (error) {
+            return 0;
         }
-        return total;
     }
 
     /**
      * Get statistics
      */
     async getStats() {
-        return {
-            totalUsers: this.subscriptions.size,
-            totalSubscriptions: this.getTotalCount()
-        };
+        try {
+            const collection = await this.getCollection();
+
+            const totalPassengers = await collection.distinct('userId', { type: 'passenger' });
+            const totalPassengerSubs = await collection.countDocuments({ type: 'passenger' });
+
+            const totalTTEs = await collection.distinct('userId', { type: 'tte' });
+            const totalTTESubs = await collection.countDocuments({ type: 'tte' });
+
+            return {
+                passengers: {
+                    users: totalPassengers.length,
+                    subscriptions: totalPassengerSubs
+                },
+                ttes: {
+                    users: totalTTEs.length,
+                    subscriptions: totalTTESubs
+                }
+            };
+        } catch (error) {
+            return { error: error.message };
+        }
     }
 
     // ============ TTE SUBSCRIPTION METHODS ============
@@ -145,74 +203,112 @@ class PushSubscriptionService {
             throw new Error('Invalid subscription object');
         }
 
-        if (!this.tteSubscriptions.has(tteId)) {
-            this.tteSubscriptions.set(tteId, []);
+        try {
+            const collection = await this.getCollection();
+
+            const query = {
+                type: 'tte',
+                userId: tteId,
+                'subscription.endpoint': subscription.endpoint
+            };
+
+            const update = {
+                $set: {
+                    type: 'tte',
+                    userId: tteId,
+                    subscription: subscription,
+                    userAgent: userAgent,
+                    updatedAt: new Date()
+                },
+                $setOnInsert: {
+                    createdAt: new Date()
+                }
+            };
+
+            await collection.updateOne(query, update, { upsert: true });
+            console.log(`✅ Added/Updated TTE push subscription for ${tteId}`);
+            return true;
+        } catch (error) {
+            console.error(`❌ Failed to add TTE subscription: ${error.message}`);
+            throw error;
         }
-
-        const existing = this.tteSubscriptions.get(tteId);
-        const isDuplicate = existing.some(sub => sub.endpoint === subscription.endpoint);
-
-        if (!isDuplicate) {
-            this.tteSubscriptions.get(tteId).push(subscription);
-            console.log(`✅ Added TTE push subscription for ${tteId}`);
-        } else {
-            console.log(`ℹ️  TTE subscription already exists for ${tteId}`);
-        }
-
-        return true;
     }
 
     /**
      * Get all subscriptions for a TTE
      */
     async getTTESubscriptions(tteId) {
-        return this.tteSubscriptions.get(tteId) || [];
+        try {
+            const collection = await this.getCollection();
+            const docs = await collection.find({
+                type: 'tte',
+                userId: tteId
+            }).toArray();
+
+            return docs.map(doc => doc.subscription);
+        } catch (error) {
+            console.error(`❌ Failed to get TTE subscriptions: ${error.message}`);
+            return [];
+        }
     }
 
     /**
      * Get ALL TTE subscriptions (for broadcasting to all TTEs)
      */
     async getAllTTESubscriptions() {
-        const allSubs = [];
-        for (const subs of this.tteSubscriptions.values()) {
-            allSubs.push(...subs);
+        try {
+            const collection = await this.getCollection();
+            const docs = await collection.find({ type: 'tte' }).toArray();
+            return docs.map(doc => doc.subscription);
+        } catch (error) {
+            console.error(`❌ Failed to get all TTE subscriptions: ${error.message}`);
+            return [];
         }
-        return allSubs;
     }
 
     /**
      * Remove a TTE subscription
      */
     async removeTTESubscription(tteId, endpoint) {
-        const subs = this.tteSubscriptions.get(tteId);
+        try {
+            const collection = await this.getCollection();
+            const result = await collection.deleteOne({
+                type: 'tte',
+                userId: tteId,
+                'subscription.endpoint': endpoint
+            });
 
-        if (!subs) return false;
-
-        const index = subs.findIndex(sub => sub.endpoint === endpoint);
-
-        if (index !== -1) {
-            subs.splice(index, 1);
-            console.log(`🗑️  Removed TTE subscription for ${tteId}`);
-
-            if (subs.length === 0) {
-                this.tteSubscriptions.delete(tteId);
+            if (result.deletedCount > 0) {
+                console.log(`🗑️  Removed TTE subscription for ${tteId}`);
+                return true;
             }
-
-            return true;
+            return false;
+        } catch (error) {
+            console.error(`❌ Failed to remove TTE subscription: ${error.message}`);
+            return false;
         }
-
-        return false;
     }
 
     /**
      * Clear all TTE subscriptions
      */
     async clearTTESubscriptions(tteId) {
-        const deleted = this.tteSubscriptions.delete(tteId);
-        if (deleted) {
-            console.log(`🗑️  Cleared all TTE subscriptions for ${tteId}`);
+        try {
+            const collection = await this.getCollection();
+            const result = await collection.deleteMany({
+                type: 'tte',
+                userId: tteId
+            });
+
+            if (result.deletedCount > 0) {
+                console.log(`🗑️  Cleared all TTE subscriptions for ${tteId}`);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error(`❌ Failed to clear TTE subscriptions: ${error.message}`);
+            return false;
         }
-        return deleted;
     }
 
     // ============ ADMIN SUBSCRIPTION METHODS ============
@@ -229,62 +325,73 @@ class PushSubscriptionService {
             throw new Error('Invalid subscription object');
         }
 
-        if (!this.adminSubscriptions) {
-            this.adminSubscriptions = new Map();
+        try {
+            const collection = await this.getCollection();
+
+            const query = {
+                type: 'admin',
+                userId: adminId,
+                'subscription.endpoint': subscription.endpoint
+            };
+
+            const update = {
+                $set: {
+                    type: 'admin',
+                    userId: adminId,
+                    subscription: subscription,
+                    userAgent: userAgent,
+                    updatedAt: new Date()
+                },
+                $setOnInsert: {
+                    createdAt: new Date()
+                }
+            };
+
+            await collection.updateOne(query, update, { upsert: true });
+            console.log(`✅ Added/Updated Admin push subscription for ${adminId}`);
+            return true;
+        } catch (error) {
+            console.error(`❌ Failed to add Admin subscription: ${error.message}`);
+            throw error;
         }
-
-        if (!this.adminSubscriptions.has(adminId)) {
-            this.adminSubscriptions.set(adminId, []);
-        }
-
-        const existing = this.adminSubscriptions.get(adminId);
-        const isDuplicate = existing.some(sub => sub.endpoint === subscription.endpoint);
-
-        if (!isDuplicate) {
-            this.adminSubscriptions.get(adminId).push(subscription);
-            console.log(`✅ Added Admin push subscription for ${adminId}`);
-        } else {
-            console.log(`ℹ️  Admin subscription already exists for ${adminId}`);
-        }
-
-        return true;
     }
 
     /**
      * Get ALL Admin subscriptions (for broadcasting to all Admins)
      */
     async getAllAdminSubscriptions() {
-        if (!this.adminSubscriptions) {
+        try {
+            const collection = await this.getCollection();
+            const docs = await collection.find({ type: 'admin' }).toArray();
+            return docs.map(doc => doc.subscription);
+        } catch (error) {
+            console.error(`❌ Failed to get all Admin subscriptions: ${error.message}`);
             return [];
         }
-        const allSubs = [];
-        for (const subs of this.adminSubscriptions.values()) {
-            allSubs.push(...subs);
-        }
-        return allSubs;
     }
 
     /**
      * Remove an Admin subscription
      */
     async removeAdminSubscription(adminId, endpoint) {
-        if (!this.adminSubscriptions) return false;
+        try {
+            const collection = await this.getCollection();
+            const result = await collection.deleteOne({
+                type: 'admin',
+                userId: adminId,
+                'subscription.endpoint': endpoint
+            });
 
-        const subs = this.adminSubscriptions.get(adminId);
-        if (!subs) return false;
-
-        const index = subs.findIndex(sub => sub.endpoint === endpoint);
-        if (index !== -1) {
-            subs.splice(index, 1);
-            console.log(`🗑️  Removed Admin subscription for ${adminId}`);
-            if (subs.length === 0) {
-                this.adminSubscriptions.delete(adminId);
+            if (result.deletedCount > 0) {
+                console.log(`🗑️  Removed Admin subscription for ${adminId}`);
+                return true;
             }
-            return true;
+            return false;
+        } catch (error) {
+            console.error(`❌ Failed to remove Admin subscription: ${error.message}`);
+            return false;
         }
-        return false;
     }
 }
 
 module.exports = new PushSubscriptionService();
-

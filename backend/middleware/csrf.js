@@ -29,8 +29,12 @@ const csrfProtection = (req, res, next) => {
         '/api/train/start-journey',
         '/api/train/next-station',
         '/api/train/reset',
+        '/api/admin/push-subscribe',
         '/api/tte/push-subscribe',
         '/api/passenger/push-subscribe',
+        '/api/test-email',
+        '/api/push/test',
+        '/api/passenger/revert-no-show',  // Allow passengers to revert no-show
         '/api/push-subscribe'
     ];
 
