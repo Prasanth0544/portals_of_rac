@@ -9,7 +9,7 @@ const db = require('../config/db');
  */
 class PassengerService {
     /**
-     * Accept upgrade offer
+     * Accept upgrade offer - PERFORMS ACTUAL UPGRADE
      * @param {string} pnr - Passenger PNR
      * @param {string} notificationId - Notification ID
      * @param {TrainState} trainState - Current train state
@@ -17,6 +17,8 @@ class PassengerService {
      * @throws {Error} If notification not found or invalid status
      */
     async acceptUpgrade(pnr, notificationId, trainState) {
+        const AllocationService = require('./reallocation/AllocationService');
+
         // Get notification
         const allNotifications = await UpgradeNotificationService.getAllNotifications(pnr);
         const notification = allNotifications.find(n => n.id === notificationId);
@@ -35,8 +37,45 @@ class PassengerService {
             throw new Error('Notification has expired');
         }
 
-        // Accept the notification
+        // ✅ PERFORM ACTUAL UPGRADE using AllocationService
+        // Extract coach and berth from offeredBerth (format: "S1-42" or "A1-15")
+        const berthParts = notification.offeredBerth.split('-');
+        const coach = berthParts[0];
+        const berth = parseInt(berthParts[1]);
+
+        console.log(`🎫 Passenger ${pnr} accepting upgrade: ${notification.currentBerth} → ${notification.offeredBerth}`);
+
+        const allocationResult = await AllocationService.applyReallocation(trainState, [{
+            pnr: pnr,
+            coach: coach,
+            berth: berth
+        }]);
+
+        if (!allocationResult.success) {
+            throw new Error(allocationResult.message || 'Failed to apply upgrade');
+        }
+
+        // Mark notification as accepted
         const acceptedNotification = await UpgradeNotificationService.acceptUpgrade(pnr, notificationId);
+
+        // Update MongoDB passenger record with new status
+        const passengersCollection = db.getPassengersCollection();
+        await passengersCollection.updateOne(
+            { PNR_Number: pnr },
+            {
+                $set: {
+                    PNR_Status: 'CNF',
+                    Assigned_Coach: coach,
+                    Assigned_berth: berth,
+                    Berth_Type: notification.offeredBerthType,
+                    Preference_Matched: true,
+                    Upgraded_From_RAC: true,
+                    Upgraded_At: new Date()
+                }
+            }
+        );
+
+        console.log(`✅ Upgrade completed: ${pnr} is now CNF in ${notification.offeredBerth}`);
 
         // Find passenger in train state
         const passenger = trainState.findPassengerByPNR(pnr);
@@ -47,10 +86,11 @@ class PassengerService {
             passenger: passenger ? {
                 pnr: passenger.pnr,
                 name: passenger.name,
-                currentBerth: acceptedNotification.currentBerth,
-                offeredBerth: acceptedNotification.offeredBerth
+                oldBerth: notification.currentBerth,
+                newBerth: notification.offeredBerth,
+                newStatus: 'CNF'
             } : null,
-            message: 'Upgrade accepted. Pending TTE confirmation.'
+            message: 'Upgrade completed! You are now confirmed.'
         };
     }
 

@@ -1,6 +1,7 @@
 // backend/controllers/passengerController.js
 const DataService = require("../services/DataService");
 const PassengerService = require("../services/PassengerService");
+const SeatPreferenceService = require("../services/SeatPreferenceService");
 const db = require("../config/db");
 const wsManager = require("../config/websocket");
 const trainController = require("./trainController");
@@ -8,6 +9,7 @@ const trainController = require("./trainController");
 class PassengerController {
   /**
    * Get PNR details (PUBLIC - no authentication required)
+   * Updated: Now returns ALL passengers for a PNR (multi-passenger support)
    */
   async getPNRDetails(req, res) {
     try {
@@ -20,12 +22,71 @@ class PassengerController {
         });
       }
 
+      const passengersCollection = db.getPassengersCollection();
       const trainState = trainController.getGlobalTrainState();
-      const passengerDetails = await PassengerService.getPassengerDetails(pnr, trainState);
+
+      // Find ALL passengers with this PNR (multi-passenger support)
+      const passengers = await passengersCollection
+        .find({ PNR_Number: pnr })
+        .sort({ Passenger_Index: 1 })
+        .toArray();
+
+      if (passengers.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "PNR not found",
+        });
+      }
+
+      // Find group leader or use first passenger
+      const leader = passengers.find(p => p.Is_Group_Leader) || passengers[0];
+
+      // Build response with all passengers
+      const response = {
+        pnr: pnr,
+        totalPassengers: passengers.length,
+        irctcId: leader.IRCTC_ID,
+        trainNumber: leader.Train_Number,
+        trainName: leader.Train_Name,
+        journeyDate: leader.Journey_Date,
+        boardingStation: leader.Boarding_Station,
+        deboardingStation: leader.Deboarding_Station,
+        bookingClass: leader.Booking_Class || leader.Class,
+        passengers: passengers.map(p => {
+          // Check if preference was matched
+          const preferenceMatched = this.checkPreferenceMatched(p);
+
+          return {
+            passengerIndex: p.Passenger_Index || 1,
+            name: p.Name,
+            age: p.Age,
+            gender: p.Gender,
+            seatPreference: p.Seat_Preference || 'No Preference',
+            preferencePriority: p.Preference_Priority || 0,
+            preferenceMatched: preferenceMatched,
+            pnrStatus: p.PNR_Status,
+            racStatus: p.Rac_status,
+            coach: p.Assigned_Coach,
+            berth: p.Assigned_Berth || p.Assigned_berth,
+            berthType: p.Berth_Type,
+            boarded: p.Boarded || false,
+            noShow: p.NO_show || false,
+            deboarded: p.Deboarded || false,
+            isGroupLeader: p.Is_Group_Leader || false,
+            passengerStatus: p.Passenger_Status || 'Offline'
+          };
+        }),
+        stats: {
+          boarded: passengers.filter(p => p.Boarded).length,
+          noShow: passengers.filter(p => p.NO_show).length,
+          cnf: passengers.filter(p => p.PNR_Status === 'CNF').length,
+          rac: passengers.filter(p => p.PNR_Status === 'RAC').length
+        }
+      };
 
       res.json({
         success: true,
-        data: passengerDetails
+        data: response
       });
     } catch (error) {
       console.error("❌ Error getting PNR details:", error);
@@ -36,6 +97,19 @@ class PassengerController {
         error: error.message,
       });
     }
+  }
+
+  /**
+   * Helper: Check if passenger's seat preference was matched
+   */
+  checkPreferenceMatched(passenger) {
+    const preference = passenger.Seat_Preference;
+    const berthType = passenger.Berth_Type;
+
+    if (!preference || preference === 'No Preference') return true;
+    if (!berthType) return false;
+
+    return SeatPreferenceService.matchesPreference(berthType, preference);
   }
 
   /**
@@ -616,21 +690,27 @@ class PassengerController {
   /**
    * Get pending upgrade notifications for a passenger
    */
-  getUpgradeNotifications(req, res) {
+  async getUpgradeNotifications(req, res) {
     try {
       const { pnr } = req.params;
       const UpgradeNotificationService = require("../services/UpgradeNotificationService");
 
-      const notifications =
-        UpgradeNotificationService.getPendingNotifications(pnr);
+      // ✅ Fixed: Added await for async method
+      const notifications = await UpgradeNotificationService.getPendingNotifications(pnr);
 
       res.json({
         success: true,
-        data: {
-          pnr: pnr,
-          count: notifications.length,
-          notifications: notifications,
-        },
+        data: notifications.map(n => ({
+          offerId: n.id,
+          id: n.id,
+          status: n.status.toLowerCase(),
+          createdAt: n.createdAt || n.timestamp,
+          berth: n.offeredBerth,
+          berthType: n.offeredBerthType,
+          coach: n.offeredCoach,
+          berthNo: n.offeredSeatNo,
+          station: n.station
+        }))
       });
     } catch (error) {
       console.error("❌ Error getting upgrade notifications:", error);
@@ -1657,6 +1737,304 @@ class PassengerController {
       }
     } catch (error) {
       console.error('❌ Error in passenger approveUpgrade:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  // =============================================
+  // MULTI-PASSENGER ENDPOINTS (NEW)
+  // =============================================
+
+  /**
+   * Create a new booking with multiple passengers
+   * POST /api/passenger/booking
+   */
+  async addBooking(req, res) {
+    try {
+      const { pnr, irctcId, trainNumber, trainName, journeyDate,
+        boardingStation, deboardingStation, bookingClass, passengers } = req.body;
+
+      // Validate required fields
+      if (!pnr || !passengers || passengers.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'PNR and passengers array are required'
+        });
+      }
+
+      // IRCTC Standard: Maximum 6 passengers per PNR
+      const MAX_PASSENGERS_PER_PNR = 6;
+      if (passengers.length > MAX_PASSENGERS_PER_PNR) {
+        return res.status(400).json({
+          success: false,
+          message: `Maximum ${MAX_PASSENGERS_PER_PNR} passengers allowed per PNR (IRCTC Standard)`
+        });
+      }
+
+      const passengersCollection = db.getPassengersCollection();
+
+      // Check if PNR already exists
+      const existing = await passengersCollection.findOne({ PNR_Number: pnr });
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: 'PNR already exists'
+        });
+      }
+
+      // Create passenger documents
+      const passengerDocs = passengers.map((p, index) => ({
+        PNR_Number: pnr,
+        Passenger_Index: index + 1,
+        IRCTC_ID: irctcId,
+        Name: p.name,
+        Age: parseInt(p.age),
+        Gender: p.gender,
+        Seat_Preference: p.seatPreference || 'No Preference',
+        Preference_Priority: SeatPreferenceService.calculatePriority({ Age: p.age, Gender: p.gender }),
+        Is_Group_Leader: index === 0,
+        Train_Number: trainNumber,
+        Train_Name: trainName || '',
+        Journey_Date: journeyDate,
+        Boarding_Station: boardingStation,
+        Deboarding_Station: deboardingStation,
+        PNR_Status: p.pnrStatus || 'CNF',
+        Rac_status: p.racStatus || '-',
+        Booking_Class: bookingClass || 'Sleeper',
+        Assigned_Coach: p.coach || '',
+        Assigned_Berth: p.berth || '',
+        Berth_Type: p.berthType || '',
+        Passenger_Status: 'Offline',
+        Boarded: false,
+        NO_show: false,
+        Deboarded: false,
+        Preference_Matched: false
+      }));
+
+      await passengersCollection.insertMany(passengerDocs);
+
+      console.log(`✅ Created booking with ${passengers.length} passengers for PNR: ${pnr}`);
+
+      // Broadcast update
+      if (wsManager) {
+        wsManager.broadcastTrainUpdate('BOOKING_CREATED', {
+          pnr: pnr,
+          totalPassengers: passengers.length
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Created booking with ${passengers.length} passengers`,
+        data: {
+          pnr,
+          totalPassengers: passengers.length,
+          passengers: passengerDocs.map(p => ({
+            passengerIndex: p.Passenger_Index,
+            name: p.Name,
+            isGroupLeader: p.Is_Group_Leader
+          }))
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error creating booking:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Get all passengers in a booking group
+   * GET /api/passenger/booking/:pnr
+   */
+  async getBookingGroup(req, res) {
+    try {
+      const { pnr } = req.params;
+      const trainState = trainController.getGlobalTrainState();
+
+      if (trainState) {
+        // Get from train state (real-time)
+        const group = trainState.getBookingGroupSummary(pnr);
+        if (group) {
+          return res.json({ success: true, data: group });
+        }
+      }
+
+      // Fallback to database
+      const passengersCollection = db.getPassengersCollection();
+      const passengers = await passengersCollection
+        .find({ PNR_Number: pnr })
+        .sort({ Passenger_Index: 1 })
+        .toArray();
+
+      if (passengers.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Booking not found'
+        });
+      }
+
+      const leader = passengers.find(p => p.Is_Group_Leader) || passengers[0];
+
+      res.json({
+        success: true,
+        data: {
+          pnr: pnr,
+          totalPassengers: passengers.length,
+          irctcId: leader.IRCTC_ID,
+          trainNumber: leader.Train_Number,
+          journeyDate: leader.Journey_Date,
+          boardingStation: leader.Boarding_Station,
+          deboardingStation: leader.Deboarding_Station,
+          passengers: passengers
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error getting booking group:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Update seat preference for a specific passenger
+   * PUT /api/passenger/:pnr/:passengerIndex/preference
+   */
+  async updateSeatPreference(req, res) {
+    try {
+      const { pnr, passengerIndex } = req.params;
+      const { seatPreference } = req.body;
+
+      const validPreferences = [
+        'Lower Berth', 'Middle Berth', 'Upper Berth',
+        'Side Lower', 'Side Upper', 'Window', 'Aisle', 'No Preference'
+      ];
+
+      if (!validPreferences.includes(seatPreference)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid seat preference'
+        });
+      }
+
+      const passengersCollection = db.getPassengersCollection();
+
+      const result = await passengersCollection.updateOne(
+        { PNR_Number: pnr, Passenger_Index: parseInt(passengerIndex) },
+        { $set: { Seat_Preference: seatPreference } }
+      );
+
+      if (result.matchedCount === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Passenger not found'
+        });
+      }
+
+      console.log(`✅ Updated seat preference for ${pnr}/${passengerIndex}: ${seatPreference}`);
+
+      // Update in trainState if available
+      const trainState = trainController.getGlobalTrainState();
+      if (trainState) {
+        const passenger = trainState.findPassengerByPNRAndIndex(pnr, parseInt(passengerIndex));
+        if (passenger) {
+          passenger.seatPreference = seatPreference;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: 'Preference updated successfully',
+        data: { pnr, passengerIndex: parseInt(passengerIndex), seatPreference }
+      });
+    } catch (error) {
+      console.error('❌ Error updating preference:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Board all passengers in a group
+   * POST /api/passenger/:pnr/board-all
+   */
+  async boardPassengerGroup(req, res) {
+    try {
+      const { pnr } = req.params;
+
+      const trainState = trainController.getGlobalTrainState();
+      if (!trainState) {
+        return res.status(400).json({
+          success: false,
+          message: 'Train not initialized'
+        });
+      }
+
+      const passengers = trainState.findPassengersByPNR(pnr);
+      if (passengers.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No passengers found for this PNR'
+        });
+      }
+
+      const passengersCollection = db.getPassengersCollection();
+      let boarded = 0;
+      let skipped = 0;
+
+      for (const p of passengers) {
+        if (p.boarded) {
+          skipped++;
+          continue;
+        }
+
+        // Update in memory
+        p.boarded = true;
+
+        // Update in database
+        await passengersCollection.updateOne(
+          { PNR_Number: pnr, Passenger_Index: p.passengerIndex || 1 },
+          { $set: { Boarded: true } }
+        );
+
+        boarded++;
+      }
+
+      trainState.updateStats();
+
+      // Broadcast update
+      if (wsManager) {
+        wsManager.broadcastTrainUpdate('GROUP_BOARDED', {
+          pnr: pnr,
+          boarded: boarded,
+          total: passengers.length,
+          stats: trainState.stats
+        });
+      }
+
+      console.log(`✅ Boarded ${boarded}/${passengers.length} passengers for PNR: ${pnr}`);
+
+      res.json({
+        success: true,
+        message: `Boarded ${boarded} passengers (${skipped} already boarded)`,
+        data: {
+          pnr: pnr,
+          boarded: boarded,
+          skipped: skipped,
+          total: passengers.length
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error boarding group:', error);
       res.status(500).json({
         success: false,
         error: error.message

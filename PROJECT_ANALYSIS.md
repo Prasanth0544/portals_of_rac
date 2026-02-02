@@ -158,6 +158,12 @@ Multiple RAC passengers may be eligible for the same vacant berth. Without a sys
 - TTE discretion (inconsistent)
 - No audit trail
 
+### Problem 5: Single Passenger Per PNR Limitation
+Family bookings with multiple passengers under one PNR:
+- Each passenger needs individual seat preferences (elderly need lower berths)
+- No way to track group relationships
+- Notifications go only to one contact
+
 ---
 
 ## ✅ How This System Solves the Problems
@@ -167,9 +173,10 @@ Multiple RAC passengers may be eligible for the same vacant berth. Without a sys
 | Manual tracking | **Automated station arrival processing** |
 | No segment tracking | **Segment-based occupancy matrix** |
 | No communication | **WebSocket + Push notifications** |
-| No priority | **RAC queue with strict ordering** |
+| No priority | **Preference-based priority (seniors → women → adults)** |
 | No TTE control | **Dual-approval workflow** |
 | No audit | **Complete action history with undo** |
+| Single passenger/PNR | **Multi-passenger booking (up to 6 per PNR)** |
 
 ---
 
@@ -226,6 +233,12 @@ The system uses a **dual-database architecture**:
 ├─────────────────────────────────────────────────┤
 │ Database: PassengersDB                          │
 │ ├── Collection: P_1 (Passengers for train 1)   │
+│ │   ├── PNR_Number (string)                     │
+│ │   ├── Passenger_Index (number) ← NEW          │
+│ │   ├── Seat_Preference (string) ← NEW          │
+│ │   ├── Preference_Priority (0-3) ← NEW         │
+│ │   ├── Is_Group_Leader (boolean) ← NEW         │
+│ │   └── Preference_Matched (boolean) ← NEW      │
 │ ├── Collection: P_2 (Passengers for train 2)   │
 │ └── Collection: upgrade_notifications          │
 └─────────────────────────────────────────────────┘
@@ -573,6 +586,7 @@ ADMIN PORTAL                    BACKEND                   ALL PORTALS
 | **UpgradeNotificationService** | `UpgradeNotificationService.js` | Upgrade offer expiry timers |
 | **WebPushService** | `WebPushService.js` | Browser push notifications |
 | **InAppNotificationService** | `InAppNotificationService.js` | In-app notification bell |
+| **SeatPreferenceService** | `SeatPreferenceService.js` | NEW: Seat preference matching and priority |
 | **OTPService** | `OTPService.js` | Passenger OTP verification |
 | **CacheService** | `CacheService.js` | Performance caching layer |
 | **DataService** | `DataService.js` | MongoDB CRUD operations |
@@ -722,6 +736,49 @@ ADMIN PORTAL                    BACKEND                   ALL PORTALS
 
 6. **Offline Passenger Handling**: TTEs can upgrade passengers without smartphones
 
+7. **Multi-Passenger Booking (NEW)**: Up to 6 passengers per PNR with individual seat preferences
+
+8. **Preference-Based Priority**: Senior citizens and women get priority for lower berths
+
 ---
 
-*Deep Analysis Generated: January 16, 2026*
+## 👥 Multi-Passenger Booking Feature (NEW)
+
+### Database Schema
+```javascript
+{
+  PNR_Number: "1722500001",
+  Passenger_Index: 1,              // 1, 2, 3... up to 6
+  Seat_Preference: "Lower Berth",  // Lower/Middle/Upper/Side Lower/Side Upper/No Preference
+  Preference_Priority: 3,          // 3=senior, 2=female, 1=adult, 0=child
+  Is_Group_Leader: true,           // Primary contact for notifications
+  Preference_Matched: false        // Did they get their preferred berth?
+}
+```
+
+### Priority Calculation
+```
+Priority 3: Age >= 60 (Senior citizens)
+Priority 2: Gender == Female
+Priority 1: Age >= 18 (Adults)
+Priority 0: Age < 18 (Children)
+```
+
+### API Endpoints
+```http
+POST /api/passenger/booking           # Create booking (max 6 passengers)
+GET  /api/passenger/booking/:pnr      # Get all passengers in booking
+GET  /api/passenger/pnr/:pnr          # Returns ALL passengers in booking
+PUT  /api/passenger/:pnr/:index/preference  # Update individual preference
+POST /api/passenger/:pnr/board-all    # Board entire group
+```
+
+### Unique Compound Index
+```javascript
+// Allows multiple passengers per PNR
+{ PNR_Number: 1, Passenger_Index: 1 }  // UNIQUE
+```
+
+---
+
+*Deep Analysis Generated: February 2, 2026*

@@ -286,13 +286,17 @@ class DataService {
           return;
         }
 
-        // Add passenger to berth
+        // Add passenger to berth (updated for multi-passenger support)
         berth.addPassenger({
           pnr: p.PNR_Number,
-          irctcId: p.IRCTC_ID || null, // ✅ ADD THIS
+          passengerIndex: p.Passenger_Index || 1,           // NEW: Position in booking
+          irctcId: p.IRCTC_ID || null,
           name: p.Name,
           age: p.Age,
           gender: p.Gender,
+          seatPreference: p.Seat_Preference || 'No Preference',  // NEW
+          preferencePriority: p.Preference_Priority || 0,        // NEW
+          isGroupLeader: p.Is_Group_Leader || false,             // NEW
           from: fromStation.code,
           fromIdx: fromStation.idx,
           to: toStation.code,
@@ -309,6 +313,7 @@ class DataService {
           passengerStatus: p.Passenger_Status || "Offline",
           noShow: p.NO_show || false,
           boarded: false,
+          preferenceMatched: p.Preference_Matched || false,      // NEW
         });
 
         success++;
@@ -345,10 +350,14 @@ class DataService {
 
         return {
           pnr: p.PNR_Number,
-          irctcId: p.IRCTC_ID || null, // ✅ ADD THIS
+          passengerIndex: p.Passenger_Index || 1,           // NEW
+          irctcId: p.IRCTC_ID || null,
           name: p.Name,
           age: p.Age,
           gender: p.Gender,
+          seatPreference: p.Seat_Preference || 'No Preference',  // NEW
+          preferencePriority: p.Preference_Priority || 0,        // NEW
+          isGroupLeader: p.Is_Group_Leader || false,             // NEW
           racNumber: racNumber,
           class: p.Class,
           from: fromStation ? fromStation.code : p.Boarding_Station,
@@ -366,6 +375,7 @@ class DataService {
           passengerStatus: p.Passenger_Status || "Offline",
           boarded: false, // RAC passengers start as not boarded
           noShow: p.NO_show || false,
+          preferenceMatched: p.Preference_Matched || false,      // NEW
         };
       })
       .sort((a, b) => a.racNumber - b.racNumber);

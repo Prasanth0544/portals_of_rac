@@ -338,6 +338,14 @@ GET  /api/passenger/search/:pnr    # Search by PNR
 POST /api/passenger/no-show        # Mark passenger as no-show
 ```
 
+### Multi-Passenger Booking (NEW)
+```http
+POST /api/passenger/booking         # Create booking with 1-6 passengers
+GET  /api/passenger/booking/:pnr    # Get all passengers in a booking
+PUT  /api/passenger/:pnr/:index/preference  # Update seat preference
+POST /api/passenger/:pnr/board-all  # Board entire group at once
+```
+
 ### Reallocation
 ```http
 GET  /api/reallocation/eligibility  # Get eligible RAC passengers
@@ -609,6 +617,6 @@ After successful setup:
 
 **Built for Indian Railways - Train 17225 Amaravathi Express** 🚂
 
-*Last Updated: December 25, 2025*
+*Last Updated: February 2, 2026*
 
 **Test Coverage:** 79.57% | 1,153 tests | 50 suites ✅

@@ -207,6 +207,8 @@ class TrainState {
   /**
    * Find passenger by PNR and return JUST the passenger object
    * Searches both berths AND racQueue
+   * NOTE: For multi-passenger bookings, this returns the first match
+   * Use findPassengersByPNR() to get all passengers in a booking
    */
   findPassengerByPNR(pnr) {
     // First check in berths
@@ -226,6 +228,83 @@ class TrainState {
     }
 
     return null;
+  }
+
+  /**
+   * Find ALL passengers under a PNR (for multi-passenger bookings)
+   * @param {string} pnr - PNR number
+   * @returns {Array} Array of all passengers with this PNR
+   */
+  findPassengersByPNR(pnr) {
+    const passengers = [];
+
+    // Search in berths
+    for (let coach of this.coaches) {
+      for (let berth of coach.berths) {
+        berth.passengers
+          .filter(p => p.pnr === pnr)
+          .forEach(p => passengers.push({
+            ...p,
+            coach: coach.coach_name || coach.coachNo,
+            berthNo: berth.berth_no || berth.berthNo,
+            berthRef: berth
+          }));
+      }
+    }
+
+    // Search in RAC queue
+    this.racQueue
+      .filter(r => r.pnr === pnr)
+      .forEach(r => passengers.push(r));
+
+    // Sort by passenger index
+    passengers.sort((a, b) => {
+      const idxA = a.passengerIndex || 1;
+      const idxB = b.passengerIndex || 1;
+      return idxA - idxB;
+    });
+
+    return passengers;
+  }
+
+  /**
+   * Find specific passenger by PNR and index
+   * @param {string} pnr - PNR number
+   * @param {number} passengerIndex - Passenger index within booking (1, 2, 3...)
+   * @returns {Object|null} Passenger or null
+   */
+  findPassengerByPNRAndIndex(pnr, passengerIndex) {
+    const allForPNR = this.findPassengersByPNR(pnr);
+    return allForPNR.find(p => (p.passengerIndex || 1) === passengerIndex) || null;
+  }
+
+  /**
+   * Get booking group summary for a PNR
+   * @param {string} pnr - PNR number
+   * @returns {Object|null} Group summary or null
+   */
+  getBookingGroupSummary(pnr) {
+    const passengers = this.findPassengersByPNR(pnr);
+    if (passengers.length === 0) return null;
+
+    const leader = passengers.find(p => p.isGroupLeader) || passengers[0];
+
+    return {
+      pnr: pnr,
+      totalPassengers: passengers.length,
+      irctcId: leader.irctcId,
+      trainNumber: this.trainNo,
+      journeyDate: this.journeyDate,
+      boardingStation: leader.from,
+      deboardingStation: leader.to,
+      stats: {
+        boarded: passengers.filter(p => p.boarded).length,
+        noShow: passengers.filter(p => p.noShow).length,
+        cnf: passengers.filter(p => p.pnrStatus === 'CNF').length,
+        rac: passengers.filter(p => p.pnrStatus === 'RAC').length
+      },
+      passengers: passengers
+    };
   }
 
   /**

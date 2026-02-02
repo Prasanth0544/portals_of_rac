@@ -479,6 +479,40 @@ class CurrentStationReallocationService {
         // Save to MongoDB using existing StationWiseApprovalService
         await StationWiseApprovalService._savePendingReallocations(pendingReallocations);
 
+        // ✅ NEW: Create UpgradeNotification entries for ALL passengers (Online + Offline)
+        // This allows Offline passengers to see upgrade offers when they log into Passenger Portal
+        const UpgradeNotificationService = require('./UpgradeNotificationService');
+
+        // Clear old notifications ONCE before creating new batch (not on each iteration!)
+        if (pendingReallocations.length > 0) {
+            await UpgradeNotificationService.clearPendingNotificationsForStation(currentStation.code);
+        }
+
+        for (const pending of pendingReallocations) {
+            try {
+                await UpgradeNotificationService.createUpgradeNotification(
+                    {
+                        pnr: pending.passengerPNR,
+                        name: pending.passengerName,
+                        coach: pending.proposedCoach,
+                        seatNo: pending.proposedBerth
+                    },
+                    {
+                        fullBerthNo: pending.proposedBerthFull,
+                        coachNo: pending.proposedCoach,
+                        berthNo: pending.proposedBerth,
+                        type: pending.proposedBerthType,
+                        vacantSegment: { from: pending.stationIdx, to: pending.berthVacantTillIdx }
+                    },
+                    { name: pending.stationName, code: pending.stationCode },
+                    false // ✅ FIX: Don't clear - we already cleared above
+                );
+                console.log(`   📬 Created UpgradeNotification for ${pending.passengerName} (${pending.passengerStatus})`);
+            } catch (notifErr) {
+                console.error(`   ⚠️ Failed to create UpgradeNotification for ${pending.passengerPNR}:`, notifErr.message);
+            }
+        }
+
         // 📨 Send push notification to all TTEs
         try {
             const WebPushService = require('./WebPushService');

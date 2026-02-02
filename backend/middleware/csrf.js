@@ -18,40 +18,25 @@ const csrfProtection = (req, res, next) => {
     }
 
     // Skip CSRF for specific public endpoints (login, OTP, push notifications)
-    // In production with cross-origin (Vercel + Render), CSRF cookies have issues
-    // These endpoints are protected by JWT authentication instead
     const publicPaths = [
-        // Authentication
         '/api/auth/staff/login',
         '/api/auth/passenger/login',
         '/api/auth/refresh',
         '/api/otp/send',
         '/api/otp/verify',
-        // Config
         '/api/config/setup',
-        // Train operations (protected by auth)
         '/api/train/initialize',
         '/api/train/start-journey',
         '/api/train/next-station',
         '/api/train/reset',
-        '/api/train/station-arrival',
-        // Reallocation operations
-        '/api/reallocation',
-        '/api/station/reallocations',
-        // Push notifications
         '/api/admin/push-subscribe',
         '/api/tte/push-subscribe',
         '/api/passenger/push-subscribe',
-        '/api/push-subscribe',
-        '/api/push/test',
-        // Passenger operations
-        '/api/passenger/no-show',
-        '/api/passenger/revert-no-show',
-        '/api/passenger/upgrade',
-        // Email
+        '/api/passenger/booking',          // NEW: Multi-passenger booking
         '/api/test-email',
-        // In-app notifications
-        '/api/notifications'
+        '/api/push/test',
+        '/api/passenger/revert-no-show',  // Allow passengers to revert no-show
+        '/api/push-subscribe'
     ];
 
     if (publicPaths.some(path => req.path.startsWith(path))) {

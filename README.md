@@ -122,6 +122,8 @@ cd tte-portal && npm run dev
 
 ### 🎫 Passenger Portal
 - PNR check and journey status
+- **Multi-passenger booking support (up to 6 per PNR)**
+- **Seat preference selection (Lower/Middle/Upper/Side)**
 - Real-time upgrade notifications with countdown timers
 - Accept/deny upgrade offers
 - QR code boarding pass generation
@@ -158,10 +160,18 @@ cd tte-portal && npm run dev
 The system tracks berth occupancy per journey segment (station-to-station), allowing the same berth to be used by different passengers on non-overlapping journey segments. This maximizes berth utilization.
 
 ### RAC Priority System
-RAC passengers are processed in strict order:
-- **RAC 1** has highest priority → upgraded first
-- **RAC 2** is next → upgraded second
-- And so on...
+RAC passengers are processed using a **preference-based priority system**:
+- **Priority 3**: Senior citizens (60+ years) - upgraded first
+- **Priority 2**: Women passengers
+- **Priority 1**: Adult passengers (18+)
+- **Priority 0**: Children
+
+### Multi-Passenger Booking (NEW)
+Supports multiple passengers under a single PNR:
+- **Maximum 6 passengers per PNR** (IRCTC standard)
+- **Seat preference selection** for each passenger
+- **Group leader tracking** for notifications
+- **Priority-based upgrade ordering** within booking group
 
 ### Dual-Approval Workflow
 1. **System identifies** eligible RAC passengers (boarded + journey overlap)
@@ -250,4 +260,4 @@ ISC
 
 **Built for Indian Railways - Train 17225 Amaravathi Express** 🚂
 
-**Last Updated:** 2025-12-25
+**Last Updated:** 2026-02-02
