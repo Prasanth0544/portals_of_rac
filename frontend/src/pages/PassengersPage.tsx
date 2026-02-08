@@ -69,7 +69,7 @@ interface TrainData {
     stations?: Station[];
 }
 
-type PageType = 'config' | 'home' | 'rac-queue' | 'coaches' | 'passengers' | 'reallocation' | 'visualization' | 'add-passenger' | 'phase1' | 'diagnostics';
+type PageType = 'config' | 'home' | 'rac-queue' | 'coaches' | 'passengers' | 'reallocation' | 'visualization' | 'add-passenger' | 'phase1';
 type FilterStatus = 'all' | 'cnf' | 'rac' | 'boarded' | 'no-show' | 'online' | 'offline' | 'upcoming';
 
 interface PassengersPageProps {
@@ -358,7 +358,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
-                        ◄
+
                     </button>
                     <h2>👥 Passenger List</h2>
                 </div>
@@ -377,7 +377,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M19 12H5M12 19l-7-7 7-7" />
                     </svg>
-                    ◄
+
                 </button>
                 <h2>👥 Passenger List & Vacant Positions ({counts ? counts.total : passengers.length} total)</h2>
             </div>

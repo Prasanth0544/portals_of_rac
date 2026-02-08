@@ -86,7 +86,7 @@ function RACQueuePage({ trainData, onClose }: RACQueuePageProps): React.ReactEle
                         >
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
-                        ◄
+
                     </button>
                     <h2>🎫 RAC Queue</h2>
                 </div>
@@ -110,7 +110,7 @@ function RACQueuePage({ trainData, onClose }: RACQueuePageProps): React.ReactEle
                     >
                         <path d="M19 12H5M12 19l-7-7 7-7" />
                     </svg>
-                    ◄
+
                 </button>
                 <h2>🎫 RAC Queue ({racQueue.length} passengers)</h2>
             </div>

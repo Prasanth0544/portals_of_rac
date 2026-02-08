@@ -110,7 +110,9 @@ function CoachesPage({ trainData, onClose }: CoachesPageProps): React.ReactEleme
         <div className="coaches-page">
             <div className="page-header">
                 <button className="back-btn" onClick={onClose}>
-                    ◄
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg>
                 </button>
                 <h2>🚂 Train Coaches & Berths</h2>
             </div>

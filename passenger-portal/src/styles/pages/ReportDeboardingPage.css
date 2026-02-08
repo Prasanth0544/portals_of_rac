@@ -12,8 +12,15 @@
 }
 
 .page-header {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 15px;
     margin-bottom: 30px;
+}
+
+.page-header>div {
+    flex: 1;
+    text-align: center;
 }
 
 .page-header h1 {
@@ -25,6 +32,36 @@
 .page-header .subtitle {
     color: #7f8c8d;
     font-size: 14px;
+}
+
+.back-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.back-btn:hover {
+    background: #f8f9fa;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.back-btn svg {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    stroke: #2c3e50;
+    display: block;
 }
 
 /* Progress Steps */

@@ -777,6 +777,26 @@ function DashboardPage(): React.ReactElement {
                         </Button>
                     </CardContent>
                 </Card>
+
+                {/* Change Boarding Station Card */}
+                <Card sx={{ bgcolor: '#e3f2fd', border: '1px solid #1976d2' }}>
+                    <CardContent>
+                        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            🔄 Change Boarding Station?
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Need to board from a different station? Change to a forward station along your route.
+                        </Typography>
+                        <Button
+                            component={Link}
+                            to="/change-boarding"
+                            variant="contained"
+                            sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
+                        >
+                            🔄 Change Station
+                        </Button>
+                    </CardContent>
+                </Card>
             </Box>
             {/* Boarding Station Change Modal */}
             <Dialog open={showChangeModal} onClose={handleCloseChangeModal} maxWidth="sm" fullWidth>

@@ -28,7 +28,7 @@ interface TrainData {
     stats?: Stats;
 }
 
-type PageType = 'config' | 'home' | 'rac-queue' | 'coaches' | 'passengers' | 'reallocation' | 'visualization' | 'add-passenger' | 'phase1' | 'diagnostics';
+type PageType = 'config' | 'home' | 'rac-queue' | 'coaches' | 'passengers' | 'reallocation' | 'visualization' | 'add-passenger' | 'phase1';
 
 interface HomePageProps {
     trainData: TrainData | null;
@@ -283,11 +283,6 @@ function HomePage({
                     <div className="nav-card" onClick={() => onNavigate('config')}>
                         <span className="nav-icon">⚙️</span>
                         <span className="nav-text">Update Config</span>
-                    </div>
-
-                    <div className="nav-card" onClick={() => onNavigate('diagnostics')}>
-                        <span className="nav-icon">🔍</span>
-                        <span className="nav-text">Allocation Diagnostics</span>
                     </div>
                 </div>
             </div>

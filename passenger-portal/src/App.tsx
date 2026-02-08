@@ -19,6 +19,7 @@ import JourneyVisualizationPage from './pages/JourneyVisualizationPage';
 import UpgradeOffersPage from './pages/UpgradeOffersPage';
 import ReportDeboardingPage from './pages/ReportDeboardingPage';
 import CancelTicketPage from './pages/CancelTicketPage';
+import ChangeBoardingStationPage from './pages/ChangeBoardingStationPage';
 import NotificationBell from './components/NotificationBell';
 import { initializePushNotifications } from './services/pushNotificationService';
 import axios from 'axios';
@@ -242,6 +243,7 @@ function App(): React.ReactElement {
                             <Route path="/upgrades" element={<UpgradeOffersPage />} />
                             <Route path="/report-deboarding" element={<ReportDeboardingPage />} />
                             <Route path="/cancel-ticket" element={<CancelTicketPage />} />
+                            <Route path="/change-boarding" element={<ChangeBoardingStationPage />} />
                         </Routes>
                     </Box>
 

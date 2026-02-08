@@ -422,16 +422,6 @@ function PNRSearchPage(): React.ReactElement {
                                 Change Station
                             </button>
                         </div>
-                        <div className="action-item">
-                            <h4>❌ Cancel Ticket</h4>
-                            <p>Cancel your ticket and free up the berth</p>
-                            <button
-                                className="action-btn cancel-btn"
-                                onClick={handleOpenCancelModal}
-                            >
-                                Cancel Ticket
-                            </button>
-                        </div>
                     </div>
                 </div>
             </div>

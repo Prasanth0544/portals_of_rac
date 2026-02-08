@@ -15,7 +15,7 @@ import PassengersPage from './pages/PassengersPage';
 
 import VisualizationPage from './pages/VisualizationPage';
 import AddPassengerPage from './pages/AddPassengerPage';
-import AllocationDiagnosticsPage from './pages/AllocationDiagnosticsPage';
+
 import PhaseOnePage from './pages/PhaseOnePage';
 import ConfigPage from './pages/ConfigPage';
 import { webSocketConnectedToast, webSocketDisconnectedToast } from './services/toastNotification';
@@ -69,7 +69,7 @@ interface WebSocketUpdateData {
     data?: any;
 }
 
-type PageType = 'config' | 'home' | 'rac-queue' | 'coaches' | 'passengers' | 'reallocation' | 'visualization' | 'add-passenger' | 'phase1' | 'diagnostics';
+type PageType = 'config' | 'home' | 'rac-queue' | 'coaches' | 'passengers' | 'reallocation' | 'visualization' | 'add-passenger' | 'phase1';
 
 function App(): React.ReactElement {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -828,30 +828,38 @@ function App(): React.ReactElement {
                 )}
 
                 {currentPage === 'phase1' && !journeyStarted && (
-                    <div className="not-started-notice">
-                        <div className="notice-card">
-                            <h3>⚠️ Journey Not Started</h3>
-                            <p>Please start the journey first to access this page.</p>
-                            <button onClick={handleClosePage} className="btn-primary">Go to Home</button>
+                    <div className="journey-not-started-container">
+                        <div className="journey-not-started-card">
+                            <div className="notice-icon">🚂</div>
+                            <h2>Journey Not Started</h2>
+                            <p>The train journey hasn't begun yet. Please start the journey from the home page to access allocation features.</p>
+                            <button onClick={handleClosePage} className="home-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                </svg>
+                                Go to Home
+                            </button>
                         </div>
                     </div>
                 )}
 
                 {(['rac-queue', 'passengers', 'reallocation', 'visualization'].includes(currentPage)) && !journeyStarted && (
-                    <div className="not-started-notice">
-                        <div className="notice-card">
-                            <h3>⚠️ Journey Not Started</h3>
-                            <p>Please start the journey first to access this page.</p>
-                            <button onClick={handleClosePage} className="btn-primary">Go to Home</button>
+                    <div className="journey-not-started-container">
+                        <div className="journey-not-started-card">
+                            <div className="notice-icon">🚂</div>
+                            <h2>Journey Not Started</h2>
+                            <p>The train journey hasn't begun yet. Please start the journey from the home page to access allocation features.</p>
+                            <button onClick={handleClosePage} className="home-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                </svg>
+                                Go to Home
+                            </button>
                         </div>
                     </div>
                 )}
 
-                {currentPage === 'diagnostics' && (
-                    <AllocationDiagnosticsPage
-                        onClose={handleClosePage}
-                    />
-                )}
+
             </div>
 
             <div className="app-footer">

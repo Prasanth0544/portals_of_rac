@@ -69,28 +69,32 @@ code {
   left: 15px;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.15);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
   transition: all 0.2s ease;
   z-index: 10;
 }
 
 .page-header .back-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-50%);
-  /* Keep stable, no movement */
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-50%) scale(1.05);
 }
 
 .page-header .back-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  stroke: white;
+  display: block;
 }
 
 .page-header h1,

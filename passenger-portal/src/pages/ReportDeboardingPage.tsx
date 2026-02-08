@@ -298,8 +298,15 @@ const ReportDeboardingPage: React.FC = () => {
         <div className="report-deboarding-page">
             <div className="deboarding-container">
                 <div className="page-header">
-                    <h1>🚉 Report Deboarding</h1>
-                    <p className="subtitle">Report that you have left the train before your destination</p>
+                    <button className="back-btn" onClick={() => navigate('/')}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h1>🚉 Report Deboarding</h1>
+                        <p className="subtitle">Report that you have left the train before your destination</p>
+                    </div>
                 </div>
 
                 {/* Progress Steps */}
