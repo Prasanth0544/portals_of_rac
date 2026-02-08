@@ -1,5 +1,6 @@
 // passenger-portal/src/pages/DashboardPage.tsx
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
     Container,
     Box,
@@ -47,6 +48,9 @@ interface JourneyData {
 interface TrainState {
     journey?: JourneyData;
     currentStationIndex?: number;
+    currentStationIdx?: number;
+    journeyStarted?: boolean;
+    stations?: Station[];
 }
 
 interface Passenger {
@@ -99,6 +103,7 @@ function DashboardPage(): React.ReactElement {
     const [reverting, setReverting] = useState<boolean>(false);
     const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
     const [showSettings, setShowSettings] = useState<boolean>(false);
+    const [isRejected, setIsRejected] = useState<boolean>(false);  // ✅ Track if upgrade was rejected
 
     // DUAL-APPROVAL: Pending upgrades for Online passengers
     const [pendingUpgrades, setPendingUpgrades] = useState<PendingUpgrade[]>([]);
@@ -158,6 +163,10 @@ function DashboardPage(): React.ReactElement {
 
             if (passengerRes.data.success && passengerRes.data.data) {
                 setPassenger(passengerRes.data.data);
+                // ✅ Check if passenger rejected an upgrade offer
+                if (passengerRes.data.data.Upgrade_Status === 'REJECTED') {
+                    setIsRejected(true);
+                }
             } else {
                 setError('No booking found for your IRCTC ID');
             }
@@ -686,6 +695,29 @@ function DashboardPage(): React.ReactElement {
                 </Alert>
             )}
 
+            {/* ✅ UPGRADE REJECTED Warning Banner */}
+            {isRejected && (
+                <Alert
+                    severity="warning"
+                    sx={{
+                        mb: 3,
+                        p: 2,
+                        border: '2px solid #f57c00',
+                        borderRadius: '8px',
+                        backgroundColor: '#fff3e0'
+                    }}
+                >
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                            🚫 Upgrade Not Available
+                        </Typography>
+                        <Typography variant="body2">
+                            You previously declined an upgrade offer. Passengers who decline upgrades are not eligible for further upgrade offers during this journey.
+                        </Typography>
+                    </Box>
+                </Alert>
+            )}
+
             {/* Journey Tracker */}
             {trainState?.journey?.stations && (
                 <JourneyTimeline
@@ -695,228 +727,57 @@ function DashboardPage(): React.ReactElement {
             )}
 
             {/* Boarding Pass */}
-            <BoardingPass passenger={passenger} />
+            <BoardingPass
+                passenger={passenger}
+                journeyStarted={trainState?.journeyStarted || false}
+                currentStation={
+                    trainState?.stations?.[
+                        trainState?.currentStationIdx ?? trainState?.currentStationIndex ?? 0
+                    ]?.name || 'Unknown'
+                }
+            />
 
-            {/* DUAL-APPROVAL: Pending Upgrade Offers */}
-            {pendingUpgrades.length > 0 && (
-                <Box sx={{
-                    mt: 3,
-                    maxWidth: '900px',
-                    mx: 'auto',
-                    bgcolor: '#ffffff',
-                    borderRadius: '8px',
-                    border: '2px solid #27ae60',
-                    boxShadow: '0 2px 8px rgba(39,174,96,0.15)',
-                    overflow: 'hidden'
-                }}>
-                    <Box sx={{
-                        background: 'linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)',
-                        color: '#ffffff',
-                        p: 2
-                    }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px', m: 0 }}>
-                            🎉 Upgrade Offers Available!
+            {/* Quick Actions */}
+            <Box sx={{ mt: 3, mb: 3 }}>
+                <Card sx={{ bgcolor: '#fff3e0', border: '1px solid #f57c00' }}>
+                    <CardContent>
+                        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            🚉 Leaving Early?
                         </Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
-                            You can approve these upgrades directly from here
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            If you've left the train before your destination, report it here. Your berth will be made available for other passengers to upgrade.
                         </Typography>
-                    </Box>
-                    <Box sx={{ p: 2 }}>
-                        {pendingUpgrades.map((upgrade) => (
-                            <Box key={upgrade.id} sx={{
-                                p: 2,
-                                mb: 2,
-                                border: '1px solid #ecf0f1',
-                                borderRadius: '8px',
-                                background: '#f8f9fa',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                flexWrap: 'wrap',
-                                gap: 2
-                            }}>
-                                <Box>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-                                        Upgrade: {upgrade.currentBerth} → {upgrade.proposedBerthFull}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Coach: {upgrade.proposedCoach} | Berth Type: {upgrade.proposedBerthType}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Station: {upgrade.stationName}
-                                    </Typography>
-                                </Box>
-                                <Button
-                                    variant="contained"
-                                    onClick={() => handleApproveUpgrade(upgrade)}
-                                    disabled={approvingUpgrade === upgrade.id}
-                                    sx={{
-                                        bgcolor: '#27ae60',
-                                        '&:hover': { bgcolor: '#219a52' },
-                                        textTransform: 'none',
-                                        fontWeight: 600,
-                                        px: 3
-                                    }}
-                                >
-                                    {approvingUpgrade === upgrade.id ? 'Approving...' : '✓ Accept Upgrade'}
-                                </Button>
-                            </Box>
-                        ))}
-                    </Box>
-                </Box>
-            )}
+                        <Button
+                            component={Link}
+                            to="/report-deboarding"
+                            variant="contained"
+                            sx={{ bgcolor: '#f57c00', '&:hover': { bgcolor: '#e65100' } }}
+                        >
+                            🚉 Report Deboarding
+                        </Button>
+                    </CardContent>
+                </Card>
 
-            {/* Ticket Actions */}
-            {!passenger?.NO_show && (
-                <Box sx={{
-                    mt: 3,
-                    maxWidth: '900px',
-                    mx: 'auto',
-                    bgcolor: '#ffffff',
-                    borderRadius: '8px',
-                    border: '1px solid #e0e0e0',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                    overflow: 'hidden'
-                }}>
-                    <Box sx={{
-                        bgcolor: '#2c3e50',
-                        color: '#ffffff',
-                        p: 2,
-                        borderBottom: '1px solid #e0e0e0'
-                    }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '16px', m: 0 }}>
-                            🎫 Ticket Actions
+                {/* Cancel Ticket Card */}
+                <Card sx={{ bgcolor: '#ffebee', border: '1px solid #e53935' }}>
+                    <CardContent>
+                        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            ❌ Cancel Your Ticket?
                         </Typography>
-                    </Box>
-                    <Box sx={{ p: 3 }}>
-                        <Grid container spacing={2}>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <Card elevation={0} sx={{
-                                    border: '1px solid #ecf0f1',
-                                    borderRadius: '6px',
-                                    height: '100%'
-                                }}>
-                                    <CardContent>
-                                        <Typography variant="h6" gutterBottom sx={{ fontSize: '15px', fontWeight: 600, color: '#2c3e50' }}>
-                                            📍 Change Boarding Station
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '13px' }}>
-                                            Change to any of the next 3 upcoming stations. <strong>One-time only.</strong>
-                                        </Typography>
-                                        <Button
-                                            variant="contained"
-                                            color="primary"
-                                            fullWidth
-                                            sx={{
-                                                bgcolor: '#3498db',
-                                                '&:hover': { bgcolor: '#2980b9' },
-                                                textTransform: 'none',
-                                                fontWeight: 500,
-                                                py: 1.2
-                                            }}
-                                            onClick={handleOpenChangeModal}
-                                        >
-                                            🔄 Change Boarding Station
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <Card elevation={0} sx={{
-                                    border: '1px solid #ecf0f1',
-                                    borderRadius: '6px',
-                                    height: '100%'
-                                }}>
-                                    <CardContent>
-                                        <Typography variant="h6" gutterBottom sx={{ fontSize: '15px', fontWeight: 600, color: '#2c3e50' }}>
-                                            ❌ Cancel Ticket
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '13px' }}>
-                                            Cancel your ticket and free up your berth for other passengers.
-                                        </Typography>
-                                        <Button
-                                            variant="contained"
-                                            color="error"
-                                            fullWidth
-                                            sx={{
-                                                bgcolor: '#e74c3c',
-                                                '&:hover': { bgcolor: '#c0392b' },
-                                                textTransform: 'none',
-                                                fontWeight: 500,
-                                                py: 1.2
-                                            }}
-                                            onClick={handleOpenCancelModal}
-                                        >
-                                            ❌ Cancel Ticket
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Box>
-            )}
-
-            {/* Upgrade Offer Dialog */}
-            <Dialog open={Boolean(upgradeOffer)} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    textAlign: 'center'
-                }}>
-                    🎉 Upgrade Available!
-                </DialogTitle>
-                <DialogContent sx={{ mt: 3 }}>
-                    <Typography variant="body1" gutterBottom>
-                        Great news! You're eligible for a confirmed berth upgrade.
-                    </Typography>
-
-                    <Box sx={{
-                        mt: 2,
-                        p: 2,
-                        bgcolor: '#f0f8ff',
-                        borderRadius: 2,
-                        border: '2px solid #667eea'
-                    }}>
-                        <Typography variant="h6" color="primary" gutterBottom>
-                            New Berth: {upgradeOffer?.offeredBerth}
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Need to cancel your journey? Your berth will be freed for other passengers to upgrade.
                         </Typography>
-                        <Typography variant="body2">
-                            <strong>Coach:</strong> {upgradeOffer?.coach}
-                        </Typography>
-                        <Typography variant="body2">
-                            <strong>Berth Type:</strong> {upgradeOffer?.berthType}
-                        </Typography>
-                        <Typography variant="body2">
-                            <strong>Current Status:</strong> {upgradeOffer?.currentStatus}
-                        </Typography>
-                    </Box>
-
-                    <Alert severity="info" sx={{ mt: 2 }}>
-                        <Typography variant="body2">
-                            This is a limited time offer. Please accept or reject within 5 minutes.
-                        </Typography>
-                    </Alert>
-                </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
-                    <Button
-                        onClick={handleRejectUpgrade}
-                        color="error"
-                        variant="outlined"
-                    >
-                        Reject
-                    </Button>
-                    <Button
-                        onClick={handleAcceptUpgrade}
-                        variant="contained"
-                        color="success"
-                        sx={{ ml: 1 }}
-                    >
-                        Accept Upgrade
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
+                        <Button
+                            component={Link}
+                            to="/cancel-ticket"
+                            variant="contained"
+                            sx={{ bgcolor: '#e53935', '&:hover': { bgcolor: '#c62828' } }}
+                        >
+                            ❌ Cancel Ticket
+                        </Button>
+                    </CardContent>
+                </Card>
+            </Box>
             {/* Boarding Station Change Modal */}
             <Dialog open={showChangeModal} onClose={handleCloseChangeModal} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ bgcolor: '#2c3e50', color: '#ffffff' }}>

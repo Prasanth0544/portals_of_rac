@@ -10,6 +10,7 @@ interface LoginPageProps {
 function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
     const [employeeId, setEmployeeId] = useState<string>('');
     const [password, setPassword] = useState<string>('');
+    const [showPassword, setShowPassword] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -62,16 +63,26 @@ function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="password">Password</label>
+                        <label htmlFor="password">Password:</label>
                         <input
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             id="password"
                             value={password}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                            placeholder="Enter your password"
+                            placeholder="Enter password"
                             required
                             disabled={loading}
                         />
+                    </div>
+
+                    <div className="show-password">
+                        <input
+                            type="checkbox"
+                            id="showPassword"
+                            checked={showPassword}
+                            onChange={(e) => setShowPassword(e.target.checked)}
+                        />
+                        <label htmlFor="showPassword">Show Password</label>
                     </div>
 
                     {error && <div className="error-message">{error}</div>}

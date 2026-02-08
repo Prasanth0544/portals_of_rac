@@ -36,9 +36,11 @@ interface PassengerData {
 
 interface BoardingPassProps {
     passenger?: PassengerData;
+    journeyStarted?: boolean;
+    currentStation?: string;
 }
 
-function BoardingPass({ passenger }: BoardingPassProps): React.ReactElement {
+function BoardingPass({ passenger, journeyStarted, currentStation }: BoardingPassProps): React.ReactElement {
     const [showQR] = useState<boolean>(true);
 
     // Generate QR data (JSON with complete passenger details including berth info)
@@ -110,6 +112,38 @@ function BoardingPass({ passenger }: BoardingPassProps): React.ReactElement {
                 </Box>
 
                 <Divider sx={{ my: 2 }} />
+
+                {/* Journey Status Banner */}
+                <Box sx={{
+                    mb: 2,
+                    p: 2,
+                    borderRadius: 2,
+                    textAlign: 'center',
+                    background: journeyStarted
+                        ? 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)'
+                        : 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)',
+                    color: journeyStarted ? 'white' : '#333'
+                }}>
+                    {journeyStarted ? (
+                        <>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                🚂 Train is Running
+                            </Typography>
+                            <Typography variant="body2">
+                                Current Station: <strong>{currentStation || 'Unknown'}</strong>
+                            </Typography>
+                        </>
+                    ) : (
+                        <>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                ⏳ Journey Not Started
+                            </Typography>
+                            <Typography variant="body2">
+                                The train journey has not begun yet
+                            </Typography>
+                        </>
+                    )}
+                </Box>
 
                 {/* QR Code Section */}
                 {showQR && (

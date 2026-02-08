@@ -235,10 +235,7 @@ The system uses a **dual-database architecture**:
 │ ├── Collection: P_1 (Passengers for train 1)   │
 │ │   ├── PNR_Number (string)                     │
 │ │   ├── Passenger_Index (number) ← NEW          │
-│ │   ├── Seat_Preference (string) ← NEW          │
-│ │   ├── Preference_Priority (0-3) ← NEW         │
-│ │   ├── Is_Group_Leader (boolean) ← NEW         │
-│ │   └── Preference_Matched (boolean) ← NEW      │
+│ │   └── Is_Group_Leader (boolean) ← NEW         │
 │ ├── Collection: P_2 (Passengers for train 2)   │
 │ └── Collection: upgrade_notifications          │
 └─────────────────────────────────────────────────┘
@@ -586,7 +583,6 @@ ADMIN PORTAL                    BACKEND                   ALL PORTALS
 | **UpgradeNotificationService** | `UpgradeNotificationService.js` | Upgrade offer expiry timers |
 | **WebPushService** | `WebPushService.js` | Browser push notifications |
 | **InAppNotificationService** | `InAppNotificationService.js` | In-app notification bell |
-| **SeatPreferenceService** | `SeatPreferenceService.js` | NEW: Seat preference matching and priority |
 | **OTPService** | `OTPService.js` | Passenger OTP verification |
 | **CacheService** | `CacheService.js` | Performance caching layer |
 | **DataService** | `DataService.js` | MongoDB CRUD operations |
@@ -749,19 +745,13 @@ ADMIN PORTAL                    BACKEND                   ALL PORTALS
 {
   PNR_Number: "1722500001",
   Passenger_Index: 1,              // 1, 2, 3... up to 6
-  Seat_Preference: "Lower Berth",  // Lower/Middle/Upper/Side Lower/Side Upper/No Preference
-  Preference_Priority: 3,          // 3=senior, 2=female, 1=adult, 0=child
   Is_Group_Leader: true,           // Primary contact for notifications
-  Preference_Matched: false        // Did they get their preferred berth?
+  Name: "Passenger Name",
+  Age: 25,
+  Gender: "Male",
+  Mobile: "9876543210",
+  Email: "passenger@example.com"
 }
-```
-
-### Priority Calculation
-```
-Priority 3: Age >= 60 (Senior citizens)
-Priority 2: Gender == Female
-Priority 1: Age >= 18 (Adults)
-Priority 0: Age < 18 (Children)
 ```
 
 ### API Endpoints

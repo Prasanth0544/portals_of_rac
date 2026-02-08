@@ -10,6 +10,14 @@ interface Station {
     code: string;
     name: string;
     arrivalTime?: string;
+    idx?: number;
+}
+
+interface TrainState {
+    journeyStarted?: boolean;
+    currentStationIdx?: number;
+    currentStationIndex?: number;
+    stations?: Station[];
 }
 
 interface Passenger {
@@ -41,6 +49,7 @@ function ViewTicketPage(): React.ReactElement {
     const [isCancelled, setIsCancelled] = useState<boolean>(false);
     const [processing, setProcessing] = useState<boolean>(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [trainState, setTrainState] = useState<TrainState | null>(null);
 
     useEffect(() => {
         fetchPassengerData();
@@ -64,6 +73,12 @@ function ViewTicketPage(): React.ReactElement {
                 setPassenger(response.data.data);
                 setAlreadyChanged(response.data.data.boardingStationChanged || false);
                 setIsCancelled(response.data.data.NO_show || false);
+            }
+
+            // Fetch train state for journey status
+            const trainRes = await axios.get(`${API_URL}/train/state`);
+            if (trainRes.data.success && trainRes.data.data) {
+                setTrainState(trainRes.data.data);
             }
         } catch (err) {
             console.error('Error fetching passenger:', err);
@@ -312,7 +327,17 @@ function ViewTicketPage(): React.ReactElement {
             </div>
 
             {/* E-Boarding Pass */}
-            {passenger && <BoardingPass passenger={passenger} />}
+            {passenger && (
+                <BoardingPass
+                    passenger={passenger}
+                    journeyStarted={trainState?.journeyStarted || false}
+                    currentStation={
+                        trainState?.stations?.[
+                            trainState?.currentStationIdx ?? trainState?.currentStationIndex ?? 0
+                        ]?.name || 'Unknown'
+                    }
+                />
+            )}
 
             {/* Change Station Modal */}
             {showChangeModal && (

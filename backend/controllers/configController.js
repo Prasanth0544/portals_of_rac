@@ -68,6 +68,45 @@ class ConfigController {
       return res.status(400).json({ success: false, message: error.message });
     }
   }
+
+  /**
+   * Get available passenger collections from PassengersDB
+   */
+  async getPassengerCollections(req, res) {
+    try {
+      const { MongoClient } = require('mongodb');
+
+      // Use environment variable or default
+      const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017';
+      const passengersDbName = process.env.PASSENGERS_DB || 'PassengersDB';
+
+      const client = new MongoClient(mongoUri);
+      await client.connect();
+
+      const db = client.db(passengersDbName);
+      const collections = await db.listCollections().toArray();
+
+      await client.close();
+
+      // Extract collection names
+      const collectionNames = collections.map(col => col.name);
+
+      return res.json({
+        success: true,
+        data: {
+          database: passengersDbName,
+          collections: collectionNames
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching passenger collections:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch passenger collections',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new ConfigController();

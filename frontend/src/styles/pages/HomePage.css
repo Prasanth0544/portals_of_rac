@@ -250,7 +250,7 @@
 /* 3. MAIN ACTIONS GRID - 3 Compact Cards */
 .main-actions-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(auto, 291px));
+  grid-template-columns: repeat(3, minmax(auto, 280px));
   gap: 12px;
   margin-bottom: 15px;
 }
@@ -314,6 +314,27 @@
 }
 
 .simulation-card:hover {
+  transform: none;
+  box-shadow: 0 2px 6px rgba(44, 62, 80, 0.08);
+}
+
+/* Timer Card */
+.timer-card {
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px solid #dee2e6;
+}
+
+.timer-card .card-header {
+  width: 100%;
+  text-align: center;
+}
+
+.timer-card:hover {
   transform: none;
   box-shadow: 0 2px 6px rgba(44, 62, 80, 0.08);
 }
@@ -666,4 +687,103 @@
 .stat-box,
 .action-card-compact {
   position: relative;
+}
+
+/* Timer Display Styles */
+.timer-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #e8f4fd 0%, #d1e8fa 100%);
+  border: 2px solid #3498db;
+  transition: all 0.3s ease;
+}
+
+.timer-display.active {
+  animation: timer-pulse 1s infinite;
+}
+
+.timer-display.paused {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  border-color: #95a5a6;
+}
+
+.timer-display.complete {
+  background: linear-gradient(135deg, #d4efdf 0%, #a9dfbf 100%);
+  border-color: #27ae60;
+}
+
+.timer-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5a6c7d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.timer-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2c3e50;
+  font-family: 'Courier New', Courier, monospace;
+  letter-spacing: 2px;
+}
+
+.timer-display.active .timer-value {
+  color: #3498db;
+}
+
+.timer-display.paused .timer-value {
+  color: #7f8c8d;
+}
+
+@keyframes timer-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(52, 152, 219, 0);
+  }
+}
+
+/* Timer low warning (under 30 seconds) - uses .warning class added by React */
+.timer-display.warning {
+  background: linear-gradient(135deg, #fef9e7 0%, #fdebd0 100%);
+  border-color: #f39c12;
+  animation: timer-warning-pulse 0.5s infinite;
+}
+
+.timer-display.warning .timer-value {
+  color: #e67e22;
+}
+
+@keyframes timer-warning-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px rgba(243, 156, 18, 0);
+  }
+}
+
+/* Responsive timer */
+@media (max-width: 768px) {
+  .timer-display {
+    padding: 10px;
+  }
+
+  .timer-value {
+    font-size: 24px;
+  }
 }

@@ -1,6 +1,6 @@
 // frontend/src/App.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as api from './services/apiWithErrorHandling';
 import wsService from './services/websocket';
 import { saveAppState, loadAppState, clearAppState } from './services/StateStore';
@@ -12,7 +12,7 @@ import HomePage from './pages/HomePage';
 import RACQueuePage from './pages/RACQueuePage';
 import CoachesPage from './pages/CoachesPage';
 import PassengersPage from './pages/PassengersPage';
-import ReallocationPage from './pages/ReallocationPage';
+
 import VisualizationPage from './pages/VisualizationPage';
 import AddPassengerPage from './pages/AddPassengerPage';
 import AllocationDiagnosticsPage from './pages/AllocationDiagnosticsPage';
@@ -87,6 +87,12 @@ function App(): React.ReactElement {
     const [stateRestored, setStateRestored] = useState<boolean>(false);
     const isInitialMount = useRef(true);
 
+    // Timer state for automatic station movement (2 minutes = 120 seconds)
+    const TIMER_DURATION = 120; // 2 minutes in seconds
+    const [timerSeconds, setTimerSeconds] = useState<number>(TIMER_DURATION);
+    const [timerActive, setTimerActive] = useState<boolean>(false);
+    const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
     // Restore persisted state on mount AND verify with backend
     useEffect(() => {
         const restoreState = async () => {
@@ -155,6 +161,22 @@ function App(): React.ReactElement {
         restoreState();
     }, []);
 
+    // Auto-start timer when page is refreshed and journey was already in progress
+    useEffect(() => {
+        if (stateRestored && journeyStarted && !timerActive) {
+            // Check if not at last station before starting timer
+            const stations = trainData?.stations || [];
+            const currentStationIdx = trainData?.currentStationIdx || 0;
+            const isLastStation = stations.length > 0 && currentStationIdx >= stations.length - 1;
+
+            if (!isLastStation) {
+                console.log('[Timer] Auto-starting timer after page refresh (journey was in progress)');
+                setTimerActive(true);
+                // Don't reset timer - keep it at 120 seconds for a fresh start after refresh
+            }
+        }
+    }, [stateRestored, journeyStarted, timerActive, trainData?.stations, trainData?.currentStationIdx]);
+
     // Save state to IndexedDB when key states change
     useEffect(() => {
         // Skip saving on initial mount
@@ -194,6 +216,86 @@ function App(): React.ReactElement {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated]);
+
+    // Timer effect for automatic station movement
+    const resetTimer = useCallback(() => {
+        setTimerSeconds(TIMER_DURATION);
+    }, [TIMER_DURATION]);
+
+    const startTimer = useCallback(() => {
+        resetTimer();
+        setTimerActive(true);
+    }, [resetTimer]);
+
+    const stopTimer = useCallback(() => {
+        setTimerActive(false);
+        if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+        }
+    }, []);
+
+    // Timer countdown effect
+    useEffect(() => {
+        if (!timerActive || !journeyStarted) {
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+            }
+            return;
+        }
+
+        // Check if already at last station
+        const stations = trainData?.stations || [];
+        const currentStationIdx = trainData?.currentStationIdx || 0;
+        const isLastStation = stations.length > 0 && currentStationIdx >= stations.length - 1;
+
+        if (isLastStation) {
+            stopTimer();
+            return;
+        }
+
+        timerIntervalRef.current = setInterval(() => {
+            setTimerSeconds((prev) => {
+                if (prev <= 1) {
+                    // Timer reached 0 - auto move to next station
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => {
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+            }
+        };
+    }, [timerActive, journeyStarted, trainData?.stations, trainData?.currentStationIdx, stopTimer]);
+
+    // Auto-move to next station when timer reaches 0
+    useEffect(() => {
+        if (timerSeconds === 0 && timerActive && journeyStarted && !loading) {
+            const stations = trainData?.stations || [];
+            const currentStationIdx = trainData?.currentStationIdx || 0;
+            const isLastStation = stations.length > 0 && currentStationIdx >= stations.length - 1;
+
+            if (!isLastStation) {
+                console.log('⏰ Timer reached 0 - auto moving to next station');
+                handleNextStationAuto();
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timerSeconds]);
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+            }
+        };
+    }, []);
 
     const autoInitializeFromBackend = async (): Promise<void> => {
         setAutoInitAttempted(true);
@@ -361,6 +463,8 @@ function App(): React.ReactElement {
             if (response.success) {
                 setJourneyStarted(true);
                 await loadTrainState();
+                // Start the automatic station movement timer
+                startTimer();
             } else {
                 setError(response.error || 'Failed to start journey');
             }
@@ -380,6 +484,8 @@ function App(): React.ReactElement {
 
             if (response.success) {
                 await loadTrainState();
+                // Reset timer for next station
+                resetTimer();
 
                 alert(`✅ Processed Station: ${response.data.station}\n\n` +
                     `Deboarded: ${response.data.deboarded}\n` +
@@ -393,6 +499,31 @@ function App(): React.ReactElement {
             }
         } catch (err: any) {
             setError(err.message || 'Failed to move to next station');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Auto-move to next station (silent, triggered by timer)
+    const handleNextStationAuto = async (): Promise<void> => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await api.moveToNextStation();
+
+            if (response.success) {
+                await loadTrainState();
+                // Reset timer for next station
+                resetTimer();
+                console.log(`⏰ Auto-moved to station: ${response.data.station}`);
+            } else {
+                setError(response.error || 'Failed to auto-move');
+                stopTimer(); // Stop timer on error
+            }
+        } catch (err: any) {
+            setError(err.message || 'Failed to auto-move to next station');
+            stopTimer(); // Stop timer on error
         } finally {
             setLoading(false);
         }
@@ -412,6 +543,9 @@ function App(): React.ReactElement {
             if (response.success) {
                 setJourneyStarted(false);
                 setAutoInitAttempted(false);
+                // Stop the timer and reset to initial value
+                stopTimer();
+                resetTimer();
                 await clearAppState(); // Clear persisted state on reset
                 await loadTrainState();
                 alert('✅ Train reset successfully!');
@@ -644,6 +778,8 @@ function App(): React.ReactElement {
                         onReset={handleReset}
                         onMarkNoShow={handleMarkNoShow}
                         onNavigate={handleNavigate}
+                        timerSeconds={timerSeconds}
+                        timerActive={timerActive}
                     />
                 )}
 
@@ -669,13 +805,7 @@ function App(): React.ReactElement {
                     />
                 )}
 
-                {currentPage === 'reallocation' && journeyStarted && (
-                    <ReallocationPage
-                        trainData={trainData}
-                        onClose={handleClosePage}
-                        loadTrainState={loadTrainState}
-                    />
-                )}
+
 
                 {currentPage === 'visualization' && journeyStarted && (
                     <VisualizationPage

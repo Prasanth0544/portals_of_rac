@@ -53,7 +53,6 @@ Desktop.ini
 Learnings/
 Learnings\dockerSharing
 Architecture_Diagrams/
-
 /RAC-Reallocation-System_( 01-10 ).pptx
 /RAC-ReallocationSystem_(11-18 ).pptx
 /PPT_CONTENT.md
@@ -63,3 +62,11 @@ ppt_content.pdf
 ppt_content.md
 /webpush_not_recivied.md
 /webpush_not_recvived
+comprehensive_rac_architecture.png
+count_lines.py
+CURRENT_VS_YOUR_SYSTEM.md
+DATA_ENGINEERING_INTELLIGENT_SYSTEMS_ANALYSIS.md
+LINKEDIN_POSTING_GUIDE.md
+PROJECT_STRUCTURE.md
+PROJECT_ANALYSIS.md
+generate_tree.py

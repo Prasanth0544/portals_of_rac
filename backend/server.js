@@ -31,11 +31,11 @@ if (process.env.NODE_ENV === 'production') {
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || [
     'http://localhost:3000',  // Admin Portal (React)
-    'http://localhost:3001',  // TTE Portal (old port)
-    'http://localhost:3002',  // Passenger Portal (old port)
-    'http://localhost:5173',  // Frontend (Vite)
     'http://localhost:5174',  // TTE Portal (Vite)
-    'http://localhost:5175'   // Passenger Portal (Vite)
+    'http://localhost:5175',   // Passenger Portal (Vite)
+    'https://passengerportal.vercel.app',
+    'https://rac-tte.vercel.app',
+    'https://rac-admin-page.vercel.app'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,

@@ -39,6 +39,8 @@ interface HomePageProps {
     onReset: () => void;
     onMarkNoShow: (pnr: string) => void;
     onNavigate: (page: PageType) => void;
+    timerSeconds: number;
+    timerActive: boolean;
 }
 
 function HomePage({
@@ -49,7 +51,9 @@ function HomePage({
     onNextStation,
     onReset,
     onMarkNoShow,
-    onNavigate
+    onNavigate,
+    timerSeconds,
+    timerActive
 }: HomePageProps): React.ReactElement | null {
     const [pnrInput, setPnrInput] = useState<string>('');
 
@@ -62,6 +66,13 @@ function HomePage({
         }
         onMarkNoShow(pnrInput);
         setPnrInput('');
+    };
+
+    // Format timer seconds to MM:SS
+    const formatTimer = (seconds: number): string => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
     const currentStationIdx = trainData.currentStationIdx || 0;
@@ -144,22 +155,35 @@ function HomePage({
                     </button>
                 </div>
 
+                {/* Timer Card */}
+                <div className="action-card-compact timer-card">
+                    <div className="card-header">
+                        <h4>⏱️ Auto Timer</h4>
+                    </div>
+                    {!journeyStarted && (
+                        <div className="timer-display paused">
+                            <span className="timer-label">Waiting for Journey Start</span>
+                            <span className="timer-value">--:--</span>
+                        </div>
+                    )}
+                    {journeyStarted && !isLastStation && (
+                        <div className={`timer-display ${timerActive ? 'active' : 'paused'} ${timerSeconds <= 30 && timerActive ? 'warning' : ''}`}>
+                            <span className="timer-label">Next Station In:</span>
+                            <span className="timer-value">{formatTimer(timerSeconds)}</span>
+                        </div>
+                    )}
+                    {journeyStarted && isLastStation && (
+                        <div className="timer-display complete">
+                            <span className="timer-label">🎉 Journey Complete!</span>
+                        </div>
+                    )}
+                </div>
+
                 <div className="action-card-compact phase1-card" onClick={() => onNavigate('phase1')}>
                     <div className="card-header">
                         <h4>🎯 Current Station Matching</h4>
                     </div>
                     <p className="card-description">Phase 1: HashMap-based reallocation</p>
-                    <div className="card-arrow">→</div>
-                </div>
-
-                <div
-                    className="action-card-compact reallocation-card"
-                    onClick={() => onNavigate('reallocation')}
-                >
-                    <div className="card-header">
-                        <h4>Reallocation</h4>
-                    </div>
-                    <p className="card-description">Upgrade RAC passengers</p>
                     <div className="card-arrow">→</div>
                 </div>
             </div>

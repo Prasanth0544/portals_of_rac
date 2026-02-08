@@ -8,7 +8,9 @@ class UpgradeNotificationService {
         this.collectionName = 'upgrade_notifications';
         this.denialLogCollection = 'upgrade_denial_log';
         this.initialized = false;
-        console.log('📩 UpgradeNotificationService initialized (MongoDB-backed)');
+        // ✅ Offer expiration time: 5 minutes
+        this.OFFER_EXPIRY_MS = 5 * 60 * 1000;
+        console.log('📩 UpgradeNotificationService initialized (MongoDB-backed, 5-min expiry)');
     }
 
     /**
@@ -119,6 +121,7 @@ class UpgradeNotificationService {
 
     /**
      * Deny upgrade offer
+     * UPDATED: Now sets Upgrade_Status = 'REJECTED' on passenger to exclude from future offers
      */
     async denyUpgrade(pnr, notificationId, reason = 'Passenger declined') {
         const collection = await this.getCollection();
@@ -158,6 +161,25 @@ class UpgradeNotificationService {
             createdAt: new Date()
         });
 
+        // ✅ NEW: Mark passenger as rejected in main passengers collection
+        // This excludes them from future upgrade offers
+        try {
+            const passengersCollection = db.getPassengersCollection();
+            await passengersCollection.updateOne(
+                { PNR_Number: pnr },
+                {
+                    $set: {
+                        Upgrade_Status: 'REJECTED',
+                        Upgrade_Rejected_At: new Date(),
+                        Upgrade_Rejected_Reason: reason
+                    }
+                }
+            );
+            console.log(`   📝 Updated passenger ${pnr} with Upgrade_Status = 'REJECTED'`);
+        } catch (updateErr) {
+            console.error(`   ⚠️ Failed to update passenger Upgrade_Status:`, updateErr.message);
+        }
+
         console.log(`❌ Upgrade denied by ${notification.name} (${pnr}): ${reason}`);
 
         return { ...notification, status: 'DENIED', deniedAt, denialReason: reason };
@@ -165,10 +187,42 @@ class UpgradeNotificationService {
 
     /**
      * Get pending notifications for passenger
+     * Automatically expires offers older than OFFER_EXPIRY_MS (5 minutes)
      */
     async getPendingNotifications(pnr) {
         const collection = await this.getCollection();
-        return await collection.find({ pnr, status: 'PENDING' }).toArray();
+        const allPending = await collection.find({ pnr, status: 'PENDING' }).toArray();
+
+        const now = Date.now();
+        const validOffers = [];
+        const expiredIds = [];
+
+        for (const notification of allPending) {
+            const createdTime = new Date(notification.createdAt).getTime();
+            const age = now - createdTime;
+
+            if (age > this.OFFER_EXPIRY_MS) {
+                // Offer has expired
+                expiredIds.push(notification.id);
+                console.log(`⏰ Offer ${notification.id} expired (age: ${Math.round(age / 1000)}s)`);
+            } else {
+                // Still valid - add remaining time info
+                notification.expiresIn = this.OFFER_EXPIRY_MS - age;
+                notification.expiresAt = new Date(createdTime + this.OFFER_EXPIRY_MS).toISOString();
+                validOffers.push(notification);
+            }
+        }
+
+        // Mark expired offers in database
+        if (expiredIds.length > 0) {
+            await collection.updateMany(
+                { id: { $in: expiredIds } },
+                { $set: { status: 'EXPIRED', expiredAt: new Date() } }
+            );
+            console.log(`   📝 Marked ${expiredIds.length} offers as EXPIRED`);
+        }
+
+        return validOffers;
     }
 
     /**

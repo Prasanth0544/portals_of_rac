@@ -2,7 +2,7 @@
 import React, { useState, useEffect, MouseEvent } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { ThemeProvider, createTheme, Theme } from '@mui/material/styles';
-import { CssBaseline, AppBar, Toolbar, Typography, Container, Box, Tabs, Tab, IconButton, Menu, MenuItem, Divider } from '@mui/material';
+import { CssBaseline, AppBar, Toolbar, Typography, Container, Box, Tabs, Tab, IconButton, Menu, MenuItem, Divider, Badge } from '@mui/material';
 import TrainIcon from '@mui/icons-material/Train';
 import HomeIcon from '@mui/icons-material/Home';
 import SearchIcon from '@mui/icons-material/Search';
@@ -17,10 +17,15 @@ import PNRSearchPage from './pages/PNRSearchPage';
 
 import JourneyVisualizationPage from './pages/JourneyVisualizationPage';
 import UpgradeOffersPage from './pages/UpgradeOffersPage';
+import ReportDeboardingPage from './pages/ReportDeboardingPage';
+import CancelTicketPage from './pages/CancelTicketPage';
 import NotificationBell from './components/NotificationBell';
 import { initializePushNotifications } from './services/pushNotificationService';
+import axios from 'axios';
 import './App.css';
 import './UserMenu.css';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 interface User {
     name?: string;
@@ -31,6 +36,7 @@ interface User {
 interface NavigationProps {
     user: User | null;
     onLogout: () => void;
+    upgradeCount: number;
 }
 
 const theme: Theme = createTheme({
@@ -53,7 +59,7 @@ const theme: Theme = createTheme({
 });
 
 // Navigation component with tabs
-function Navigation({ user, onLogout }: NavigationProps): React.ReactElement {
+function Navigation({ user, onLogout, upgradeCount }: NavigationProps): React.ReactElement {
     const location = useLocation();
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
 
@@ -123,8 +129,12 @@ function Navigation({ user, onLogout }: NavigationProps): React.ReactElement {
                         iconPosition="start"
                     />
                     <Tab
-                        icon={<UpgradeIcon />}
-                        label="Upgrades"
+                        icon={
+                            <Badge badgeContent={upgradeCount} color="error" max={99}>
+                                <UpgradeIcon />
+                            </Badge>
+                        }
+                        label={upgradeCount > 0 ? `Upgrades (${upgradeCount})` : 'Upgrades'}
                         component={Link}
                         to="/upgrades"
                         iconPosition="start"
@@ -171,6 +181,7 @@ function Navigation({ user, onLogout }: NavigationProps): React.ReactElement {
 function App(): React.ReactElement {
     const [authenticated, setAuthenticated] = useState<boolean>(false);
     const [user, setUser] = useState<User | null>(null);
+    const [upgradeCount, setUpgradeCount] = useState<number>(0);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -183,6 +194,26 @@ function App(): React.ReactElement {
             initializePushNotifications();
         }
     }, []);
+
+    // Fetch upgrade count periodically
+    useEffect(() => {
+        if (!user?.IRCTC_ID) return;
+
+        const fetchUpgradeCount = async (): Promise<void> => {
+            try {
+                const response = await axios.get(`${API_URL}/passenger/pending-upgrades/${user.IRCTC_ID}`);
+                if (response.data.success) {
+                    setUpgradeCount(response.data.pendingUpgrades?.length || 0);
+                }
+            } catch (err) {
+                console.log('Could not fetch upgrade count');
+            }
+        };
+
+        fetchUpgradeCount();
+        const interval = setInterval(fetchUpgradeCount, 30000); // Refresh every 30 seconds
+        return () => clearInterval(interval);
+    }, [user?.IRCTC_ID]);
 
     const handleLogout = (): void => {
         localStorage.removeItem('token');
@@ -201,7 +232,7 @@ function App(): React.ReactElement {
             <CssBaseline />
             <Router>
                 <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-                    <Navigation user={user} onLogout={handleLogout} />
+                    <Navigation user={user} onLogout={handleLogout} upgradeCount={upgradeCount} />
 
                     <Box sx={{ flex: 1 }}>
                         <Routes>
@@ -209,6 +240,8 @@ function App(): React.ReactElement {
                             <Route path="/pnr-search" element={<PNRSearchPage />} />
                             <Route path="/journey" element={<JourneyVisualizationPage />} />
                             <Route path="/upgrades" element={<UpgradeOffersPage />} />
+                            <Route path="/report-deboarding" element={<ReportDeboardingPage />} />
+                            <Route path="/cancel-ticket" element={<CancelTicketPage />} />
                         </Routes>
                     </Box>
 

@@ -1,6 +1,6 @@
 // frontend/src/pages/ConfigPage.tsx
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
-import { setupConfig, initializeTrain, getTrains } from "../services/apiWithErrorHandling";
+import { setupConfig, initializeTrain, getTrains, getPassengerCollections } from "../services/apiWithErrorHandling";
 import "../styles/pages/ConfigPage.css";
 
 interface FormState {
@@ -39,6 +39,7 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [trainList, setTrainList] = useState<TrainItem[]>([]);
+    const [passengerCollections, setPassengerCollections] = useState<string[]>([]);
 
     useEffect(() => {
         (async () => {
@@ -47,6 +48,15 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
                 if (res.success) setTrainList(res.data || []);
             } catch (error: any) {
                 console.warn('Could not load train list:', error.message);
+            }
+
+            try {
+                const collectionsRes = await getPassengerCollections();
+                if (collectionsRes.success && collectionsRes.data?.collections) {
+                    setPassengerCollections(collectionsRes.data.collections);
+                }
+            } catch (error: any) {
+                console.warn('Could not load passenger collections:', error.message);
             }
         })();
     }, []);
@@ -144,19 +154,40 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
 
                 <div className="form-section">
                     <h3>Passengers (Database: {form.passengersDb})</h3>
-                    <label>
-                        Collection Name
-                        <input
-                            type="text"
-                            value={form.passengersCollection}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => update("passengersCollection", e.target.value)}
-                            placeholder="e.g., 17225_new"
-                            required
-                        />
-                        <span className="field-hint">
-                            Enter the passengers collection name
-                        </span>
-                    </label>
+                    {passengerCollections.length > 0 ? (
+                        <label>
+                            Collection Name
+                            <select
+                                value={form.passengersCollection}
+                                onChange={(e: ChangeEvent<HTMLSelectElement>) => update("passengersCollection", e.target.value)}
+                                required
+                            >
+                                <option value="">-- Select Collection --</option>
+                                {passengerCollections.map((collection) => (
+                                    <option key={collection} value={collection}>
+                                        {collection}
+                                    </option>
+                                ))}
+                            </select>
+                            <span className="field-hint">
+                                Select from available passenger collections
+                            </span>
+                        </label>
+                    ) : (
+                        <label>
+                            Collection Name
+                            <input
+                                type="text"
+                                value={form.passengersCollection}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => update("passengersCollection", e.target.value)}
+                                placeholder="e.g., P_1, Phase_2"
+                                required
+                            />
+                            <span className="field-hint">
+                                Enter the passengers collection name (collection list not loaded)
+                            </span>
+                        </label>
+                    )}
                 </div>
 
                 <div className="form-section">

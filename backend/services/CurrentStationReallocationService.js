@@ -415,15 +415,23 @@ class CurrentStationReallocationService {
             // Fetch IRCTC_ID and Passenger_Status from MongoDB
             let irctcId = null;
             let passengerStatus = topMatch.passengerStatus || 'Offline';
+            let upgradeStatus = null;
 
             try {
                 const dbPassenger = await passengersCollection.findOne({ PNR_Number: topMatch.pnr });
                 if (dbPassenger) {
                     irctcId = dbPassenger.IRCTC_ID;
                     passengerStatus = dbPassenger.Passenger_Status || passengerStatus;
+                    upgradeStatus = dbPassenger.Upgrade_Status;
                 }
             } catch (err) {
                 console.warn(`⚠️ Could not fetch IRCTC_ID for ${topMatch.pnr}:`, err.message);
+            }
+
+            // ✅ NEW: Skip passengers who previously rejected an upgrade offer
+            if (upgradeStatus === 'REJECTED') {
+                console.log(`   ⏭️ Skipping ${topMatch.pnr} (${topMatch.name}) - previously rejected upgrade`);
+                continue;
             }
 
             // Determine approval target based on passenger status

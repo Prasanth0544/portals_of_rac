@@ -230,6 +230,51 @@ class PassengerController {
   }
 
   /**
+   * Get all passengers by PNR (for multi-passenger bookings)
+   * GET /api/passengers/by-pnr/:pnr
+   */
+  async getPassengersByPNR(req, res) {
+    try {
+      const { pnr } = req.params;
+
+      if (!pnr) {
+        return res.status(400).json({
+          success: false,
+          message: 'PNR is required'
+        });
+      }
+
+      // Get all passengers with this PNR
+      const passengers = await db.getPassengersCollection().find({
+        $or: [
+          { PNR_Number: pnr },
+          { pnr: pnr }
+        ]
+      }).toArray();
+
+      if (!passengers || passengers.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No passengers found for this PNR'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: passengers,
+        count: passengers.length
+      });
+
+    } catch (error) {
+      console.error('❌ Error fetching passengers by PNR:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
    * Get list of vacant berths with details
    */
   async getVacantBerths(req, res) {
@@ -726,13 +771,15 @@ class PassengerController {
    */
   async acceptUpgrade(req, res) {
     try {
-      const { pnr, notificationId } = req.body;
+      // ✅ FIX: Accept both offerId (from frontend) and notificationId (legacy)
+      const { pnr, notificationId, offerId } = req.body;
+      const actualNotificationId = notificationId || offerId;
 
       // Validation
-      if (!pnr || !notificationId) {
+      if (!pnr || !actualNotificationId) {
         return res.status(400).json({
           success: false,
-          message: "Missing required fields: pnr, notificationId",
+          message: "Missing required fields: pnr, notificationId/offerId",
         });
       }
 
@@ -746,7 +793,7 @@ class PassengerController {
       }
 
       // Call service for business logic
-      const result = await PassengerService.acceptUpgrade(pnr, notificationId, trainState);
+      const result = await PassengerService.acceptUpgrade(pnr, actualNotificationId, trainState);
 
       // Note: Actual upgrade will be performed by TTE confirmation
       // This just marks the passenger's acceptance
@@ -784,18 +831,20 @@ class PassengerController {
    */
   async denyUpgrade(req, res) {
     try {
-      const { pnr, notificationId, reason } = req.body;
+      // ✅ FIX: Accept both offerId (from frontend) and notificationId (legacy)
+      const { pnr, notificationId, offerId, reason } = req.body;
+      const actualNotificationId = notificationId || offerId;
 
       // Validation
-      if (!pnr || !notificationId) {
+      if (!pnr || !actualNotificationId) {
         return res.status(400).json({
           success: false,
-          message: "Missing required fields: pnr, notificationId",
+          message: "Missing required fields: pnr, notificationId/offerId",
         });
       }
 
       // Call service for business logic
-      const result = await PassengerService.denyUpgrade(pnr, notificationId);
+      const result = await PassengerService.denyUpgrade(pnr, actualNotificationId);
 
       // Broadcast update via WebSocket
       if (wsManager) {
@@ -1509,7 +1558,7 @@ class PassengerController {
    */
   async selfCancelTicket(req, res) {
     try {
-      const { pnr, irctcId } = req.body;
+      const { pnr, irctcId, passengerName } = req.body;
 
       if (!pnr || !irctcId) {
         return res.status(400).json({
@@ -1518,18 +1567,23 @@ class PassengerController {
         });
       }
 
-      // Get passenger from database and verify IRCTC ID - try both PNR field names
-      const passenger = await db.getPassengersCollection().findOne({
-        $or: [
-          { PNR_Number: pnr, IRCTC_ID: irctcId },
-          { pnr: pnr, IRCTC_ID: irctcId }
-        ]
-      });
+      // Build query - for multi-passenger PNR, match by name too
+      const query = passengerName
+        ? { PNR_Number: pnr, IRCTC_ID: irctcId, Name: passengerName }
+        : {
+          $or: [
+            { PNR_Number: pnr, IRCTC_ID: irctcId },
+            { pnr: pnr, IRCTC_ID: irctcId }
+          ]
+        };
+
+      // Get passenger from database
+      const passenger = await db.getPassengersCollection().findOne(query);
 
       if (!passenger) {
         return res.status(404).json({
           success: false,
-          message: 'Passenger not found or IRCTC ID does not match'
+          message: 'Passenger not found or credentials do not match'
         });
       }
 
@@ -1543,13 +1597,18 @@ class PassengerController {
 
       // Update database - set NO_show to true
       const result = await db.getPassengersCollection().updateOne(
-        { PNR_Number: pnr, IRCTC_ID: irctcId },
+        passengerName
+          ? { PNR_Number: pnr, IRCTC_ID: irctcId, Name: passengerName }
+          : { PNR_Number: pnr, IRCTC_ID: irctcId },
         {
           $set: {
             NO_show: true,
             NO_show_timestamp: new Date(),
             selfCancelled: true,
-            selfCancelledAt: new Date()
+            selfCancelledAt: new Date(),
+            Cancelled: true,
+            CancelledAt: new Date(),
+            CancellationType: 'FULL_JOURNEY'  // Distinguish from deboarding
           }
         }
       );
@@ -1587,6 +1646,143 @@ class PassengerController {
 
     } catch (error) {
       console.error('❌ Error self-cancelling ticket:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Report early deboarding (passenger reports they left the train before destination)
+   * POST /api/passenger/report-deboarding
+   * Body: { pnr, irctcId, passengerName, deboardingStation }
+   */
+  async reportDeboarding(req, res) {
+    try {
+      const { pnr, irctcId, passengerName, deboardingStation } = req.body;
+
+      if (!pnr || !irctcId || !deboardingStation) {
+        return res.status(400).json({
+          success: false,
+          message: 'PNR, IRCTC ID, and Deboarding Station are required'
+        });
+      }
+
+      // Get passenger from database - for multi-passenger PNR, match by name too
+      const query = passengerName
+        ? { PNR_Number: pnr, IRCTC_ID: irctcId, Name: passengerName }
+        : { PNR_Number: pnr, IRCTC_ID: irctcId };
+
+      const passenger = await db.getPassengersCollection().findOne(query);
+
+      if (!passenger) {
+        return res.status(404).json({
+          success: false,
+          message: 'Passenger not found or credentials do not match'
+        });
+      }
+
+      // Check if already deboarded/no-show
+      if (passenger.NO_show) {
+        return res.status(400).json({
+          success: false,
+          message: 'Passenger is already marked as deboarded/no-show'
+        });
+      }
+
+      // Validate deboarding station is between boarding and destination
+      const stationOrder = require('../utils/stationOrder');
+      const trainState = trainController.getGlobalTrainState();
+
+      if (!trainState) {
+        return res.status(400).json({
+          success: false,
+          message: 'Train not initialized'
+        });
+      }
+
+      const stations = trainState.stations;
+
+      // Find stations using flexible matching
+      const boardingStation = stationOrder.findStation(stations, passenger.Boarding_Station || passenger.boarding_station);
+      const destinationStation = stationOrder.findStation(stations, passenger.Deboarding_Station || passenger.deboarding_station);
+      const deboardingStationObj = stationOrder.findStation(stations, deboardingStation);
+
+      if (!boardingStation || !destinationStation || !deboardingStationObj) {
+        console.log('Station lookup failed:', {
+          boarding: passenger.Boarding_Station,
+          destination: passenger.Deboarding_Station,
+          deboarding: deboardingStation
+        });
+        return res.status(400).json({
+          success: false,
+          message: 'Could not find station in current train route'
+        });
+      }
+
+      const boardingIdx = boardingStation.idx;
+      const destinationIdx = destinationStation.idx;
+      const deboardingIdx = deboardingStationObj.idx;
+
+      if (deboardingIdx <= boardingIdx || deboardingIdx >= destinationIdx) {
+        return res.status(400).json({
+          success: false,
+          message: 'Deboarding station must be between boarding and destination stations'
+        });
+      }
+
+      // Update database - set NO_show to true with deboarding info
+      const result = await db.getPassengersCollection().updateOne(
+        query,
+        {
+          $set: {
+            NO_show: true,
+            NO_show_timestamp: new Date(),
+            Deboarded: true,
+            DeboardedAt: new Date(),
+            DeboardingStation: deboardingStation,
+            DeboardingReportedBy: 'PASSENGER'
+          }
+        }
+      );
+
+      if (result.modifiedCount === 0) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to record deboarding'
+        });
+      }
+
+      // Update in-memory state (trainState already available from above)
+      if (trainState) {
+        const memPassenger = trainState.findPassengerByPNR(pnr);
+        if (memPassenger) {
+          memPassenger.noShow = true;
+
+          // Free up the berth
+          const location = trainState.findPassenger(pnr);
+          if (location) {
+            location.berth.removePassenger(pnr);
+            location.berth.updateStatus();
+          }
+        }
+      }
+
+      console.log(`🚉 Deboarding reported for ${passenger.Name} (PNR: ${pnr}) at station: ${deboardingStation}`);
+
+      res.json({
+        success: true,
+        message: `Deboarding reported successfully at ${deboardingStation}. Your berth is now available for other passengers.`,
+        data: {
+          pnr: pnr,
+          passengerName: passenger.Name,
+          deboardingStation: deboardingStation
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Error reporting deboarding:', error);
       res.status(500).json({
         success: false,
         error: error.message

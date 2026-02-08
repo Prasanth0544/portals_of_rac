@@ -15,9 +15,11 @@ interface UpgradeOffer {
     coach: string;
     berthNo: string;
     expiresAt?: string;
+    expiresIn?: number; // milliseconds remaining
 }
 
 interface User {
+    IRCTC_ID?: string;
     irctcId?: string;
 }
 
@@ -26,11 +28,13 @@ const UpgradeOffersPage: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [accepting, setAccepting] = useState<string | null>(null);
     const [pnr, setPnr] = useState<string | null>(null);
+    const [isRejected, setIsRejected] = useState<boolean>(false);
+    const [countdown, setCountdown] = useState<number>(0);
 
-    // Get IRCTC ID from logged-in user
+    // Get IRCTC ID from logged-in user (handles both cases)
     const userStr = localStorage.getItem('user');
     const user: User | null = userStr ? JSON.parse(userStr) : null;
-    const irctcId = user?.irctcId;
+    const irctcId = user?.IRCTC_ID || user?.irctcId;
 
     useEffect(() => {
         if (irctcId) {
@@ -40,16 +44,55 @@ const UpgradeOffersPage: React.FC = () => {
         }
     }, [irctcId]);
 
+    // ✅ Countdown timer - updates every second for offer expiration
+    useEffect(() => {
+        if (offers.length === 0) return;
+
+        const interval = setInterval(() => {
+            const now = Date.now();
+            let hasValid = false;
+
+            setOffers(prevOffers => prevOffers.map(offer => {
+                if (offer.expiresAt) {
+                    const remaining = new Date(offer.expiresAt).getTime() - now;
+                    if (remaining > 0) {
+                        hasValid = true;
+                        return { ...offer, expiresIn: remaining };
+                    }
+                }
+                return offer;
+            }).filter(o => !o.expiresIn || o.expiresIn > 0));
+
+            // Refresh from server if all offers expired
+            if (!hasValid && pnr) {
+                fetchUpgradeOffers(pnr);
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [offers.length, pnr]);
+
     const fetchPassengerPNR = async (irctcId: string): Promise<void> => {
         setLoading(true);
         try {
-            const response = await fetch(`${API_URL}/passenger/pnr-by-irctc/${irctcId}`);
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_URL}/passengers/by-irctc/${irctcId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             const data = await response.json();
 
             if (data.success && data.data) {
                 const passengerPNR = data.data.PNR_Number;
                 setPnr(passengerPNR);
-                fetchUpgradeOffers(passengerPNR);
+                // ✅ Check if passenger has rejected an upgrade
+                if (data.data.Upgrade_Status === 'REJECTED') {
+                    setIsRejected(true);
+                    setLoading(false);
+                } else {
+                    fetchUpgradeOffers(passengerPNR);
+                }
             } else {
                 setLoading(false);
             }
@@ -110,9 +153,13 @@ const UpgradeOffersPage: React.FC = () => {
         if (!offerId) return;
 
         try {
+            const token = localStorage.getItem('token');
             const response = await fetch(`${API_URL}/passenger/deny-upgrade`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     pnr: pnr,
                     offerId: offerId
@@ -122,13 +169,13 @@ const UpgradeOffersPage: React.FC = () => {
             const data = await response.json();
 
             if (data.success) {
-                toast.success('Upgrade offer declined');
+                toast.success('✅ Upgrade declined. You will not receive further upgrade offers for this journey.');
                 if (pnr) fetchUpgradeOffers(pnr);
             } else {
                 toast.error(data.message || 'Failed to decline upgrade');
             }
         } catch (error) {
-            toast.error('Error declining upgrade');
+            toast.error('❌ Error declining upgrade. Please try again.');
         }
     };
 
@@ -161,91 +208,129 @@ const UpgradeOffersPage: React.FC = () => {
                     <p>We couldn't find a booking associated with your IRCTC ID.</p>
                     <p className="hint">Please make sure you have a valid train booking.</p>
                 </div>
-            ) : offers.length === 0 ? (
-                <div className="empty-state">
-                    <div className="empty-icon">📭</div>
-                    <h3>No Upgrade Offers Available</h3>
-                    <p>You don't have any pending upgrade offers at the moment.</p>
-                    <p className="hint">Offers will appear here when a confirmed berth becomes available.</p>
+            ) : isRejected ? (
+                <div className="empty-state rejected-state">
+                    <div className="empty-icon">🚫</div>
+                    <h3>Upgrade Not Available</h3>
+                    <p>You previously declined an upgrade offer.</p>
+                    <p className="hint">Passengers who decline upgrade offers are not eligible for further upgrades during this journey.</p>
+                    <div className="pnr-badge">PNR: {pnr}</div>
                 </div>
             ) : (
-                <div className="offers-grid">
-                    {offers.map((offer, index) => (
-                        <div
-                            key={offer.offerId || offer.id || `offer-${index}`}
-                            className={`offer-card ${offer.status === 'expired' ? 'expired' : ''}`}
-                        >
-                            <div className="offer-header">
-                                <div className="offer-badge">
-                                    {offer.status === 'pending' ? '🔔 New Offer' : '⏰ Expired'}
-                                </div>
-                                <div className="offer-time">
-                                    {new Date(offer.createdAt).toLocaleString()}
-                                </div>
-                            </div>
-
-                            <div className="offer-body">
-                                <div className="berth-info">
-                                    <h3>🛏️ {offer.berth}</h3>
-                                    <span className="berth-type">{offer.berthType}</span>
-                                </div>
-
-                                <div className="upgrade-details">
-                                    <div className="detail-row">
-                                        <span className="label">Current Status:</span>
-                                        <span className="value status-rac">RAC</span>
-                                    </div>
-                                    <div className="detail-row">
-                                        <span className="label">New Status:</span>
-                                        <span className="value status-cnf">Confirmed (CNF)</span>
-                                    </div>
-                                    <div className="detail-row">
-                                        <span className="label">Coach:</span>
-                                        <span className="value">{offer.coach}</span>
-                                    </div>
-                                    <div className="detail-row">
-                                        <span className="label">Berth Number:</span>
-                                        <span className="value">{offer.berthNo}</span>
-                                    </div>
-                                </div>
-
-                                {offer.expiresAt && (
-                                    <div className="expiry-info">
-                                        <span className="expiry-label">⏱️ Expires:</span>
-                                        <span className="expiry-time">
-                                            {new Date(offer.expiresAt).toLocaleTimeString()}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {offer.status === 'pending' && (
-                                <div className="offer-actions">
-                                    <button
-                                        className="btn-accept"
-                                        onClick={() => acceptOffer(offer)}
-                                        disabled={accepting === (offer.offerId || offer.id)}
-                                    >
-                                        {accepting === (offer.offerId || offer.id) ? 'Accepting...' : '✅ Accept Upgrade'}
-                                    </button>
-                                    <button
-                                        className="btn-deny"
-                                        onClick={() => denyOffer(offer)}
-                                        disabled={accepting === (offer.offerId || offer.id)}
-                                    >
-                                        ❌ Decline
-                                    </button>
-                                </div>
-                            )}
-
-                            {offer.status === 'expired' && (
-                                <div className="expired-message">
-                                    This offer has expired
-                                </div>
-                            )}
+                <>
+                    {/* Page Header */}
+                    <div className="page-header">
+                        <div className="header-content">
+                            <h1>🎫 Upgrade Offers</h1>
+                            <p className="header-subtitle">
+                                {offers.length > 0
+                                    ? `You have ${offers.length} pending upgrade offer${offers.length > 1 ? 's' : ''}`
+                                    : 'No pending offers at the moment'}
+                            </p>
                         </div>
-                    ))}
-                </div>
+                        <div className="header-stats">
+                            <div className="stat-badge">
+                                <span className="stat-label">PNR</span>
+                                <span className="stat-value">{pnr}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {offers.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="empty-icon">📭</div>
+                            <h3>No Upgrade Offers Available</h3>
+                            <p>You don't have any pending upgrade offers at the moment.</p>
+                            <p className="hint">Offers will appear here when a confirmed berth becomes available.</p>
+                        </div>
+                    ) : (
+                        <div className="offers-list">
+                            {offers.map((offer, index) => (
+                                <div
+                                    key={offer.offerId || offer.id || `offer-${index}`}
+                                    className={`offer-card-horizontal ${offer.status === 'expired' ? 'expired' : ''}`}
+                                >
+                                    {/* Left Section - Status & Badge */}
+                                    <div className="offer-left">
+                                        <div className={`status-indicator ${offer.status}`}>
+                                            {offer.status === 'pending' ? '🔔' : '⏰'}
+                                        </div>
+                                        <div className="offer-meta">
+                                            <span className={`offer-badge ${offer.status}`}>
+                                                {offer.status === 'pending' ? 'New Offer' : 'Expired'}
+                                            </span>
+                                            {offer.expiresIn ? (
+                                                <span className={`countdown-timer ${offer.expiresIn < 60000 ? 'urgent' : ''}`}>
+                                                    ⏱️ {Math.floor(offer.expiresIn / 60000)}:{String(Math.floor((offer.expiresIn % 60000) / 1000)).padStart(2, '0')}
+                                                </span>
+                                            ) : (
+                                                <span className="offer-time">
+                                                    {new Date(offer.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Center Section - Upgrade Visual */}
+                                    <div className="offer-center">
+                                        <div className="upgrade-visual">
+                                            <div className="from-status">
+                                                <span className="status-label">From</span>
+                                                <span className="status-badge rac">RAC</span>
+                                            </div>
+                                            <div className="upgrade-arrow">
+                                                <span>→</span>
+                                                <span className="arrow-label">UPGRADE</span>
+                                            </div>
+                                            <div className="to-status">
+                                                <span className="status-label">To</span>
+                                                <span className="status-badge cnf">CNF</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right Section - Berth Details */}
+                                    <div className="offer-right">
+                                        <div className="berth-details">
+                                            <div className="berth-main">
+                                                <span className="berth-icon">🛏️</span>
+                                                <span className="berth-number">{offer.berth}</span>
+                                            </div>
+                                            <div className="berth-meta">
+                                                <span className="berth-type-badge">{offer.berthType}</span>
+                                                <span className="coach-info">Coach {offer.coach}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Actions Section */}
+                                    <div className="offer-actions-section">
+                                        {offer.status === 'pending' ? (
+                                            <>
+                                                <button
+                                                    className="btn-accept"
+                                                    onClick={() => acceptOffer(offer)}
+                                                    disabled={accepting === (offer.offerId || offer.id)}
+                                                >
+                                                    {accepting === (offer.offerId || offer.id) ? 'Accepting...' : '✅ Accept'}
+                                                </button>
+                                                <button
+                                                    className="btn-deny"
+                                                    onClick={() => denyOffer(offer)}
+                                                    disabled={accepting === (offer.offerId || offer.id)}
+                                                >
+                                                    ❌ Decline
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div className="expired-badge">Expired</div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

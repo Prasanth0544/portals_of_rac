@@ -94,6 +94,12 @@ router.post('/passenger/self-cancel',
   (req, res) => passengerController.selfCancelTicket(req, res)
 );
 
+// ✅ Report early deboarding (passenger left train before destination)
+router.post('/passenger/report-deboarding',
+  authMiddleware,
+  (req, res) => passengerController.reportDeboarding(req, res)
+);
+
 // ✅ DUAL-APPROVAL: Passenger can approve their own RAC upgrade
 router.post('/passenger/approve-upgrade',
   authMiddleware,
@@ -184,6 +190,9 @@ router.post('/config/setup',
   validationMiddleware.validateDynamicConfig,
   (req, res) => configController.setup(req, res)
 );
+
+// Get available passenger collections from PassengersDB
+router.get('/config/collections', (req, res) => configController.getPassengerCollections(req, res));
 
 // Get current config (sanitized - no password)
 router.get('/config/current', (req, res) => {
@@ -586,6 +595,12 @@ router.get('/passengers/by-irctc/:irctcId',
   authMiddleware,
   requireRole(['PASSENGER']),
   (req, res) => passengerController.getPassengerByIRCTC(req, res)
+);
+
+// Get all passengers by PNR (for multi-passenger bookings)
+router.get('/passengers/by-pnr/:pnr',
+  authMiddleware,
+  (req, res) => passengerController.getPassengersByPNR(req, res)
 );
 
 // Self-cancellation (mark no-show)

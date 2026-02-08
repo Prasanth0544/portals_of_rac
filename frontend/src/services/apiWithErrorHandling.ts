@@ -299,6 +299,9 @@ export const setupConfig = (payload: any): Promise<ApiResult> =>
 export const getTrains = (): Promise<ApiResult> =>
     safeRequest(() => api.get('/trains'));
 
+export const getPassengerCollections = (): Promise<ApiResult> =>
+    safeRequest(() => api.get('/config/collections'));
+
 // ========================== TRAIN APIs ==========================
 
 export const initializeTrain = (trainNo?: string, journeyDate?: string, trainName?: string): Promise<ApiResult> =>
