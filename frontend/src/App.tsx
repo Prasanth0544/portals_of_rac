@@ -5,7 +5,7 @@ import * as api from './services/apiWithErrorHandling';
 import wsService from './services/websocket';
 import { saveAppState, loadAppState, clearAppState } from './services/StateStore';
 import ToastContainer from './components/ToastContainer';
-import APIDocumentationLink from './components/APIDocumentationLink';
+
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import HomePage from './pages/HomePage';
@@ -731,7 +731,7 @@ function App(): React.ReactElement {
                     )}
                 </div>
                 <div className="header-actions">
-                    <APIDocumentationLink />
+
                 </div>
                 <div className="user-menu">
                     <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)}>

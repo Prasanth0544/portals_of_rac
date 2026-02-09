@@ -7,8 +7,7 @@ const http = require('http');
 const db = require('./config/db');
 const wsManager = require('./config/websocket');
 const apiRoutes = require('./routes/api');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./config/swagger');
+
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { validateEnv } = require('./utils/envValidator');
@@ -70,12 +69,7 @@ app.get('/api/csrf-token', getCsrfToken);
 // API Routes
 app.use('/api', apiRoutes);
 
-// Swagger documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
-  swaggerOptions: {
-    persistAuthorization: true
-  }
-}));
+
 
 // Root route
 app.get('/', (req, res) => {

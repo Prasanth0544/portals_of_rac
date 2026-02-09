@@ -127,8 +127,8 @@ function JourneyVisualizationPage(): React.ReactElement {
                                         <td className="td-center">{station.sno || idx + 1}</td>
                                         <td className="td-code">{station.code}</td>
                                         <td className="td-name">
-                                            {idx === 0 && <span className="station-badge origin">ORIGIN</span>}
-                                            {idx === stations.length - 1 && <span className="station-badge destination">DESTINATION</span>}
+                                            {idx === 0 && <span className="station-badge origin">Starting Station</span>}
+                                            {idx === stations.length - 1 && <span className="station-badge destination">End</span>}
                                             {station.name}
                                         </td>
                                         <td className="td-center">{station.zone || 'SCR'}</td>

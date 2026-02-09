@@ -198,7 +198,7 @@ function App(): React.ReactElement {
                     justifyContent: 'center',
                     alignItems: 'center',
                     minHeight: '100vh',
-                    bgcolor: '#f5f5f5',
+                    bgcolor: 'transparent',
                     flexDirection: 'column',
                     gap: 2
                 }}>
@@ -236,7 +236,7 @@ function App(): React.ReactElement {
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
-            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'transparent' }}>
                 <AppBar position="static" elevation={3}>
                     <Toolbar>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

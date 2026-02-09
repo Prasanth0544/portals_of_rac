@@ -1,4 +1,4 @@
-// passenger-portal/src/pages/UpgradeOffersPage.tsx
+// passenger-portal/src/pages/Upgrade OffersPage.tsx
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import '../styles/pages/UpgradeOffersPage.css';
@@ -30,6 +30,7 @@ const UpgradeOffersPage: React.FC = () => {
     const [pnr, setPnr] = useState<string | null>(null);
     const [isRejected, setIsRejected] = useState<boolean>(false);
     const [countdown, setCountdown] = useState<number>(0);
+    const [passengerData, setPassengerData] = useState<any>(null); // Track full passenger data including Online_Status
 
     // Get IRCTC ID from logged-in user (handles both cases)
     const userStr = localStorage.getItem('user');
@@ -235,6 +236,29 @@ const UpgradeOffersPage: React.FC = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* ⚠️ OFFLINE STATUS Info Banner */}
+                    {passengerData?.Online_Status === 'offline' && (
+                        <div className="info-banner offline-banner" style={{
+                            backgroundColor: '#e3f2fd',
+                            border: '2px solid #1976d2',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            margin: '20px 0',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '32px', marginBottom: '12px' }}>ℹ️</div>
+                            <h3 style={{ color: '#1976d2', marginBottom: '12px', fontSize: '20px', fontWeight: '700' }}>
+                                Offline Passenger
+                            </h3>
+                            <p style={{ color: '#555', marginBottom: '8px', lineHeight: '1.6' }}>
+                                Your booking status is <strong>Offline</strong>. You are not eligible for automatic upgrade notifications through the Passenger Portal.
+                            </p>
+                            <p style={{ color: '#666', fontSize: '14px', lineHeight: '1.5' }}>
+                                For upgrade opportunities, please contact the <strong>Train Ticket Examiner (TTE)</strong> directly on board.
+                            </p>
+                        </div>
+                    )}
 
                     {offers.length === 0 ? (
                         <div className="empty-state">

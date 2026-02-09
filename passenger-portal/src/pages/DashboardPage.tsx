@@ -22,7 +22,8 @@ import {
     TextField,
     Radio,
     RadioGroup,
-    FormControlLabel
+    FormControlLabel,
+    Paper
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -718,6 +719,32 @@ function DashboardPage(): React.ReactElement {
                 </Alert>
             )}
 
+            {/* ⚠️ OFFLINE STATUS Info Banner */}
+            {passenger?.Online_Status === 'offline' && (
+                <Alert
+                    severity="info"
+                    sx={{
+                        mb: 3,
+                        p: 2,
+                        border: '2px solid #1976d2',
+                        borderRadius: '8px',
+                        backgroundColor: '#e3f2fd'
+                    }}
+                >
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                            ℹ️ Offline Passenger
+                        </Typography>
+                        <Typography variant="body2">
+                            Your booking status is <strong>Offline</strong>. You are not eligible for automatic upgrade notifications through the Passenger Portal.
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                            For upgrade opportunities, please contact the Train Ticket Examiner (TTE) directly on board.
+                        </Typography>
+                    </Box>
+                </Alert>
+            )}
+
             {/* Journey Tracker */}
             {trainState?.journey?.stations && (
                 <JourneyTimeline
@@ -737,67 +764,88 @@ function DashboardPage(): React.ReactElement {
                 }
             />
 
-            {/* Quick Actions */}
-            <Box sx={{ mt: 3, mb: 3 }}>
-                <Card sx={{ bgcolor: '#fff3e0', border: '1px solid #f57c00' }}>
-                    <CardContent>
-                        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            🚉 Leaving Early?
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            If you've left the train before your destination, report it here. Your berth will be made available for other passengers to upgrade.
-                        </Typography>
-                        <Button
-                            component={Link}
-                            to="/report-deboarding"
-                            variant="contained"
-                            sx={{ bgcolor: '#f57c00', '&:hover': { bgcolor: '#e65100' } }}
-                        >
-                            🚉 Report Deboarding
-                        </Button>
-                    </CardContent>
-                </Card>
+            {/* Ticket Actions */}
+            <Paper elevation={0} sx={{ mt: 4, mb: 4, p: 3, borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+                    Ticket Actions
+                </Typography>
+                <Grid container spacing={3}>
+                    {/* Report Deboarding Card */}
+                    <Grid size={{ xs: 12, md: 4 }}>
+                        <Card sx={{ bgcolor: '#fff3e0', border: '1px solid #f57c00', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <CardContent sx={{ flexGrow: 1 }}>
+                                <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    🚉 Leaving Early?
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    If you've left the train before your destination, report it here. Your berth will be made available for other passengers to upgrade.
+                                </Typography>
+                                <Box sx={{ mt: 'auto' }}>
+                                    <Button
+                                        component={Link}
+                                        to="/report-deboarding"
+                                        variant="contained"
+                                        fullWidth
+                                        sx={{ bgcolor: '#f57c00', '&:hover': { bgcolor: '#e65100' } }}
+                                    >
+                                        Report Deboarding
+                                    </Button>
+                                </Box>
+                            </CardContent>
+                        </Card>
+                    </Grid>
 
-                {/* Cancel Ticket Card */}
-                <Card sx={{ bgcolor: '#ffebee', border: '1px solid #e53935' }}>
-                    <CardContent>
-                        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            ❌ Cancel Your Ticket?
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            Need to cancel your journey? Your berth will be freed for other passengers to upgrade.
-                        </Typography>
-                        <Button
-                            component={Link}
-                            to="/cancel-ticket"
-                            variant="contained"
-                            sx={{ bgcolor: '#e53935', '&:hover': { bgcolor: '#c62828' } }}
-                        >
-                            ❌ Cancel Ticket
-                        </Button>
-                    </CardContent>
-                </Card>
+                    {/* Cancel Ticket Card */}
+                    <Grid size={{ xs: 12, md: 4 }}>
+                        <Card sx={{ bgcolor: '#ffebee', border: '1px solid #e53935', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <CardContent sx={{ flexGrow: 1 }}>
+                                <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    ❌ Cancel Ticket?
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    Need to cancel your journey? Your berth will be freed for other passengers to upgrade.
+                                </Typography>
+                                <Box sx={{ mt: 'auto' }}>
+                                    <Button
+                                        component={Link}
+                                        to="/cancel-ticket"
+                                        variant="contained"
+                                        fullWidth
+                                        sx={{ bgcolor: '#e53935', '&:hover': { bgcolor: '#c62828' } }}
+                                    >
+                                        Cancel Ticket
+                                    </Button>
+                                </Box>
+                            </CardContent>
+                        </Card>
+                    </Grid>
 
-                {/* Change Boarding Station Card */}
-                <Card sx={{ bgcolor: '#e3f2fd', border: '1px solid #1976d2' }}>
-                    <CardContent>
-                        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            🔄 Change Boarding Station?
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            Need to board from a different station? Change to a forward station along your route.
-                        </Typography>
-                        <Button
-                            component={Link}
-                            to="/change-boarding"
-                            variant="contained"
-                            sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
-                        >
-                            🔄 Change Station
-                        </Button>
-                    </CardContent>
-                </Card>
-            </Box>
+                    {/* Change Boarding Station Card */}
+                    <Grid size={{ xs: 12, md: 4 }}>
+                        <Card sx={{ bgcolor: '#e3f2fd', border: '1px solid #1976d2', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <CardContent sx={{ flexGrow: 1 }}>
+                                <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    🔄 Change Boarding Station?
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    Need to board from a different station? Change to a forward station along your route.
+                                </Typography>
+                                <Box sx={{ mt: 'auto' }}>
+                                    <Button
+                                        component={Link}
+                                        to="/change-boarding"
+                                        variant="contained"
+                                        fullWidth
+                                        sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
+                                    >
+                                        Change Station
+                                    </Button>
+                                </Box>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                </Grid>
+            </Paper>
             {/* Boarding Station Change Modal */}
             <Dialog open={showChangeModal} onClose={handleCloseChangeModal} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ bgcolor: '#2c3e50', color: '#ffffff' }}>
@@ -1006,7 +1054,7 @@ function DashboardPage(): React.ReactElement {
                     )}
                 </DialogActions>
             </Dialog>
-        </Container>
+        </Container >
     );
 }
 

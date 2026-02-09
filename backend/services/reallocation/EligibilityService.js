@@ -1,7 +1,7 @@
 /**
  * EligibilityService.js
  * Handles two-stage eligibility checking for RAC upgrade
- * Stage 1: Hard constraints (Rules 0, 2, 3, 4, 10, 11)
+ * Stage 1: Hard constraints (Rules 0, 1, 2, 3, 4, 10, 11)
  * Stage 2: Refinement filters (Rules 5, 6, 7, 8, 9)
  */
 
@@ -13,7 +13,7 @@ const LOOK_AHEAD_SEGMENTS = 2;
 class EligibilityService {
   /**
    * Check Stage 1 eligibility - Hard constraints
-   * Must pass ALL rules: 0, 2, 3, 4, 10, 11
+   * Must pass ALL rules: 0, 1, 2, 3, 4, 10, 11
    * @returns {Object} - {eligible: boolean, reason: string, stage: 1}
    */
   checkStage1Eligibility(racPassenger, vacantSegment, currentStationIdx, trainState) {
@@ -23,6 +23,11 @@ class EligibilityService {
       // Rule 0: Must be RAC status
       if (racPassenger.pnrStatus !== 'RAC') {
         return { eligible: false, reason: 'Not RAC status', failedRule: 'Rule 0' };
+      }
+
+      // Rule 1: Passenger must be online
+      if (racPassenger.passengerStatus !== 'Online') {
+        return { eligible: false, reason: 'Passenger is offline', failedRule: 'Rule 1' };
       }
 
       // Rule 2: Must be boarded
