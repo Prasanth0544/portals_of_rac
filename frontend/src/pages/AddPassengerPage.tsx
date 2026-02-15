@@ -214,6 +214,7 @@ const AddPassengerPage = ({ trainData, onClose }: AddPassengerPageProps): React.
                     journey_date: formData.journey_date,
                     from: formData.from,
                     to: formData.to,
+                    passenger_status: formData.passenger_status, // Sync status with primary
                 };
                 const cpResponse = await addPassenger(coPassengerData);
                 if (!cpResponse.success) {
@@ -444,12 +445,12 @@ const AddPassengerPage = ({ trainData, onClose }: AddPassengerPageProps): React.
                             </div>
 
                             <div className="form-group">
-                                <label>Passenger Status</label>
+                                <label>Group Status (Shared)</label>
                                 <select name="passenger_status" value={formData.passenger_status} onChange={handleChange} required>
                                     <option value="Online">Online</option>
                                     <option value="Offline">Offline</option>
                                 </select>
-                                <span className="field-hint">Online = User with internet enabled device</span>
+                                <span className="field-hint">Applies to ALL passengers in this PNR</span>
                             </div>
                         </div>
                     </div>
@@ -564,14 +565,6 @@ const AddPassengerPage = ({ trainData, onClose }: AddPassengerPageProps): React.
                                         <option value="Upper Berth">Upper Berth</option>
                                         <option value="Side Lower">Side Lower</option>
                                         <option value="Side Upper">Side Upper</option>
-                                    </select>
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Passenger Status</label>
-                                    <select name="passenger_status" value={cp.passenger_status} onChange={(e) => handleCoPassengerChange(index, e)} required>
-                                        <option value="Online">Online</option>
-                                        <option value="Offline">Offline</option>
                                     </select>
                                 </div>
                             </div>

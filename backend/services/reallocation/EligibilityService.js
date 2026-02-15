@@ -25,10 +25,8 @@ class EligibilityService {
         return { eligible: false, reason: 'Not RAC status', failedRule: 'Rule 0' };
       }
 
-      // Rule 1: Passenger must be online
-      if (racPassenger.passengerStatus !== 'Online') {
-        return { eligible: false, reason: 'Passenger is offline', failedRule: 'Rule 1' };
-      }
+      // Rule 1: (Removed) - passengerStatus is not reliably set
+      // Online/Offline distinction is handled at notification/approval level instead
 
       // Rule 2: Must be boarded
       if (!racPassenger.boarded) {

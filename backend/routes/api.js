@@ -287,6 +287,29 @@ router.get('/reallocation/eligibility',
   (req, res) => reallocationController.getEligibilityMatrix(req, res)
 );
 
+// ✨ NEW: Get eligible PNR groups for group selective upgrade
+router.get('/reallocation/eligible-groups',
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
+  (req, res) => reallocationController.getEligibleGroups(req, res)
+);
+
+// ✨ NEW: Select specific passengers from a group for upgrade
+router.post('/reallocation/select-passengers',
+  authMiddleware,
+  validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
+  (req, res) => reallocationController.selectPassengersForUpgrade(req, res)
+);
+
+// ✨ NEW: Check group upgrade offer status (for reconnection)
+router.get('/reallocation/group-upgrade-status/:pnr',
+  authMiddleware,
+  (req, res) => reallocationController.getGroupUpgradeStatus(req, res)
+);
+
+
 // ========== STATION-WISE APPROVAL ROUTES ========== ✅ NEW
 // Get pending reallocations awaiting TTE approval
 router.get('/reallocation/pending',

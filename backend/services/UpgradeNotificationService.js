@@ -73,17 +73,19 @@ class UpgradeNotificationService {
     }
 
     /**
-     * Clear all pending notifications for a station
-     * Called when new batch is being created
+     * Clear ALL pending notifications (across all stations)
+     * Called when new batch is being created at a new station
+     * Old station offers should disappear when new ones arrive
      */
     async clearPendingNotificationsForStation(stationCode) {
         const collection = await this.getCollection();
+        // Clear ALL pending notifications, not just for this station
+        // This ensures old-station offers disappear when new ones arrive
         const result = await collection.deleteMany({
-            stationCode: stationCode,
             status: 'PENDING'
         });
         if (result.deletedCount > 0) {
-            console.log(`🗑️ Cleared ${result.deletedCount} old pending notifications for station ${stationCode}`);
+            console.log(`🗑️ Cleared ${result.deletedCount} old pending notifications (new station: ${stationCode})`);
         }
         return result.deletedCount;
     }

@@ -1,6 +1,7 @@
 // tte-portal/src/pages/PendingReallocationsPage.tsx
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { tteAPI } from '../api';
+import useTteSocket from '../hooks/useTteSocket';
 import '../styles/pages/PendingReallocationsPage.css';
 
 interface Reallocation {
@@ -26,6 +27,9 @@ const PendingReallocationsPage: React.FC = () => {
     const [rejecting, setRejecting] = useState<string | null>(null);
     const [rejectionReason, setRejectionReason] = useState<string>('');
 
+    // Use shared WebSocket hook instead of creating a duplicate connection
+    const { on } = useTteSocket();
+
     // Get TTE ID from localStorage
     const getTteId = (): string => {
         const user = localStorage.getItem('user');
@@ -42,26 +46,20 @@ const PendingReallocationsPage: React.FC = () => {
         // Auto-refresh every 10 seconds
         const interval = setInterval(fetchPendingReallocations, 10000);
 
-        // DUAL-APPROVAL: Listen for passenger self-approval via WebSocket
-        const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
-        const ws = new WebSocket(wsUrl);
-        ws.onmessage = (event: MessageEvent) => {
-            try {
-                const data = JSON.parse(event.data);
-                // Refresh when passenger approves their own upgrade
-                if (data.type === 'UPGRADE_APPROVED_BY_PASSENGER' ||
-                    data.type === 'RAC_REALLOCATION_APPROVED') {
-                    console.log('🔄 TTE: Refresh triggered by approval event', data);
-                    fetchPendingReallocations();
-                }
-            } catch (err) {
-                // Ignore parse errors
-            }
-        };
+        // Listen for approval events via shared WebSocket hook
+        const unsubApproved = on('UPGRADE_APPROVED_BY_PASSENGER', () => {
+            console.log('🔄 TTE: Refresh triggered by passenger approval');
+            fetchPendingReallocations();
+        });
+        const unsubRealloc = on('RAC_REALLOCATION_APPROVED', () => {
+            console.log('🔄 TTE: Refresh triggered by reallocation approval');
+            fetchPendingReallocations();
+        });
 
         return () => {
             clearInterval(interval);
-            ws.close();
+            unsubApproved();
+            unsubRealloc();
         };
     }, []);
 

@@ -93,6 +93,10 @@ interface WebSocketMessage {
         pnr?: string;
         reason?: string;
     };
+    // Group upgrade properties
+    pnr?: string;
+    vacantSeatsCount?: number;
+    passengerCount?: number;
 }
 
 function DashboardPage(): React.ReactElement {
@@ -203,6 +207,40 @@ function DashboardPage(): React.ReactElement {
         }
     };
 
+    // ✅ UX ENHANCEMENT: Check for active group upgrade offers on reconnection
+    const checkForActiveGroupUpgrade = async (): Promise<void> => {
+        try {
+            const userData = JSON.parse(localStorage.getItem('user') || '{}');
+            const pnr = userData.pnr || userData.PNR_Number;
+
+            if (!pnr) {
+                console.log('⚠️ No PNR found in user data, skipping group upgrade check');
+                return;
+            }
+
+            console.log('🔍 Checking for active group upgrade offers...');
+
+            const response = await axios.get(
+                `${API_URL}/reallocation/group-upgrade-status/${pnr}`,
+                { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
+            );
+
+            if (response.data.success && response.data.hasActiveOffer) {
+                console.log('✅ Found active group upgrade offer on reconnection!', response.data);
+
+                // Show notification and navigate to selection page
+                alert(`🎉 You have an active upgrade offer!\\n\\nSeats available: ${response.data.vacantSeatsCount}\\nYour group size: ${response.data.passengerCount}\\n\\nSelect passengers now!`);
+
+                window.location.href = `/#/family-upgrade?pnr=${pnr}`;
+            } else {
+                console.log('ℹ️ No active group upgrade offers found');
+            }
+        } catch (err) {
+            console.error('Error checking for active group upgrades:', err);
+            // Silently fail - this is just a reconnection check
+        }
+    };
+
     useEffect(() => {
         fetchData();
 
@@ -212,10 +250,15 @@ function DashboardPage(): React.ReactElement {
             requestPushPermission(userData.irctcId);
         }
 
+        // ✅ Check for active group upgrade offers on load (reconnection scenario)
+        checkForActiveGroupUpgrade();
+
         const ws = new WebSocket('ws://localhost:5000');
 
         ws.onopen = (): void => {
             console.log('📡 WebSocket connected to passenger portal');
+            // Identify this client for targeted messaging
+            ws.send(JSON.stringify({ type: 'IDENTIFY', role: 'PASSENGER', irctcId: userData.irctcId }));
         };
 
         ws.onmessage = (event: MessageEvent): void => {
@@ -227,10 +270,11 @@ function DashboardPage(): React.ReactElement {
                     setUpgradeOffer(data.offer || null);
                 }
 
-                if (data.type === 'UPGRADE_OFFER_AVAILABLE' && data.data?.irctcId === userData.irctcId) {
+                if (data.type === 'UPGRADE_OFFER_AVAILABLE' && data.irctcId === userData.irctcId) {
                     console.log('🎉 Dual-approval upgrade offer received:', data);
                     fetchPendingUpgrades();
                 }
+
 
                 if (data.type === 'RAC_REALLOCATION_APPROVED') {
                     fetchPendingUpgrades();
@@ -240,6 +284,21 @@ function DashboardPage(): React.ReactElement {
                     console.log('❌ Upgrade rejected:', data);
                     setPendingUpgrades(prev => prev.filter(u => u.pnr !== data.data?.pnr));
                     alert(`❌ Your upgrade offer was rejected.\nReason: ${data.data.reason}`);
+                }
+
+                // ✨ NEW: Group upgrade offer received - navigate to selection page
+                if (data.type === 'GROUP_UPGRADE_AVAILABLE') {
+                    // Match PNR - check both pnr and PNR_Number fields
+                    const passengerPNR = userData.pnr || userData.PNR_Number;
+                    const groupData = data.data || data;
+
+                    if (passengerPNR && groupData.pnr === passengerPNR) {
+                        console.log('🎯 Group upgrade offer received!', data);
+                        alert(`🎉 Great news! Your group is eligible for an upgrade!\n\nYou have 10 minutes to select passengers.\n\nSeats available: ${groupData.vacantSeatsCount}\nYour group size: ${groupData.passengerCount}`);
+
+                        // Navigate to family upgrade selection page
+                        window.location.href = `/#/family-upgrade?pnr=${groupData.pnr}`;
+                    }
                 }
             } catch (err) {
                 console.error('Error parsing WebSocket message:', err);

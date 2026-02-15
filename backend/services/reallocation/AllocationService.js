@@ -89,8 +89,9 @@ class AllocationService {
     // Update statistics
     this._updateStats(trainState, passenger);
 
-    // Broadcast websocket event
-    wsManager.broadcast('RAC_UPGRADED', {
+    // Notify TTEs of upgrade completion (targeted)
+    wsManager.sendToTTEs({
+      type: 'RAC_UPGRADED',
       pnr,
       name: passenger.name,
       coach,
@@ -266,7 +267,7 @@ class AllocationService {
             Assigned_Coach: coach,       // Use correct field name
             Assigned_berth: berth,       // Use correct field name
             Berth_Type: berthType,       // Update from "Side Lower" to actual type
-            Passenger_Status: 'Offline', // Maintain status
+            // Passenger_Status: 'Offline', // REMOVED: Do not force Offline, preserve existing status
             Boarded: true,
             Upgraded_From: 'RAC',        // ✅ Track upgrade source
           },
@@ -305,13 +306,10 @@ class AllocationService {
         throw new Error(`RAC passenger ${racPNR} not found`);
       }
 
-      // Find co-passenger
+      // Find co-passenger (may not exist for solo RAC passengers)
       const coPassenger = this._findCoPassenger(racPassenger, trainState);
-      if (!coPassenger) {
-        throw new Error('Co-passenger not found');
-      }
 
-      // Allocate both passengers to same berth
+      // Allocate berth
       const berth = trainState.findBerth(newBerthDetails.coachNo, newBerthDetails.berthNo);
       if (!berth) {
         throw new Error('Berth not found');
@@ -319,22 +317,18 @@ class AllocationService {
 
       // Allocate RAC passenger
       this._allocateBerth(racPassenger, berth, trainState);
-
-      // Update co-passenger if needed
-      if (coPassenger.pnrStatus === 'RAC') {
-        this._allocateBerth(coPassenger, berth, trainState);
-      }
-
-      // Update database with berth type
       await this._updateDatabase(racPNR, newBerthDetails.coachNo, newBerthDetails.berthNo, berth.type);
-      if (coPassenger.pnrStatus === 'RAC') {
+
+      // Update co-passenger if they exist and are also RAC
+      if (coPassenger && coPassenger.pnrStatus === 'RAC') {
+        this._allocateBerth(coPassenger, berth, trainState);
         await this._updateDatabase(coPassenger.pnr, newBerthDetails.coachNo, newBerthDetails.berthNo, berth.type);
       }
 
       return {
         success: true,
         racPNR,
-        coPassengerPNR: coPassenger.pnr,
+        coPassengerPNR: coPassenger?.pnr || null,
         berth: `${newBerthDetails.coachNo}-${newBerthDetails.berthNo}`,
       };
     } catch (error) {

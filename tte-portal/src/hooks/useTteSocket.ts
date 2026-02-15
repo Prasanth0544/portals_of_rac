@@ -27,6 +27,8 @@ interface PendingUpgrade {
 interface WebSocketMessage {
     type: string;
     payload?: any;
+    data?: any;
+    eventType?: string;
 }
 
 type EventCallback = (payload: any) => void;
@@ -58,50 +60,64 @@ const useTteSocket = (): UseTteSocketReturn => {
 
     /**
      * Handle incoming messages
+     * Backend sends: { type, data?, eventType?, timestamp }
+     * - broadcast() sends flat objects with type + data fields
+     * - broadcastTrainUpdate() sends { type: 'TRAIN_UPDATE', eventType, data }
+     * - broadcastStatsUpdate() sends { type: 'STATS_UPDATE', data: { stats } }
      */
-    const handleMessage = useCallback((data: WebSocketMessage): void => {
-        const { type, payload } = data;
+    const handleMessage = useCallback((msg: WebSocketMessage): void => {
+        const { type, data, eventType } = msg;
 
-        setLastUpdate({ type, payload, timestamp: new Date() });
+        setLastUpdate({ type, payload: data, timestamp: new Date() });
 
         // Handle specific event types
         switch (type) {
             case 'TRAIN_UPDATE':
-                // Trigger listeners
+                // broadcastTrainUpdate sends { type: 'TRAIN_UPDATE', eventType, data }
+                // Dispatch to eventType-specific listeners first, then TRAIN_UPDATE listeners
+                if (eventType) {
+                    const eventListeners = listenersRef.current.get(eventType);
+                    if (eventListeners) {
+                        eventListeners.forEach(listener => listener(data));
+                    }
+                }
                 const trainListeners = listenersRef.current.get(type);
                 if (trainListeners) {
-                    trainListeners.forEach(listener => listener(payload));
+                    trainListeners.forEach(listener => listener(data));
                 }
                 break;
 
             case 'NO_SHOW':
-                console.log('📋 No-show event:', payload);
-                // New vacancy created - potential upgrade opportunity
+                console.log('📋 No-show event:', data);
                 break;
 
             case 'RAC_UPGRADE_ACCEPTED':
-                console.log('✅ Passenger accepted upgrade:', payload);
-                // Add to pending upgrades for TTE verification
-                setPendingUpgrades(prev => [...prev, payload]);
+                console.log('✅ Passenger accepted upgrade:', data);
+                if (data) {
+                    setPendingUpgrades(prev => [...prev, data]);
+                }
                 break;
 
             case 'STATS_UPDATE':
-                setStats(payload.stats);
+                // broadcastStatsUpdate sends { type: 'STATS_UPDATE', data: { stats } }
+                if (data?.stats) {
+                    setStats(data.stats);
+                }
                 break;
 
             case 'PASSENGER_BOARDED':
-                console.log('🎫 Passenger boarded:', payload);
+                console.log('🎫 Passenger boarded:', data);
                 break;
 
             case 'PASSENGER_DEBOARDED':
-                console.log('👋 Passenger deboarded:', payload);
+                console.log('👋 Passenger deboarded:', data);
                 break;
 
             default:
-                // Pass to generic listeners
+                // Pass to generic listeners (e.g. PENDING_REALLOCATIONS, RAC_UPGRADED, etc.)
                 const genericListeners = listenersRef.current.get(type);
                 if (genericListeners) {
-                    genericListeners.forEach(listener => listener(payload));
+                    genericListeners.forEach(listener => listener(data));
                 }
         }
     }, []);
@@ -121,8 +137,9 @@ const useTteSocket = (): UseTteSocketReturn => {
                 console.log('✅ TTE WebSocket connected');
                 setIsConnected(true);
 
-                // Subscribe to general updates
+                // Subscribe to general updates + identify as TTE
                 ws.send(JSON.stringify({ type: 'SUBSCRIBE' }));
+                ws.send(JSON.stringify({ type: 'IDENTIFY', role: 'TTE' }));
             };
 
             ws.onmessage = (event: MessageEvent): void => {

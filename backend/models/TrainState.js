@@ -49,6 +49,11 @@ class TrainState {
       usedBerths: new Set(),              // Berths already matched/upgraded
       usedPassengers: new Set()           // Passengers already matched/upgraded
     };
+
+    // ✅ HashMap indexes for O(1) passenger lookups
+    this._pnrIndex = new Map();    // PNR → passenger object (first match)
+    this._irctcIndex = new Map();  // IRCTC_ID → passenger object
+    this._racPnrIndex = new Map(); // PNR → RAC passenger
   }
 
   /**
@@ -164,8 +169,9 @@ class TrainState {
       }
     });
 
-    // Update statistics after boarding
+    // Update statistics and rebuild indexes after boarding
     this.updateStats();
+    this._buildPassengerIndexes();
 
     console.log(`🚂 Journey Started: ${boardedCount} CNF + ${racBoardedCount} RAC passengers boarded at origin`);
     this.logEvent('JOURNEY_STARTED', `Journey started - ${boardedCount + racBoardedCount} passengers boarded at origin`);
@@ -206,24 +212,29 @@ class TrainState {
 
   /**
    * Find passenger by PNR and return JUST the passenger object
-   * Searches both berths AND racQueue
+   * Uses HashMap index for O(1) lookup, falls back to linear scan
    * NOTE: For multi-passenger bookings, this returns the first match
    * Use findPassengersByPNR() to get all passengers in a booking
    */
   findPassengerByPNR(pnr) {
-    // First check in berths
+    // O(1) HashMap lookup first
+    const indexed = this._pnrIndex.get(pnr);
+    if (indexed) return indexed;
+
+    // Fallback to linear scan (index may not be built yet)
     for (let coach of this.coaches) {
       for (let berth of coach.berths) {
         const passenger = berth.passengers.find(p => p.pnr === pnr);
         if (passenger) {
+          this._pnrIndex.set(pnr, passenger); // cache it
           return passenger;
         }
       }
     }
 
-    // Also check in RAC queue
     const racPassenger = this.racQueue.find(r => r.pnr === pnr);
     if (racPassenger) {
+      this._pnrIndex.set(pnr, racPassenger); // cache it
       return racPassenger;
     }
 
@@ -338,6 +349,9 @@ class TrainState {
     this.stats.occupiedBerths = occupied;
     this.stats.racPassengers = this.racQueue.length;
     this.stats.totalBoarded = totalOnboard;
+
+    // Rebuild passenger indexes after any state change
+    this._buildPassengerIndexes();
 
     // Debug log to verify counts
     console.log(`📊 Stats Update: Vacant=${vacant}, Occupied=${occupied}, Total=${vacant + occupied}, Onboard=${totalOnboard}, RAC Queue=${this.racQueue.length}`);
@@ -511,6 +525,7 @@ class TrainState {
    */
   getAllPassengers() {
     const passengers = [];
+    const seenPNRs = new Set(); // O(1) dedup instead of find()
 
     // Get passengers from berths (CNF passengers)
     this.coaches.forEach(coach => {
@@ -522,15 +537,14 @@ class TrainState {
             berth: berth.fullBerthNo,
             berthType: berth.type
           });
+          seenPNRs.add(p.pnr);
         });
       });
     });
 
     // Also include RAC queue passengers (they may not be in berths yet)
     this.racQueue.forEach(rac => {
-      // Check if this RAC passenger is already in the berth passengers
-      const alreadyIncluded = passengers.find(p => p.pnr === rac.pnr);
-      if (!alreadyIncluded) {
+      if (!seenPNRs.has(rac.pnr)) { // O(1) check instead of find()
         passengers.push({
           ...rac,
           boarded: rac.boarded || false,
@@ -552,6 +566,54 @@ class TrainState {
       rac.noShow !== true &&
       rac.pnrStatus === 'RAC'
     );
+  }
+
+  /**
+   * ========================================
+   * PASSENGER INDEX MANAGEMENT
+   * ========================================
+   */
+
+  /**
+   * Rebuild HashMap indexes for O(1) passenger lookups
+   * Called after any state mutation (boarding, no-show, upgrade, etc.)
+   */
+  _buildPassengerIndexes() {
+    this._pnrIndex.clear();
+    this._irctcIndex.clear();
+    this._racPnrIndex.clear();
+
+    // Index berth passengers
+    for (const coach of this.coaches) {
+      for (const berth of coach.berths) {
+        for (const p of berth.passengers) {
+          if (!this._pnrIndex.has(p.pnr)) {
+            this._pnrIndex.set(p.pnr, p);
+          }
+          if (p.irctcId && !this._irctcIndex.has(p.irctcId)) {
+            this._irctcIndex.set(p.irctcId, p);
+          }
+        }
+      }
+    }
+
+    // Index RAC queue passengers
+    for (const rac of this.racQueue) {
+      if (!this._pnrIndex.has(rac.pnr)) {
+        this._pnrIndex.set(rac.pnr, rac);
+      }
+      this._racPnrIndex.set(rac.pnr, rac);
+      if (rac.irctcId && !this._irctcIndex.has(rac.irctcId)) {
+        this._irctcIndex.set(rac.irctcId, rac);
+      }
+    }
+  }
+
+  /**
+   * Find passenger by IRCTC_ID — O(1) lookup
+   */
+  findPassengerByIRCTCId(irctcId) {
+    return this._irctcIndex.get(irctcId) || null;
   }
 
   /**
@@ -610,31 +672,39 @@ class TrainState {
    * Confirm all passengers in queue as boarded
    */
   async confirmAllBoarded() {
-    const passengers = Array.from(this.boardingVerificationQueue.keys());
+    const pnrs = Array.from(this.boardingVerificationQueue.keys());
 
-    if (passengers.length === 0) {
+    if (pnrs.length === 0) {
       return { success: true, count: 0 };
     }
 
-    console.log(`✅ Confirming ${passengers.length} passengers boarded`);
+    console.log(`✅ Confirming ${pnrs.length} passengers boarded`);
 
-    const db = require('../config/db');
-
-    for (const pnr of passengers) {
+    // Update in-memory state
+    const confirmedPNRs = [];
+    for (const pnr of pnrs) {
       const result = this.findPassenger(pnr);
       if (result) {
-        const { passenger } = result;
-        passenger.boarded = true;
+        result.passenger.boarded = true;
+        confirmedPNRs.push(pnr);
+      }
+    }
 
-        try {
-          const passengersCollection = await db.getPassengersCollection();
-          await passengersCollection.updateOne(
-            { PNR_Number: pnr },
-            { $set: { Boarded: true } }
-          );
-        } catch (error) {
-          console.error(`Error updating passenger ${pnr}:`, error);
-        }
+    // ✅ Batch DB update — 1 call instead of N
+    if (confirmedPNRs.length > 0) {
+      const db = require('../config/db');
+      try {
+        const passengersCollection = await db.getPassengersCollection();
+        const bulkOps = confirmedPNRs.map(pnr => ({
+          updateOne: {
+            filter: { PNR_Number: pnr },
+            update: { $set: { Boarded: true } }
+          }
+        }));
+        const result = await passengersCollection.bulkWrite(bulkOps, { ordered: false });
+        console.log(`📦 Bulk confirmed ${result.modifiedCount} passengers in DB`);
+      } catch (error) {
+        console.error(`Error bulk updating boarding:`, error);
       }
     }
 
@@ -647,12 +717,12 @@ class TrainState {
 
     this.updateStats();
 
-    this.logEvent('BOARDING_CONFIRMED', `All ${passengers.length} passengers confirmed`, {
-      count: passengers.length,
+    this.logEvent('BOARDING_CONFIRMED', `All ${pnrs.length} passengers confirmed`, {
+      count: pnrs.length,
       station: this.getCurrentStation()?.name
     });
 
-    return { success: true, count: passengers.length };
+    return { success: true, count: pnrs.length };
   }
 
   /**

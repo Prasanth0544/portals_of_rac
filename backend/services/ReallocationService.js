@@ -91,9 +91,8 @@ class ReallocationService {
       // Find eligible RAC passengers (using loop since hasDeniedBerth is async)
       const eligibleRAC = [];
       for (const rac of trainState.racQueue) {
-        // Must be boarded and online
+        // Must be boarded
         if (!rac.boarded) continue;
-        if (rac.passengerStatus !== 'Online') continue;
 
         // Check if passenger already denied this specific berth
         if (await UpgradeNotificationService.hasDeniedBerth(rac.pnr, vacantBerthInfo.fullBerthNo)) {
@@ -136,30 +135,17 @@ class ReallocationService {
                 }
               );
 
-              // Send browser push notification
-
-              if (racPassenger.passengerStatus === 'Online') {
-                // Online passenger -> send to passenger portal
-                await WebPushService.sendPushNotification(
-                  racPassenger.irctcId,
-                  {
-                    title: '🎉 Upgrade Offer Available!',
-                    body: `Berth ${vacantBerthInfo.fullBerthNo} in ${vacantBerthInfo.coachNo} is available!`,
-                    url: 'http://localhost:5175/#/upgrade-offers',
-                    tag: `upgrade-${racPassenger.pnr}`
-                  }
-                );
-                logger.debug(`Push sent to Online passenger ${racPassenger.pnr}`);
-              } else {
-                // Offline passenger -> broadcast to all TTEs
-                await WebPushService.sendPushToAllTTEs({
-                  title: '📋 Offline Passenger Upgrade',
-                  body: `${racPassenger.name} (PNR: ${racPassenger.pnr}) - ${vacantBerthInfo.fullBerthNo}`,
-                  url: 'http://localhost:5173/#/upgrade-notifications',
-                  tag: `tte-upgrade-${racPassenger.pnr}`
-                });
-                logger.debug(`Push to TTE for offline ${racPassenger.pnr}`);
-              }
+              // Send browser push notification to passenger
+              await WebPushService.sendPushNotification(
+                racPassenger.irctcId,
+                {
+                  title: '🎉 Upgrade Offer Available!',
+                  body: `Berth ${vacantBerthInfo.fullBerthNo} in ${vacantBerthInfo.coachNo} is available!`,
+                  url: 'http://localhost:5175/#/upgrade-offers',
+                  tag: `upgrade-${racPassenger.pnr}`
+                }
+              );
+              logger.debug(`Push sent to passenger ${racPassenger.pnr}`);
 
             }
           }
@@ -277,6 +263,175 @@ class ReallocationService {
       };
     }
   }
+
+  /**
+   * ✨ NEW: Get eligible PNR groups for vacant seats (Group Selective Upgrade)
+   * Returns groups where at least ONE passenger is eligible for vacant segment
+   * Enables selective upgrade when group size > vacant seats
+   */
+  getEligibleGroupsForVacantSeats(trainState) {
+    try {
+      const vacantSegments = VacancyService.getVacantSegments(trainState);
+      const currentStationIdx = trainState.currentStationIdx || 0;
+
+      if (vacantSegments.length === 0) {
+        return {
+          totalVacantSeats: 0,
+          eligibleGroups: [],
+          message: 'No vacant seats available'
+        };
+      }
+
+      // Get all RAC passengers sorted by queue position
+      const racQueue = RACQueueService.getRACQueue(trainState);
+
+      // Group ALL passengers by PNR (not just RAC - need to show CNF too)
+      const groupsByPNR = new Map();
+
+      // First, add all RAC passengers
+      racQueue.forEach(racPassenger => {
+        const pnr = racPassenger.pnr;
+        if (!groupsByPNR.has(pnr)) {
+          groupsByPNR.set(pnr, { racPassengers: [], cnfPassengers: [] });
+        }
+        groupsByPNR.get(pnr).racPassengers.push(racPassenger);
+      });
+
+      // Then, add CNF passengers from the same PNRs
+      trainState.coaches.forEach(coach => {
+        coach.berths.forEach(berth => {
+          if (berth.passenger && berth.passenger.pnrStatus === 'CNF') {
+            const pnr = berth.passenger.pnr;
+            // Only add if this PNR already has RAC passengers
+            if (groupsByPNR.has(pnr)) {
+              groupsByPNR.get(pnr).cnfPassengers.push(berth.passenger);
+            }
+          }
+        });
+      });
+
+      const eligibleGroups = [];
+
+      // For each PNR group, check if ANY RAC passenger is eligible for ANY vacant segment
+      groupsByPNR.forEach((group, pnr) => {
+        const { racPassengers, cnfPassengers } = group;
+
+        // Skip if this PNR has been rejected before
+        const hasRejected = racPassengers.some(p => p.hasRejectedGroupUpgrade === true);
+        if (hasRejected) {
+          console.log(`⚠️ PNR ${pnr} previously rejected group upgrade - skipping`);
+          return;
+        }
+
+        let groupIsEligible = false;
+        let topRACPosition = Math.min(...racPassengers.map(p => p.racStatus || Infinity));
+
+        // Check each RAC passenger against all vacant segments
+        for (const passenger of racPassengers) {
+          for (const vacantSegment of vacantSegments) {
+            const isEligible = EligibilityService.isEligibleForSegment(
+              passenger,
+              vacantSegment,
+              trainState,
+              currentStationIdx
+            );
+
+            if (isEligible) {
+              groupIsEligible = true;
+              break;
+            }
+          }
+          if (groupIsEligible) break;
+        }
+
+        if (groupIsEligible) {
+          // Combine all passengers (RAC + CNF) for display
+          const allPassengers = [
+            ...racPassengers.map(p => ({
+              id: p._id?.toString() || p.pnr,
+              pnr: p.pnr,
+              name: p.name,
+              age: p.age,
+              gender: p.gender,
+              racStatus: p.racStatus,
+              pnrStatus: 'RAC',  // Mark as RAC
+              coach: p.coach,
+              berth: p.berth,
+              from: p.from,
+              to: p.to,
+              passengerStatus: p.passengerStatus || 'Offline',
+              boarded: p.boarded || false,
+              isSelectable: true  // Can be selected for upgrade
+            })),
+            ...cnfPassengers.map(p => ({
+              id: p._id?.toString() || p.pnr,
+              pnr: p.pnr,
+              name: p.name,
+              age: p.age,
+              gender: p.gender,
+              racStatus: null,
+              pnrStatus: 'CNF',  // Mark as CNF
+              coach: p.coach,
+              berth: p.berth,
+              from: p.from,
+              to: p.to,
+              passengerStatus: p.passengerStatus || 'Offline',
+              boarded: p.boarded || false,
+              isSelectable: false  // Cannot be selected (already confirmed)
+            }))
+          ];
+
+          const racCount = racPassengers.length;
+          const canUpgradeAll = racCount <= vacantSegments.length;
+
+          eligibleGroups.push({
+            pnr,
+            passengers: allPassengers,  // All passengers (CNF + RAC)
+            racPassengers: racPassengers.map(p => ({ // Only RAC passengers for selection
+              id: p._id?.toString() || p.pnr,
+              name: p.name,
+              age: p.age,
+              gender: p.gender
+            })),
+            eligibleCount: racCount,  // Only count RAC passengers
+            totalCount: allPassengers.length,  // Total in group
+            canUpgradeAll,
+            topRACPosition,
+            // Priority: Lower RAC number = higher priority
+            priority: topRACPosition
+          });
+        }
+      });
+
+      // Sort by RAC position (fairness - best RAC position goes first)
+      eligibleGroups.sort((a, b) => a.topRACPosition - b.topRACPosition);
+
+      return {
+        totalVacantSeats: vacantSegments.length,
+        vacantSeats: vacantSegments.map(seg => ({
+          berth: `${seg.coachNo}-${seg.berthNo}`,
+          coach: seg.coachNo,
+          berthNo: seg.berthNo,
+          type: seg.type,
+          class: seg.class,
+          from: trainState.stations?.[seg.fromIdx]?.name || seg.from,
+          to: trainState.stations?.[seg.toIdx]?.name || seg.to
+        })),
+        eligibleGroups,
+        message: eligibleGroups.length > 0
+          ? `Found ${eligibleGroups.length} eligible group(s)`
+          : 'No eligible groups found'
+      };
+    } catch (error) {
+      console.error('Error in getEligibleGroupsForVacantSeats:', error);
+      return {
+        totalVacantSeats: 0,
+        eligibleGroups: [],
+        error: error.message
+      };
+    }
+  }
+
 
   /**
    * LEGACY: Get eligibility matrix - shows which RAC passengers are eligible for each vacant berth

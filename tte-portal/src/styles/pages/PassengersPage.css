@@ -747,3 +747,58 @@
 .status-btn.cancel-btn:hover {
   background: #da190b;
 }
+
+/* ============================================
+   MULTI-PASSENGER PNR GROUPING STYLES
+   ============================================ */
+
+/* Group Header Row */
+.group-header-row {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+  font-weight: 600;
+  cursor: pointer;
+  border-left: 4px solid #3498db;
+  transition: all 0.2s ease;
+}
+
+.group-header-row:hover {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
+  transform: translateX(2px);
+}
+
+/* Expand/Collapse Icon */
+.expand-icon {
+  display: inline-block;
+  transition: transform 0.2s ease;
+  margin-right: 8px;
+  font-size: 10px;
+  color: #3498db;
+}
+
+.expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+/* Passenger Count Badge */
+.passenger-count-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  margin-left: 10px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+}
+
+/* Passenger Detail Row (indented) */
+.passenger-detail-row {
+  background: #fafbfc !important;
+  font-size: 0.95em;
+  border-left: 4px solid #cbd5e1;
+}
+
+.passenger-detail-row:hover {
+  background: #f1f5f9 !important;
+}

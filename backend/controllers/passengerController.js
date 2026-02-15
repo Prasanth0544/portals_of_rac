@@ -915,20 +915,11 @@ class PassengerController {
       const passenger = passengerLocation.passenger;
       const capitalizedStatus = status.charAt(0).toUpperCase() + status.slice(1);
 
-      // Update in-memory state
-      passenger.passengerStatus = capitalizedStatus;
+      // Update in-memory state and Database for ENTIRE GROUP
+      const PassengerService = require('../services/PassengerService');
+      await PassengerService.updateGroupStatus(pnr, capitalizedStatus, trainState);
 
-      // Update MongoDB
-      try {
-        const passengersCollection = db.getPassengersCollection();
-        await passengersCollection.updateOne(
-          { PNR_Number: pnr },
-          { $set: { Passenger_Status: capitalizedStatus } }
-        );
-        console.log(`✅ Updated passenger status in MongoDB: ${pnr} -> ${capitalizedStatus}`);
-      } catch (dbError) {
-        console.error(`⚠️  Failed to update MongoDB:`, dbError.message);
-      }
+      console.log(`✅ Updated group status in MongoDB: ${pnr} -> ${capitalizedStatus}`);
 
       // Update RAC queue if this is a RAC passenger
       const racPassenger = trainState.racQueue.find(r => r.pnr === pnr);

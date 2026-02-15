@@ -107,8 +107,10 @@ class StationWiseApprovalService {
             if (pendingReallocations.length > 0) {
                 await this._savePendingReallocations(pendingReallocations);
 
-                // Notify TTE via WebSocket
-                wsManager.broadcast('TTE', 'PENDING_REALLOCATIONS', {
+                // Notify TTEs via WebSocket (targeted — only TTEs need this)
+                wsManager.sendToTTEs({
+                    type: 'PENDING_REALLOCATIONS',
+                    target: 'TTE',
                     count: pendingReallocations.length,
                     station: currentStation.name
                 });
@@ -426,9 +428,9 @@ class StationWiseApprovalService {
                         console.error('   ⚠️ Rejection push failed:', pushErr.message);
                     }
 
-                    // WebSocket broadcast to update passenger portal
+                    // WebSocket — send rejection to specific passenger only
                     try {
-                        wsManager.broadcast({
+                        wsManager.sendToUser(pending.passengerIrctcId, {
                             type: 'RAC_UPGRADE_REJECTED',
                             data: {
                                 reallocationId: reallocationId,
@@ -439,7 +441,7 @@ class StationWiseApprovalService {
                             }
                         });
                     } catch (wsErr) {
-                        console.error('   ⚠️ WebSocket broadcast failed:', wsErr.message);
+                        console.error('   ⚠️ WebSocket send failed:', wsErr.message);
                     }
                 }
 

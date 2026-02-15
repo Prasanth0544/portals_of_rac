@@ -42,17 +42,16 @@ class StationEventService {
     const deboardResult = this.deboardPassengers(trainState);
     result.deboarded = deboardResult.count;
 
-    // **STEP 3: RAC UPGRADES - DISABLED (Using Manual TTE Approval via Current Station Matching)**
-    // OLD AUTOMATIC LOGIC DISABLED - Now using Current Station Matching workflow
-    // const upgradeResult = await this.processRACUpgradesWithEligibility(trainState, deboardResult.newlyVacantBerths);
-    // result.racAllocated = upgradeResult.count;
-    // result.upgrades = upgradeResult.upgrades;
-
-    console.log(`\n⚠️  Automatic RAC upgrades DISABLED`);
-    console.log(`   → Use "Current Station Matching" tab in Admin Portal`);
-    console.log(`   → Manual TTE approval required\n`);
-
-    result.racAllocated = 0;
+    // **STEP 3: AUTO-CREATE pending reallocations for TTE/Passenger approval**
+    try {
+      const CurrentStationService = require('./CurrentStationReallocationService');
+      const autoResult = await CurrentStationService.createPendingReallocationsFromMatches(trainState);
+      result.racAllocated = autoResult.created || 0;
+      console.log(`\n✅ Auto-created ${result.racAllocated} pending upgrade(s) for approval`);
+    } catch (autoErr) {
+      console.error('⚠️ Auto upgrade check failed (non-critical):', autoErr.message);
+      result.racAllocated = 0;
+    }
     result.upgrades = [];
 
     // **STEP 4: Process no-shows**

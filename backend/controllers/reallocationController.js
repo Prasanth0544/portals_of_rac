@@ -149,6 +149,58 @@ class ReallocationController {
         console.warn('⚠️  Could not capture berth info for vacancy processing');
       }
 
+      // CRITICAL: Emit WebSocket event for real-time vacancy notification
+      if (wsManager && vacantBerthInfo) {
+        wsManager.emitToAll('VACANCY_CREATED', {
+          coach: vacantBerthInfo.coachName || vacantBerthInfo.coachNo,
+          berth: vacantBerthInfo.fullBerthNo,
+          type: vacantBerthInfo.type,
+          class: vacantBerthInfo.class,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // ✨ NEW: Check for eligible groups and create upgrade offer
+      const GroupUpgradeService = require('../services/GroupUpgradeService');
+      const eligibleGroupsData = ReallocationService.getEligibleGroupsForVacantSeats(trainState);
+
+      if (eligibleGroupsData.eligibleGroups && eligibleGroupsData.eligibleGroups.length > 0) {
+        console.log(`🎯 Found ${eligibleGroupsData.eligibleGroups.length} eligible group(s) after no-show`);
+
+        // ✅ FIX: Only offer to TOP priority group (prevents seat conflicts)
+        // Groups already sorted by RAC position (fairness)
+        const topGroup = eligibleGroupsData.eligibleGroups[0];
+
+        const offerResult = await GroupUpgradeService.createGroupUpgradeOffer(
+          topGroup.pnr,
+          topGroup.passengers.filter(p => p.isSelectable).map(p => p.id),  // Only RAC passengers
+          eligibleGroupsData.totalVacantSeats
+        );
+
+        if (offerResult.success && wsManager) {
+          // Emit event to passenger portal
+          wsManager.emitToAll('GROUP_UPGRADE_AVAILABLE', {
+            pnr: topGroup.pnr,
+            passengerCount: topGroup.eligibleCount,  // RAC count only
+            totalCount: topGroup.totalCount,  // Total passengers (RAC + CNF)
+            vacantSeatsCount: eligibleGroupsData.totalVacantSeats,
+            canUpgradeAll: topGroup.canUpgradeAll,
+            expiresAt: offerResult.expiresAt,
+            vacantSeats: eligibleGroupsData.vacantSeats,
+            passengers: topGroup.passengers.map(p => ({
+              id: p.id,
+              name: p.name,
+              age: p.age,
+              gender: p.gender,
+              pnrStatus: p.pnrStatus,  // 'RAC' or 'CNF'
+              isSelectable: p.isSelectable  // true for RAC, false for CNF
+            }))
+          });
+
+          console.log(`📨 Sent GROUP_UPGRADE_AVAILABLE event for PNR ${topGroup.pnr} (top priority)`);
+        }
+      }
+
       // Broadcast no-show event
       if (wsManager) {
         wsManager.broadcastNoShow({
@@ -163,8 +215,8 @@ class ReallocationController {
 
       res.json({
         success: true,
-        message: `Passenger ${result.passenger.name} marked as no-show`,
-        data: result.passenger
+        message: "Passenger marked as no-show",
+        passenger: result.passenger,
       });
 
     } catch (error) {
@@ -587,6 +639,362 @@ class ReallocationController {
         success: false,
         message: "Failed to send upgrade offer",
         error: error.message
+      });
+    }
+  }
+
+  /**
+   * ✨ NEW: Get eligible PNR groups for group selective upgrade
+   */
+  async getEligibleGroups(req, res) {
+    try {
+      const trainState = trainController.getGlobalTrainState();
+
+      if (!trainState) {
+        return res.status(400).json({
+          success: false,
+          message: "Train not initialized"
+        });
+      }
+
+      const result = ReallocationService.getEligibleGroupsForVacantSeats(trainState);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('Error getting eligible groups:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * ✨ NEW: Select specific passengers from a group for upgrade
+   * Handles both TTE and passenger portal selections
+   */
+  async selectPassengersForUpgrade(req, res) {
+    try {
+      const { pnr, selectedPassengerIds, requestedBy } = req.body;
+
+      // Validation
+      if (!pnr || !selectedPassengerIds || !Array.isArray(selectedPassengerIds)) {
+        return res.status(400).json({
+          success: false,
+          message: "PNR and selectedPassengerIds (array) are required"
+        });
+      }
+
+      if (!requestedBy || !['passenger', 'tte'].includes(requestedBy)) {
+        return res.status(400).json({
+          success: false,
+          message: "requestedBy must be 'passenger' or 'tte'"
+        });
+      }
+
+      // ✅ SECURITY: PNR ownership validation (only if requested by passenger)
+      if (requestedBy === 'passenger' && req.user) {
+        // req.user is populated by authMiddleware JWT verification
+        const authenticatedPNR = req.user.pnr;
+
+        if (!authenticatedPNR) {
+          return res.status(401).json({
+            success: false,
+            message: "Authentication error: PNR not found in user session"
+          });
+        }
+
+        if (authenticatedPNR !== pnr) {
+          return res.status(403).json({
+            success: false,
+            message: "Access denied: You can only select passengers from your own PNR"
+          });
+        }
+      }
+
+      const trainState = trainController.getGlobalTrainState();
+
+      if (!trainState) {
+        return res.status(400).json({
+          success: false,
+          message: "Train not initialized"
+        });
+      }
+
+      // Get vacant segments
+      const VacancyService = require('../services/reallocation/VacancyService');
+      const vacantSegments = VacancyService.getVacantSegments(trainState);
+
+      if (vacantSegments.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No vacant seats available"
+        });
+      }
+
+      // ✅ FIX RACE CONDITION: Re-check vacancy count at selection time
+      if (selectedPassengerIds.length > vacantSegments.length) {
+        return res.status(409).json({
+          message: `Only ${vacantSegments.length} seat(s) currently available. Cannot upgrade ${selectedPassengerIds.length} passengers.`
+        });
+      }
+
+      // Find all RAC passengers in the PNR (CNF passengers cannot be in racQueue)
+      const pnrPassengers = trainState.racQueue.filter(p => p.pnr === pnr);
+
+      if (pnrPassengers.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: `No RAC passengers found for PNR ${pnr}`
+        });
+      }
+
+      // ✅ Validate offer hasn't expired (re-check at selection time)
+      const GroupUpgradeService = require('../services/GroupUpgradeService');
+      const offerStatus = await GroupUpgradeService.getOfferStatus(pnr);
+
+      if (!offerStatus.hasOffer) {
+        return res.status(404).json({
+          success: false,
+          message: 'No active upgrade offer found for this PNR'
+        });
+      }
+
+      if (offerStatus.isExpired) {
+        return res.status(410).json({
+          success: false,
+          message: 'This upgrade offer has expired. The TTE will handle the upgrade decision.'
+        });
+      }
+
+      if (!offerStatus.visibleToPassenger && requestedBy === 'passenger') {
+        return res.status(403).json({
+          success: false,
+          message: 'This offer is no longer available to passengers'
+        });
+      }
+
+      // Validate all selected passengers belong to this PNR
+      const selectedPassengers = [];
+      for (const selectedId of selectedPassengerIds) {
+        const passenger = pnrPassengers.find(p =>
+          (p._id?.toString() === selectedId) || (p.pnr === selectedId)
+        );
+
+        if (!passenger) {
+          return res.status(400).json({
+            success: false,
+            message: `Passenger ${selectedId} not found in PNR ${pnr}`
+          });
+        }
+
+        // ✅ Validate passenger is RAC status (only RAC can be upgraded)
+        if (passenger.pnrStatus !== 'RAC') {
+          return res.status(400).json({
+            success: false,
+            message: `Passenger ${passenger.name} cannot be upgraded (status: ${passenger.pnrStatus}). Only RAC passengers are eligible.`
+          });
+        }
+
+        selectedPassengers.push(passenger);
+      }
+
+      // Apply upgrades using AllocationService
+      const AllocationService = require('../services/reallocation/AllocationService');
+      const upgradedPassengers = [];
+      const errors = [];
+      const usedSegments = new Set(); // Track used segments to avoid double allocation
+
+      for (const passenger of selectedPassengers) {
+        // Find the best-fit vacant segment for this passenger's journey
+        let bestSegment = null;
+        let bestScore = Infinity;
+
+        for (let j = 0; j < vacantSegments.length; j++) {
+          if (usedSegments.has(j)) continue; // Skip already-used segments
+
+          const seg = vacantSegments[j];
+
+          // Segment must cover passenger's entire journey:
+          // seg.fromIdx <= passenger.fromIdx AND seg.toIdx >= passenger.toIdx
+          if (seg.fromIdx <= passenger.fromIdx && seg.toIdx >= passenger.toIdx) {
+            // Score: prefer tightest fit (smallest excess vacancy)
+            const score = (passenger.fromIdx - seg.fromIdx) + (seg.toIdx - passenger.toIdx);
+            if (score < bestScore) {
+              bestScore = score;
+              bestSegment = { index: j, segment: seg };
+            }
+          }
+        }
+
+        if (!bestSegment) {
+          errors.push({
+            passenger: passenger.name,
+            error: `No matching vacant segment covers journey ${passenger.from} → ${passenger.to}`
+          });
+          continue;
+        }
+
+        const vacantSegment = bestSegment.segment;
+        usedSegments.add(bestSegment.index);
+
+        try {
+          const fullBerthNo = `${vacantSegment.coachNo}-${vacantSegment.berthNo}`;
+          const oldBerth = passenger.coach && passenger.seat
+            ? `RAC ${passenger.racStatus || ''} (${passenger.coach}-${passenger.seat})`
+            : `RAC ${passenger.racStatus || ''}`;
+
+          await AllocationService.upgradeRACPassengerWithCoPassenger(
+            passenger.pnr,
+            {
+              coachNo: vacantSegment.coachNo,
+              berthNo: vacantSegment.berthNo,
+              fullBerthNo,
+              type: vacantSegment.type
+            },
+            trainState
+          );
+
+          upgradedPassengers.push({
+            pnr: passenger.pnr,
+            name: passenger.name,
+            from: oldBerth,
+            to: fullBerthNo,
+            selectedBy: requestedBy
+          });
+        } catch (error) {
+          errors.push({
+            passenger: passenger.name,
+            error: error.message
+          });
+        }
+      }
+
+      // Emit WebSocket event
+      if (wsManager && upgradedPassengers.length > 0) {
+        wsManager.emitToAll('GROUP_UPGRADE_SELECTED', {
+          pnr,
+          upgradedPassengers: upgradedPassengers.map(p => ({
+            name: p.name,
+            berth: p.to
+          })),
+          remainingInRAC: pnrPassengers.length - upgradedPassengers.length,
+          selectedBy: requestedBy
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully upgraded ${upgradedPassengers.length} passenger(s)`,
+        data: {
+          upgraded: upgradedPassengers,
+          errors,
+          totalUpgraded: upgradedPassengers.length,
+          totalRequested: selectedPassengerIds.length
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in selectPassengersForUpgrade:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Reject a group upgrade offer (passenger declines)
+   * Marks entire PNR as rejected - no future offers
+   */
+  async rejectGroupUpgrade(req, res) {
+    try {
+      const { pnr, reason } = req.body;
+
+      if (!pnr) {
+        return res.status(400).json({
+          success: false,
+          message: "PNR is required"
+        });
+      }
+
+      const GroupUpgradeService = require('../services/GroupUpgradeService');
+      const result = await GroupUpgradeService.rejectGroupUpgradeOffer(pnr, reason || 'User declined');
+
+      if (result.success) {
+        res.json({
+          success: true,
+          message: `Group upgrade offer rejected for PNR ${pnr}`,
+          data: { modifiedCount: result.modifiedCount }
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: result.message || 'Failed to reject offer'
+        });
+      }
+    } catch (error) {
+      console.error('Error in rejectGroupUpgrade:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * ✅ UX ENHANCEMENT: Check if PNR has active group upgrade offer (for reconnection)
+   * GET /api/reallocation/group-upgrade-status/:pnr
+   */
+  async getGroupUpgradeStatus(req, res) {
+    try {
+      const { pnr } = req.params;
+
+      if (!pnr) {
+        return res.status(400).json({
+          success: false,
+          message: "PNR is required"
+        });
+      }
+
+      const GroupUpgradeService = require('../services/GroupUpgradeService');
+      const offerStatus = await GroupUpgradeService.getOfferStatus(pnr);
+
+      if (!offerStatus.hasOffer) {
+        return res.json({
+          success: true,
+          hasActiveOffer: false,
+          message: 'No active offer for this PNR'
+        });
+      }
+
+      if (offerStatus.isExpired) {
+        return res.json({
+          success: true,
+          hasActiveOffer: false,
+          message: 'Offer has expired'
+        });
+      }
+
+      // Active offer exists
+      res.json({
+        success: true,
+        hasActiveOffer: true,
+        pnr: pnr,
+        vacantSeatsCount: offerStatus.vacantSeatsCount,
+        passengerCount: offerStatus.passengerCount,
+        expiresAt: offerStatus.expiresAt,
+        createdAt: offerStatus.createdAt
+      });
+
+    } catch (error) {
+      console.error('Error in getGroupUpgradeStatus:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message
       });
     }
   }

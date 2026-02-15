@@ -6,6 +6,8 @@ class WebSocketManager {
     this.wss = null;
     this.clients = new Set();
     this.pnrSubscriptions = new Map(); // PNR -> Set of WebSocket clients
+    this.clientsByIrctcId = new Map(); // IRCTC_ID -> Set of WebSocket clients
+    this.clientsByRole = new Map();    // 'TTE'|'PASSENGER'|'ADMIN' -> Set of WebSocket clients
   }
 
   /**
@@ -158,6 +160,11 @@ class WebSocketManager {
         });
         break;
 
+      case "IDENTIFY":
+        // Register client role and/or IRCTC ID for targeted messaging
+        this._registerClientIdentity(ws, data);
+        break;
+
       default:
         console.log(`⚠️ Unknown message type: ${type}`);
     }
@@ -227,6 +234,22 @@ class WebSocketManager {
 
     // Clear the subscribed PNRs set
     ws.subscribedPNRs.clear();
+
+    // Remove from role-based and irctcId-based indexes
+    if (ws.irctcId) {
+      const idClients = this.clientsByIrctcId.get(ws.irctcId);
+      if (idClients) {
+        idClients.delete(ws);
+        if (idClients.size === 0) this.clientsByIrctcId.delete(ws.irctcId);
+      }
+    }
+    if (ws.clientRole) {
+      const roleClients = this.clientsByRole.get(ws.clientRole);
+      if (roleClients) {
+        roleClients.delete(ws);
+        if (roleClients.size === 0) this.clientsByRole.delete(ws.clientRole);
+      }
+    }
 
     // Remove from all clients
     this.clients.delete(ws);
@@ -420,6 +443,117 @@ class WebSocketManager {
     return sentCount;
   }
 
+  // ==================== TARGETED SEND METHODS ====================
+
+  /**
+   * Register client identity (role + IRCTC ID) for targeted messaging
+   */
+  _registerClientIdentity(ws, data) {
+    const { irctcId, role, tteId } = data;
+
+    if (irctcId) {
+      ws.irctcId = irctcId;
+      if (!this.clientsByIrctcId.has(irctcId)) {
+        this.clientsByIrctcId.set(irctcId, new Set());
+      }
+      this.clientsByIrctcId.get(irctcId).add(ws);
+    }
+
+    if (role) {
+      ws.clientRole = role;
+      if (!this.clientsByRole.has(role)) {
+        this.clientsByRole.set(role, new Set());
+      }
+      this.clientsByRole.get(role).add(ws);
+    }
+
+    if (tteId) {
+      ws.tteId = tteId;
+    }
+
+    console.log(`🔑 Client ${ws.clientId} identified as ${role || 'UNKNOWN'}${irctcId ? ` (${irctcId})` : ''}`);
+    this.sendToClient(ws, {
+      type: 'IDENTIFIED',
+      message: `Registered as ${role || 'client'}`,
+    });
+  }
+
+  /**
+   * Send to a specific passenger by IRCTC ID — O(1) lookup
+   */
+  sendToUser(irctcId, dataObj) {
+    const clients = this.clientsByIrctcId.get(irctcId);
+    if (!clients || clients.size === 0) return 0;
+
+    const message = JSON.stringify({
+      ...dataObj,
+      timestamp: new Date().toISOString(),
+    });
+
+    let sentCount = 0;
+    clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        try {
+          client.send(message);
+          sentCount++;
+        } catch (error) {
+          console.error(`Failed to send to user ${irctcId}:`, error);
+        }
+      }
+    });
+
+    return sentCount;
+  }
+
+  /**
+   * Send to all TTEs only
+   */
+  sendToTTEs(dataObj) {
+    return this._sendToRole('TTE', dataObj);
+  }
+
+  /**
+   * Send to all passengers only
+   */
+  sendToAllPassengers(dataObj) {
+    return this._sendToRole('PASSENGER', dataObj);
+  }
+
+  /**
+   * Send to all admins only
+   */
+  sendToAdmins(dataObj) {
+    return this._sendToRole('ADMIN', dataObj);
+  }
+
+  /**
+   * Internal: send to all clients with a specific role
+   */
+  _sendToRole(role, dataObj) {
+    const clients = this.clientsByRole.get(role) || new Set();
+    if (clients.size === 0) return 0;
+
+    const message = JSON.stringify({
+      ...dataObj,
+      timestamp: new Date().toISOString(),
+    });
+
+    let sentCount = 0;
+    clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        try {
+          client.send(message);
+          sentCount++;
+        } catch (error) {
+          console.error(`Failed to send to ${role} client:`, error);
+        }
+      }
+    });
+
+    console.log(`📡 Sent "${dataObj.type}" to ${sentCount} ${role}(s)`);
+    return sentCount;
+  }
+
   /**
    * Broadcast train update
    */
@@ -535,6 +669,8 @@ class WebSocketManager {
     // Clear all collections
     this.clients.clear();
     this.pnrSubscriptions.clear();
+    this.clientsByIrctcId.clear();
+    this.clientsByRole.clear();
 
     // Close server
     if (this.wss) {

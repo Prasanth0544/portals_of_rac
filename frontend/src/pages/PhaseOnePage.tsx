@@ -90,23 +90,46 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
         fetchMatchingData();
         fetchUpgradedPassengers();
 
-        const interval = setInterval(() => {
-            fetchMatchingData();
-            fetchUpgradedPassengers();
-        }, 3000);
-
+        // ✅ Event-driven updates via WebSocket (replaces 3-second polling)
         const ws = new WebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:5000');
 
         ws.onopen = (): void => {
-            console.log('PhaseOnePage WebSocket connected');
+            console.log('PhaseOnePage WebSocket connected (event-driven mode)');
         };
+
+        // Events that should trigger a data refresh
+        const REFRESH_EVENT_TYPES = new Set([
+            'PASSENGER_BOARDED',
+            'PASSENGER_DEBOARDED',
+            'TTE_UPGRADE_CONFIRMED',
+            'TRAIN_INITIALIZED',
+            'TRAIN_RESET',
+            'NO_SHOW_MARKED',
+            'RAC_UPGRADE_ACCEPTED',
+            'RAC_UPGRADE_DENIED',
+            'UPGRADE_APPROVED_BY_PASSENGER',
+            'ACTION_UNDONE',
+        ]);
 
         ws.onmessage = (event: MessageEvent): void => {
             try {
                 const message = JSON.parse(event.data);
 
-                if (message.type === 'RAC_REALLOCATION_APPROVED') {
-                    console.log('✅ RAC approval detected, refreshing data...', message.data);
+                // Direct top-level event types
+                if (
+                    message.type === 'RAC_REALLOCATION_APPROVED' ||
+                    message.type === 'STATION_ARRIVAL' ||
+                    message.type === 'NO_SHOW' ||
+                    message.type === 'RAC_REALLOCATION'
+                ) {
+                    console.log(`🔄 [${message.type}] Refreshing matching data...`);
+                    fetchMatchingData();
+                    fetchUpgradedPassengers();
+                }
+
+                // TRAIN_UPDATE wrapper events (check eventType sub-field)
+                if (message.type === 'TRAIN_UPDATE' && REFRESH_EVENT_TYPES.has(message.eventType)) {
+                    console.log(`🔄 [TRAIN_UPDATE/${message.eventType}] Refreshing matching data...`);
                     fetchMatchingData();
                     fetchUpgradedPassengers();
                 }
@@ -126,7 +149,6 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
         });
 
         return () => {
-            clearInterval(interval);
             ws.close();
         };
     }, []);

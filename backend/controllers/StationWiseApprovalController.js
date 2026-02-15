@@ -75,7 +75,7 @@ class StationWiseApprovalController {
             // Update train stats after approvals
             trainState.updateStats();
 
-            // ✅ BROADCAST TO ALL CLIENTS
+            // Broadcast approval to ALL clients (TTEs update dashboard, passengers fetch new status)
             const wsManager = require('../config/websocket');
             console.log(`🔔 Broadcasting RAC_REALLOCATION_APPROVED to all clients...`);
             wsManager.broadcast({

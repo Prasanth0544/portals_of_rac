@@ -8,6 +8,9 @@
 
 const StationWiseApprovalService = require('./StationWiseApprovalService');
 
+// Set to true for verbose per-call matching logs (noisy in production)
+const DEBUG_MATCHING = false;
+
 class CurrentStationReallocationService {
     /**
      * Get current station reallocation data
@@ -25,7 +28,7 @@ class CurrentStationReallocationService {
         //     return trainState.stationUpgradeLock.cachedResults;
         // }
 
-        console.log(`\n🎯 Getting CURRENT STATION reallocation data: ${currentStation.name} (idx: ${currentIdx})`);
+        if (DEBUG_MATCHING) console.log(`\n🎯 Getting CURRENT STATION reallocation data: ${currentStation.name} (idx: ${currentIdx})`);
 
         // HashMap 1: RAC Passengers boarded at current station
         const racHashMap = this._getRACPassengersAtCurrentStation(trainState, currentIdx);
@@ -297,8 +300,10 @@ class CurrentStationReallocationService {
         const usedPassengers = new Set(); // Track assigned passengers to avoid duplicates
         const usedBerths = new Set(); // Track assigned berths to avoid collisions
 
-        console.log(`\n🔍 Finding STRICT matches (${racHashMap.size} RAC → ${vacantHashMap.size} berths)...`);
-        console.log(`   ⚠️ STRICT MODE: Only PERFECT matches (vacancy end = destination)`);
+        if (DEBUG_MATCHING) {
+            console.log(`\n🔍 Finding STRICT matches (${racHashMap.size} RAC → ${vacantHashMap.size} berths)...`);
+            console.log(`   ⚠️ STRICT MODE: Only PERFECT matches (vacancy end = destination)`);
+        }
 
         // Sort berths by how long they stay vacant (shorter vacancy = higher priority to fill first)
         const sortedBerths = [...vacantHashMap.entries()].sort((a, b) =>
@@ -308,7 +313,7 @@ class CurrentStationReallocationService {
         for (const [berthId, berthData] of sortedBerths) {
             // CONSTRAINT: Skip if berth already used in this matching session
             if (usedBerths.has(berthId)) {
-                console.log(`   ⚠️ ${berthId} - Already matched, skipping`);
+                if (DEBUG_MATCHING) console.log(`   ⚠️ ${berthId} - Already matched, skipping`);
                 continue;
             }
 
@@ -383,12 +388,14 @@ class CurrentStationReallocationService {
                 });
 
                 const matchType = topMatch.isPerfectMatch ? '🎯 PERFECT' : '✅ GOOD';
-                console.log(`   ${matchType} ${berthId} → ${topMatch.name} (${topMatch.racStatus}) [score: ${topMatch.matchScore}]`);
+                if (DEBUG_MATCHING) console.log(`   ${matchType} ${berthId} → ${topMatch.name} (${topMatch.racStatus}) [score: ${topMatch.matchScore}]`);
             }
         }
 
-        console.log(`   Total strict matches: ${matches.length}`);
-        console.log(`   Berths used: ${usedBerths.size}, Passengers matched: ${usedPassengers.size}\n`);
+        if (DEBUG_MATCHING) {
+            console.log(`   Total strict matches: ${matches.length}`);
+            console.log(`   Berths used: ${usedBerths.size}, Passengers matched: ${usedPassengers.size}\n`);
+        }
         return matches;
     }
 
@@ -533,69 +540,35 @@ class CurrentStationReallocationService {
             console.error('⚠️ Failed to send TTE push notification:', pushError.message);
         }
 
-        // ✅ DUAL-APPROVAL: Notify Online passengers via push + WebSocket
-        const onlineReallocations = pendingReallocations.filter(p => p.approvalTarget === 'BOTH' && p.passengerIrctcId);
+        // ✅ DUAL-APPROVAL: Notify ALL passengers with IRCTC_ID via targeted WS + background queue
+        const pushEligible = pendingReallocations.filter(p => p.passengerIrctcId);
 
-        if (onlineReallocations.length > 0) {
-            console.log(`\n📲 Sending upgrade offers to ${onlineReallocations.length} ONLINE passengers...`);
+        if (pushEligible.length > 0) {
+            console.log(`\n📲 Sending upgrade offers to ${pushEligible.length} passengers...`);
 
-            const WebPushService = require('./WebPushService');
             const wsManager = require('../config/websocket');
-            const NotificationService = require('./NotificationService');
+            const NotificationQueueService = require('./NotificationQueueService');
 
-            for (const pending of onlineReallocations) {
-                try {
-                    // Send browser push notification
-                    await WebPushService.sendUpgradeOfferToPassenger(pending.passengerIrctcId, {
-                        pnr: pending.passengerPNR,
-                        currentBerth: pending.currentRAC,
+            // 1️⃣ Targeted WebSocket — send each passenger ONLY their own offer
+            for (const pending of pushEligible) {
+                wsManager.sendToUser(pending.passengerIrctcId, {
+                    type: 'UPGRADE_OFFER_AVAILABLE',
+                    target: 'PASSENGER',
+                    irctcId: pending.passengerIrctcId,
+                    pnr: pending.passengerPNR,
+                    offer: {
+                        reallocationId: pending._id?.toString(),
                         offeredBerth: pending.proposedBerthFull,
                         offeredBerthType: pending.proposedBerthType,
-                        offeredCoach: pending.proposedCoach
-                    });
-
-                    // Also send via WebSocket for instant UI update
-                    wsManager.broadcast('PASSENGER', 'UPGRADE_OFFER_AVAILABLE', {
-                        irctcId: pending.passengerIrctcId,
-                        pnr: pending.passengerPNR,
-                        offer: {
-                            reallocationId: pending._id?.toString(),
-                            offeredBerth: pending.proposedBerthFull,
-                            offeredBerthType: pending.proposedBerthType,
-                            offeredCoach: pending.proposedCoach,
-                            currentStatus: pending.currentRAC
-                        }
-                    });
-
-                    // ✅ TASK 2: Send email notification for approval request
-                    try {
-                        const passengersCollection = db.getPassengersCollection();
-                        const dbPassenger = await passengersCollection.findOne({ IRCTC_ID: pending.passengerIrctcId });
-
-                        if (dbPassenger?.Email) {
-                            await NotificationService.sendApprovalRequestNotification(
-                                {
-                                    name: pending.passengerName,
-                                    email: dbPassenger.Email,
-                                    pnr: pending.passengerPNR
-                                },
-                                {
-                                    currentRAC: pending.currentRAC,
-                                    proposedBerthFull: pending.proposedBerthFull,
-                                    proposedBerthType: pending.proposedBerthType,
-                                    stationName: pending.stationName
-                                }
-                            );
-                        }
-                    } catch (emailErr) {
-                        console.error(`   ⚠️ Email notification failed:`, emailErr.message);
+                        offeredCoach: pending.proposedCoach,
+                        currentStatus: pending.currentRAC
                     }
-
-                    console.log(`   ✅ Sent upgrade offer to ${pending.passengerName} (${pending.passengerIrctcId})`);
-                } catch (err) {
-                    console.error(`   ❌ Failed to notify ${pending.passengerName}:`, err.message);
-                }
+                });
             }
+            console.log(`   📡 Sent targeted WS offers to ${pushEligible.length} passengers`);
+
+            // 2️⃣ Background queue — push + email processed asynchronously (fire-and-forget)
+            NotificationQueueService.enqueueUpgradeOffers(pushEligible);
         }
 
         console.log(`✅ Created ${pendingReallocations.length} pending reallocations for approval`);
@@ -604,7 +577,7 @@ class CurrentStationReallocationService {
             success: true,
             created: pendingReallocations.length,
             pendingReallocations: pendingReallocations,
-            onlineCount: onlineReallocations.length
+            notifiedCount: pushEligible.length
         };
     }
 }

@@ -37,6 +37,7 @@ class WebSocketService {
             this.emit('connected');
 
             this.send({ type: 'SUBSCRIBE' });
+            this.send({ type: 'IDENTIFY', role: 'ADMIN' });
         };
 
         this.ws.onmessage = (event: MessageEvent): void => {

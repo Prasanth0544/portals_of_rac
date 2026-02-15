@@ -243,6 +243,12 @@ async function startServer() {
       console.log('');
       console.log(`📡 WebSocket Server: Ready (${wsManager.getClientCount()} clients)`);
       console.log('');
+
+      // Start group upgrade timeout processor
+      const GroupUpgradeService = require('./services/GroupUpgradeService');
+      GroupUpgradeService.startTimeoutProcessor();
+      console.log('');
+
       console.log('🎯 Ready to accept requests!');
       console.log('');
       console.log('Try:');
@@ -259,6 +265,10 @@ async function startServer() {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n🛑 Shutting down gracefully...');
+
+  // Stop group upgrade timeout processor
+  const GroupUpgradeService = require('./services/GroupUpgradeService');
+  GroupUpgradeService.stopTimeoutProcessor();
 
   // Close WebSocket connections
   wsManager.closeAll();

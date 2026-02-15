@@ -191,6 +191,51 @@ class PassengerService {
     }
 
     /**
+     * Update passenger status for entire group
+     * @param {string} pnr - PNR Number
+     * @param {string} status - New status ('Online' or 'Offline')
+     * @param {TrainState} trainState - Current train state
+     */
+    async updateGroupStatus(pnr, status, trainState) {
+        if (!trainState) {
+            console.warn('⚠️ TrainState not provided to updateGroupStatus');
+            return;
+        }
+
+        try {
+            console.log(`\n🔄 Syncing Group Status: Marking all passengers in PNR ${pnr} as ${status.toUpperCase()}`);
+
+            // 1. Update In-Memory State
+            const passengers = trainState.findPassengersByPNR(pnr);
+            let updateCount = 0;
+
+            passengers.forEach(p => {
+                if (p.passengerStatus !== status) {
+                    p.passengerStatus = status;
+                    updateCount++;
+                    console.log(`   ✅ Marked ${p.name} (${p.pnr}) as ${status}`);
+                }
+            });
+
+            if (updateCount === 0) {
+                console.log(`   (All ${passengers.length} already ${status})`);
+            }
+
+            // 2. Update Database (for persistence)
+            const passengersCollection = db.getPassengersCollection();
+            await passengersCollection.updateMany(
+                { PNR_Number: pnr },
+                { $set: { Passenger_Status: status, Last_Active: new Date() } }
+            );
+
+            console.log(`   💾 Updated Database for PNR ${pnr}`);
+
+        } catch (error) {
+            console.error('❌ Error syncing group status:', error);
+        }
+    }
+
+    /**
      * Get passengers by status
      * @param {string} status - Status filter
      * @param {TrainState} trainState - Current train state

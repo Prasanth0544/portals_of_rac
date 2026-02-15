@@ -141,6 +141,31 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
     const [vacantToStation, setVacantToStation] = useState<string>("");
     const [vacantBerthSearch, setVacantBerthSearch] = useState<string>("");
 
+    // ✅ NEW: Multi-Passenger Grouping State
+    const [expandedPNRs, setExpandedPNRs] = useState<Set<string>>(new Set());
+
+    // ✅ NEW: Group passengers by PNR
+    const groupPassengersByPNR = (passengerList: Passenger[]): Map<string, Passenger[]> => {
+        const groups = new Map<string, Passenger[]>();
+        passengerList.forEach(p => {
+            const existing = groups.get(p.pnr) || [];
+            groups.set(p.pnr, [...existing, p]);
+        });
+        return groups;
+    };
+
+    const togglePNRExpansion = (pnr: string): void => {
+        setExpandedPNRs(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(pnr)) {
+                newSet.delete(pnr);
+            } else {
+                newSet.add(pnr);
+            }
+            return newSet;
+        });
+    };
+
     useEffect(() => {
         loadData();
 
@@ -629,32 +654,126 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredPassengers.map((p, idx) => (
-                                        <tr key={p.pnr} className={p.noShow ? "no-show-row" : ""}>
-                                            <td className="td-no">{idx + 1}</td>
-                                            <td className="td-pnr">{p.pnr}</td>
-                                            <td className="td-name">{p.name}</td>
-                                            <td className="td-age">{p.age}</td>
-                                            <td className="td-gender">{p.gender}</td>
-                                            <td className="td-status">
-                                                <span className={`badge ${p.pnrStatus.toLowerCase().replace(" ", "-")}`}>
-                                                    {p.pnrStatus}
-                                                </span>
-                                            </td>
-                                            <td className="td-rac">{p.racStatus || '-'}</td>
-                                            <td className="td-coach">{p.coach}</td>
-                                            <td className="td-class">{p.class}</td>
-                                            <td className="td-from">{p.from}</td>
-                                            <td className="td-to">{p.to}</td>
-                                            <td className="td-berth">{p.berth}</td>
-                                            <td className="td-boarded">
-                                                {p.noShow ? "❌" : p.boarded ? "✅" : "⏳"}
-                                            </td>
-                                            <td className="td-passenger-status">
-                                                <PassengerStatusButton passenger={p} onStatusUpdate={handleStatusUpdate} />
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {(() => {
+                                        const grouped = groupPassengersByPNR(filteredPassengers);
+                                        const rows: React.ReactElement[] = [];
+                                        let rowIndex = 0;
+
+                                        grouped.forEach((passengerGroup, pnr) => {
+                                            const isMultiPassenger = passengerGroup.length > 1;
+                                            const isExpanded = expandedPNRs.has(pnr);
+
+                                            if (isMultiPassenger) {
+                                                // Render GROUP HEADER ROW
+                                                const firstPassenger = passengerGroup[0];
+                                                const groupStatus = firstPassenger.passengerStatus || 'Offline';
+
+                                                rows.push(
+                                                    <tr
+                                                        key={`group-${pnr}`}
+                                                        className="group-header-row"
+                                                        onClick={() => togglePNRExpansion(pnr)}
+                                                    >
+                                                        <td className="td-no">{++rowIndex}</td>
+                                                        <td className="td-pnr" colSpan={2}>
+                                                            <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
+                                                            <strong>{pnr}</strong>
+                                                            <span className="passenger-count-badge">
+                                                                {passengerGroup.length} passengers
+                                                            </span>
+                                                        </td>
+                                                        <td className="td-age">-</td>
+                                                        <td className="td-gender">-</td>
+                                                        <td className="td-status">
+                                                            <span className={`badge ${firstPassenger.pnrStatus.toLowerCase().replace(" ", "-")}`}>
+                                                                {firstPassenger.pnrStatus}
+                                                            </span>
+                                                        </td>
+                                                        <td className="td-rac">{firstPassenger.racStatus || '-'}</td>
+                                                        <td className="td-coach">{firstPassenger.coach}</td>
+                                                        <td className="td-class">{firstPassenger.class}</td>
+                                                        <td className="td-from">{firstPassenger.from}</td>
+                                                        <td className="td-to">{firstPassenger.to}</td>
+                                                        <td className="td-berth">Multiple</td>
+                                                        <td className="td-boarded">
+                                                            {passengerGroup.every(p => p.boarded) ? "✅" :
+                                                                passengerGroup.some(p => p.boarded) ? "⏳" : "⏳"}
+                                                        </td>
+                                                        <td className="td-passenger-status">
+                                                            <span className={`current-status-btn ${groupStatus.toLowerCase()}`}>
+                                                                {groupStatus}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                );
+
+                                                // Render DETAIL ROWS (if expanded)
+                                                if (isExpanded) {
+                                                    passengerGroup.forEach((p, idx) => {
+                                                        rows.push(
+                                                            <tr key={`${pnr}-${idx}`} className={`passenger-detail-row ${p.noShow ? "no-show-row" : ""}`}>
+                                                                <td className="td-no"></td>
+                                                                <td className="td-pnr" style={{ paddingLeft: '40px', fontSize: '0.9em', color: '#6b7280' }}>
+                                                                    #{idx + 1}
+                                                                </td>
+                                                                <td className="td-name">{p.name}</td>
+                                                                <td className="td-age">{p.age}</td>
+                                                                <td className="td-gender">{p.gender}</td>
+                                                                <td className="td-status">
+                                                                    <span className={`badge ${p.pnrStatus.toLowerCase().replace(" ", "-")}`}>
+                                                                        {p.pnrStatus}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="td-rac">{p.racStatus || '-'}</td>
+                                                                <td className="td-coach">{p.coach}</td>
+                                                                <td className="td-class">{p.class}</td>
+                                                                <td className="td-from">{p.from}</td>
+                                                                <td className="td-to">{p.to}</td>
+                                                                <td className="td-berth">{p.berth}</td>
+                                                                <td className="td-boarded">
+                                                                    {p.noShow ? "❌" : p.boarded ? "✅" : "⏳"}
+                                                                </td>
+                                                                <td className="td-passenger-status">
+                                                                    <PassengerStatusButton passenger={p} onStatusUpdate={handleStatusUpdate} />
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    });
+                                                }
+                                            } else {
+                                                // Render SINGLE PASSENGER ROW (no grouping)
+                                                const p = passengerGroup[0];
+                                                rows.push(
+                                                    <tr key={p.pnr} className={p.noShow ? "no-show-row" : ""}>
+                                                        <td className="td-no">{++rowIndex}</td>
+                                                        <td className="td-pnr">{p.pnr}</td>
+                                                        <td className="td-name">{p.name}</td>
+                                                        <td className="td-age">{p.age}</td>
+                                                        <td className="td-gender">{p.gender}</td>
+                                                        <td className="td-status">
+                                                            <span className={`badge ${p.pnrStatus.toLowerCase().replace(" ", "-")}`}>
+                                                                {p.pnrStatus}
+                                                            </span>
+                                                        </td>
+                                                        <td className="td-rac">{p.racStatus || '-'}</td>
+                                                        <td className="td-coach">{p.coach}</td>
+                                                        <td className="td-class">{p.class}</td>
+                                                        <td className="td-from">{p.from}</td>
+                                                        <td className="td-to">{p.to}</td>
+                                                        <td className="td-berth">{p.berth}</td>
+                                                        <td className="td-boarded">
+                                                            {p.noShow ? "❌" : p.boarded ? "✅" : "⏳"}
+                                                        </td>
+                                                        <td className="td-passenger-status">
+                                                            <PassengerStatusButton passenger={p} onStatusUpdate={handleStatusUpdate} />
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            }
+                                        });
+
+                                        return rows;
+                                    })()}
                                 </tbody>
                             </table>
                             <div className="table-footer">

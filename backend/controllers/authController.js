@@ -381,6 +381,25 @@ class AuthController {
                 }))
             });
 
+            // ✅ NEW: Sync Group Status
+            // Mark ALL passengers in the PNR as "Online" to prevent splitting
+            try {
+                const trainController = require('./trainController');
+                const PassengerService = require('../services/PassengerService');
+                const trainState = trainController.getGlobalTrainState();
+
+                if (trainState && tickets && tickets.length > 0) {
+                    console.log(`\n🔑 User ${user.IRCTC_ID || user.email} logged in. Syncing status for ${tickets.length} PNRs...`);
+
+                    for (const ticket of tickets) {
+                        await PassengerService.updateGroupStatus(ticket.PNR_Number, 'Online', trainState);
+                    }
+                }
+            } catch (syncError) {
+                console.error('⚠️ Failed to sync group status on login:', syncError);
+                // Continue - do not block login response
+            }
+
         } catch (error) {
             console.error('Passenger login error:', error);
             res.status(500).json({
@@ -421,6 +440,34 @@ class AuthController {
             const { refreshToken } = req.body;
 
             if (refreshToken) {
+                // ✅ NEW: Sync Group Status to OFFLINE on Logout
+                try {
+                    const tokenData = await RefreshTokenService.validateRefreshToken(refreshToken);
+
+                    if (tokenData && tokenData.role === 'PASSENGER') {
+                        const trainController = require('./trainController');
+                        const PassengerService = require('../services/PassengerService');
+                        const trainState = trainController.getGlobalTrainState();
+
+                        // Find user's PNRs
+                        const passengersCollection = db.getPassengersCollection();
+                        const tickets = await passengersCollection.find({
+                            IRCTC_ID: tokenData.userId
+                        }).toArray();
+
+                        if (trainState && tickets && tickets.length > 0) {
+                            console.log(`\n🚪 User ${tokenData.userId} logging out. Marking ${tickets.length} PNRs as OFFLINE...`);
+
+                            for (const ticket of tickets) {
+                                await PassengerService.updateGroupStatus(ticket.PNR_Number, 'Offline', trainState);
+                            }
+                        }
+                    }
+                } catch (logoutSyncError) {
+                    console.error('⚠️ Error syncing offline status on logout:', logoutSyncError);
+                    // Continue with revocation
+                }
+
                 // Revoke the refresh token
                 await RefreshTokenService.revokeRefreshToken(refreshToken);
             }
