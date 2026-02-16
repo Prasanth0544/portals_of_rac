@@ -1,10 +1,10 @@
 ## Multi Train Support
+ — even those monitoring a different train. With 1000 trains × 200 passengers each, a single station arrival event would be sent to 200,000 clients instead of just 200.
 
+**Solution:** Implement train-specific WebSoc
 ### 1. WebSocket Rooms
 
-**Problem:** Currently, the system supports only a single train at a time. When scaling to multiple trains, all WebSocket messages (station arrivals, boarding updates, upgrade offers) would be broadcast to every connected client — even those monitoring a different train. With 1000 trains × 200 passengers each, a single station arrival event would be sent to 200,000 clients instead of just 200.
-
-**Solution:** Implement train-specific WebSocket "rooms". When a client connects, it subscribes to a specific `trainNo`. The server tags the WebSocket connection and only sends messages to clients in that train's room.
+**Problem:** Currently, the system supports only a single train at a time. When scaling to multiple trains, all WebSocket messages (station arrivals, boarding updates, upgrade offers) would be broadcast to every connected clientket "rooms". When a client connects, it subscribes to a specific `trainNo`. The server tags the WebSocket connection and only sends messages to clients in that train's room.
 
 **How it works:**
 - Client sends `{ type: 'SUBSCRIBE_TRAIN', trainNo: '12345' }` on connect

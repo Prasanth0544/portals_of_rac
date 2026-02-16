@@ -4,11 +4,12 @@
 const crypto = require('crypto');
 const NotificationService = require('./NotificationService');
 const db = require('../config/db');
+const { COLLECTIONS } = require('../config/collections');
 
 class OTPService {
     constructor() {
         this.OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
-        this.collectionName = 'otp_store';
+        this.collectionName = process.env.OTP_STORE_COLLECTION || 'otp_store';
         this.initialized = false;
 
         console.log('🔐 OTPService initialized (MongoDB-backed)');

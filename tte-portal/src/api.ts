@@ -187,6 +187,12 @@ api.interceptors.response.use(
 
 // TTE Portal API
 export const tteAPI = {
+    // TTE Login with train number validation
+    login: async (employeeId: string, password: string, trainNo: string): Promise<ApiResponse> => {
+        const response = await api.post('/auth/staff/login', { employeeId, password, trainNo });
+        return response.data;
+    },
+
     // Get filtered passengers
     getPassengers: async (filters: PassengerFilters = {}): Promise<ApiResponse> => {
         const params = new URLSearchParams(filters as Record<string, string>).toString();
@@ -278,12 +284,6 @@ export const tteAPI = {
         return response.data;
     },
 
-    // ========== Authentication ==========
-    // Staff login (TTE/Admin)
-    login: async (employeeId: string, password: string): Promise<ApiResponse> => {
-        const response = await api.post('/auth/staff/login', { employeeId, password });
-        return response.data;
-    },
 
     // Staff registration (TTE)
     register: async (employeeId: string, password: string, confirmPassword: string, name?: string): Promise<ApiResponse> => {

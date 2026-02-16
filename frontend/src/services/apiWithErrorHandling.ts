@@ -299,8 +299,34 @@ export const setupConfig = (payload: any): Promise<ApiResult> =>
 export const getTrains = (): Promise<ApiResult> =>
     safeRequest(() => api.get('/trains'));
 
-export const getPassengerCollections = (): Promise<ApiResult> =>
-    safeRequest(() => api.get('/config/collections'));
+
+
+// ========================== MULTI-TRAIN MANAGEMENT APIs ========================== ✅ Phase 3
+
+export const listTrains = (): Promise<ApiResult> =>
+    safeRequest(() => api.get('/trains/list'));
+
+export const registerTrain = (
+    trainNo: string,
+    trainName: string,
+    totalCoaches?: number,
+    sleeperCoachesCount?: number,
+    threeTierACCoachesCount?: number
+): Promise<ApiResult> =>
+    safeRequest(() => api.post('/trains/register', {
+        trainNo,
+        trainName,
+        totalCoaches,
+        sleeperCoachesCount,
+        threeTierACCoachesCount
+    }));
+
+export const getTrainConfig = (trainNo: string): Promise<ApiResult> =>
+    safeRequest(() => api.get(`/trains/${trainNo}/config`));
+
+export const registerTTE = (trainNo: string, name: string, password?: string): Promise<ApiResult> =>
+    safeRequest(() => api.post('/auth/tte/register', { trainNo, name, password }));
+
 
 // ========================== TRAIN APIs ==========================
 

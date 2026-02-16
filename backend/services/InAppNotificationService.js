@@ -7,10 +7,11 @@
  */
 
 const db = require('../config/db');
+const { COLLECTIONS } = require('../config/collections');
 
 class InAppNotificationService {
     constructor() {
-        this.collectionName = 'in_app_notifications';
+        this.collectionName = COLLECTIONS.IN_APP_NOTIFICATIONS;
         console.log('📱 InAppNotificationService initialized (MongoDB-backed)');
     }
 

@@ -2,11 +2,12 @@
 // UPDATED: Now uses MongoDB for persistence (survives server restarts)
 
 const db = require("../config/db");
+const { COLLECTIONS } = require('../config/collections');
 
 class UpgradeNotificationService {
     constructor() {
-        this.collectionName = 'upgrade_notifications';
-        this.denialLogCollection = 'upgrade_denial_log';
+        this.collectionName = COLLECTIONS.UPGRADE_NOTIFICATIONS;
+        this.denialLogCollection = process.env.UPGRADE_DENIAL_LOG_COLLECTION || 'upgrade_denial_log';
         this.initialized = false;
         // ✅ Offer expiration time: 5 minutes
         this.OFFER_EXPIRY_MS = 5 * 60 * 1000;

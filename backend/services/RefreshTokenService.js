@@ -3,6 +3,7 @@
 
 const crypto = require('crypto');
 const db = require('../config/db');
+const { COLLECTIONS } = require('../config/collections');
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 
@@ -20,7 +21,7 @@ class RefreshTokenService {
             const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
             const racDb = await db.getDb();
-            const collection = racDb.collection('refresh_tokens');
+            const collection = racDb.collection(COLLECTIONS.REFRESH_TOKENS);
             // Note: TTL index is created by scripts/createIndexes.js
 
             // Store the refresh token
@@ -50,7 +51,7 @@ class RefreshTokenService {
     async validateRefreshToken(token) {
         try {
             const racDb = await db.getDb();
-            const collection = racDb.collection('refresh_tokens');
+            const collection = racDb.collection(COLLECTIONS.REFRESH_TOKENS);
 
             const storedToken = await collection.findOne({
                 token,
@@ -77,7 +78,7 @@ class RefreshTokenService {
     async revokeRefreshToken(token) {
         try {
             const racDb = await db.getDb();
-            const collection = racDb.collection('refresh_tokens');
+            const collection = racDb.collection(COLLECTIONS.REFRESH_TOKENS);
 
             const result = await collection.updateOne(
                 { token },
@@ -99,7 +100,7 @@ class RefreshTokenService {
     async revokeAllUserTokens(userId) {
         try {
             const racDb = await db.getDb();
-            const collection = racDb.collection('refresh_tokens');
+            const collection = racDb.collection(COLLECTIONS.REFRESH_TOKENS);
 
             const result = await collection.updateMany(
                 { userId, isRevoked: { $ne: true } },

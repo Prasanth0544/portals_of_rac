@@ -1,11 +1,12 @@
 // backend/scripts/createTestAccounts.js
 // Run this script ONCE to create test accounts in MongoDB
 
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { MongoClient } = require('mongodb');
+const { COLLECTIONS, DBS } = require('../config/collections');
 
-const MONGO_URI = 'mongodb://localhost:27017';
-const DB_NAME = 'rac';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 
 async function createTestAccounts() {
     const client = new MongoClient(MONGO_URI);
@@ -14,7 +15,7 @@ async function createTestAccounts() {
         await client.connect();
         console.log('✅ Connected to MongoDB');
 
-        const db = client.db(DB_NAME);
+        const db = client.db(DBS.STATIONS);
 
         // Hash passwords
         const adminPasswordHash = await bcrypt.hash('Prasanth@123', 12);
@@ -22,7 +23,7 @@ async function createTestAccounts() {
         const passengerPasswordHash = await bcrypt.hash('Prasanth@123', 12);
 
         // 1. Create tte_users collection and insert Admin + TTE accounts
-        const tteUsersCollection = db.collection('tte_users');
+        const tteUsersCollection = db.collection(COLLECTIONS.TTE_USERS);
 
         // Check if already exists
         const existingAdmin = await tteUsersCollection.findOne({ employeeId: 'ADMIN_01' });
@@ -66,7 +67,7 @@ async function createTestAccounts() {
         }
 
         // 2. Create passenger_accounts collection and insert test passenger
-        const passengerAccountsCollection = db.collection('passenger_accounts');
+        const passengerAccountsCollection = db.collection(COLLECTIONS.PASSENGER_ACCOUNTS);
 
         const existingPassenger = await passengerAccountsCollection.findOne({ IRCTC_ID: 'IR_0001' });
         if (existingPassenger) {

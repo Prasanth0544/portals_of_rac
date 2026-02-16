@@ -4,6 +4,7 @@ const DataService = require('../services/DataService');
 const StationEventService = require('../services/StationEventService');
 const RuntimeStateService = require('../services/RuntimeStateService');
 const db = require('../config/db');
+const { COLLECTIONS } = require('../config/collections');
 
 let trainState = null;
 let wsManager = null;
@@ -56,14 +57,14 @@ class TrainController {
         const passengersDb = db.getPassengersDb();
 
         // Clear ALL upgrade notifications (not just pending)
-        const upgradeNotifications = passengersDb.collection('upgrade_notifications');
+        const upgradeNotifications = passengersDb.collection(COLLECTIONS.UPGRADE_NOTIFICATIONS);
         const notifResult = await upgradeNotifications.deleteMany({});
         if (notifResult.deletedCount > 0) {
           console.log(`   🗑️ Cleared ${notifResult.deletedCount} upgrade notifications`);
         }
 
         // Clear ALL station reallocations (pending, approved, rejected)
-        const stationReallocations = passengersDb.collection('station_reallocations');
+        const stationReallocations = passengersDb.collection(COLLECTIONS.STATION_REALLOCATIONS);
         const reallocResult = await stationReallocations.deleteMany({});
         if (reallocResult.deletedCount > 0) {
           console.log(`   🗑️ Cleared ${reallocResult.deletedCount} station reallocations`);

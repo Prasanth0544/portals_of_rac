@@ -180,7 +180,13 @@ class GroupUpgradeService {
      */
     async processExpiredOffers() {
         try {
-            const passengersCollection = db.getPassengersCollection();
+            // Skip if no train configured yet (bootstrap mode)
+            let passengersCollection;
+            try {
+                passengersCollection = db.getPassengersCollection();
+            } catch {
+                return { processedCount: 0 }; // No train configured yet
+            }
             const now = new Date();
 
             // Find all offers that have expired but aren't marked as such

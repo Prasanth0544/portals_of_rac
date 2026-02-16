@@ -17,6 +17,28 @@
   margin-bottom: 15px;
   box-shadow: 0 4px 6px rgba(44, 62, 80, 0.1);
   border: 1px solid #e1e8ed;
+  gap: 10px;
+}
+
+.exit-landing-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.exit-landing-btn:hover {
+  background: #2c3e50;
+  color: white;
+  border-color: #2c3e50;
 }
 
 .config-item {

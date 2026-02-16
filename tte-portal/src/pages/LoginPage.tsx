@@ -4,12 +4,13 @@ import { tteAPI } from '../api';
 import '../styles/pages/LoginPage.css';
 
 interface LoginPageProps {
-    onSwitchToSignUp?: () => void;
+    // No props needed - TTEs registered by admin only
 }
 
-function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
+function LoginPage({ }: LoginPageProps): React.ReactElement {
     const [employeeId, setEmployeeId] = useState<string>('');
     const [password, setPassword] = useState<string>('');
+    const [trainNo, setTrainNo] = useState<string>(''); // NEW: Train number field
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
@@ -20,7 +21,7 @@ function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
         setLoading(true);
 
         try {
-            const response = await tteAPI.login(employeeId, password);
+            const response = await tteAPI.login(employeeId, password, trainNo); // Pass trainNo
 
             if (response.success && response.token && response.user) {
                 // Map API response to localStorage format
@@ -80,6 +81,19 @@ function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
                         />
                     </div>
 
+                    <div className="form-group">
+                        <label htmlFor="trainNo">Train Number</label>
+                        <input
+                            type="text"
+                            id="trainNo"
+                            value={trainNo}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setTrainNo(e.target.value)}
+                            placeholder="Enter assigned train number (e.g., 17225)"
+                            required
+                            disabled={loading}
+                        />
+                    </div>
+
                     <div className="show-password">
                         <input
                             type="checkbox"
@@ -99,15 +113,7 @@ function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
 
                 <div className="login-footer">
                     <p>TTE Portal</p>
-                    <small>Test Credentials: TTE_01 / Prasanth@123</small>
-                    {onSwitchToSignUp && (
-                        <p style={{ marginTop: '12px' }}>
-                            Don't have an account?{' '}
-                            <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToSignUp(); }} style={{ color: '#3498db', fontWeight: 600 }}>
-                                Sign Up
-                            </a>
-                        </p>
-                    )}
+                    <small>TTEs are registered by Admin. Contact your administrator for credentials.</small>
                 </div>
             </div>
         </div>

@@ -6,6 +6,7 @@
 
 const { ObjectId } = require('mongodb');
 const db = require('../config/db');
+const { COLLECTIONS } = require('../config/collections');
 const wsManager = require('../config/websocket');
 const EligibilityService = require('./reallocation/EligibilityService');
 const VacancyService = require('./reallocation/VacancyService');
@@ -252,7 +253,7 @@ class StationWiseApprovalService {
     async _savePendingReallocations(pendingReallocations) {
         try {
             const database = db.getPassengersCollection().s.db;
-            const collection = database.collection('station_reallocations');
+            const collection = database.collection(COLLECTIONS.STATION_REALLOCATIONS);
 
             if (pendingReallocations.length === 0) {
                 return { insertedCount: 0, deletedCount: 0 };
@@ -292,7 +293,7 @@ class StationWiseApprovalService {
     async getPendingReallocations(trainId = null) {
         try {
             const database = db.getPassengersCollection().s.db;
-            const collection = database.collection('station_reallocations');
+            const collection = database.collection(COLLECTIONS.STATION_REALLOCATIONS);
 
             const query = { status: 'pending' };
             if (trainId) {
@@ -315,7 +316,7 @@ class StationWiseApprovalService {
             console.log(`\n✅ Approving ${reallocationIds.length} reallocation(s)...`);
 
             const database = db.getPassengersCollection().s.db;
-            const collection = database.collection('station_reallocations');
+            const collection = database.collection(COLLECTIONS.STATION_REALLOCATIONS);
             const results = [];
 
             for (const id of reallocationIds) {
@@ -387,7 +388,7 @@ class StationWiseApprovalService {
     async rejectReallocation(reallocationId, reason, tteId) {
         try {
             const database = db.getPassengersCollection().s.db;
-            const collection = database.collection('station_reallocations');
+            const collection = database.collection(COLLECTIONS.STATION_REALLOCATIONS);
 
             // Get the pending reallocation first (for notification)
             const pending = await collection.findOne({ _id: new ObjectId(reallocationId) });

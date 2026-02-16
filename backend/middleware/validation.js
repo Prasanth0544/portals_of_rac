@@ -1,6 +1,7 @@
 // backend/middleware/validation.js
 
 const ValidationService = require("../services/ValidationService");
+const { COLLECTIONS } = require('../config/collections');
 
 class ValidationMiddleware {
   /**
@@ -218,7 +219,7 @@ class ValidationMiddleware {
     // Default Train Details to stations DB and conventional collection name
     req.body.trainDetailsDb = trainDetailsDb || stationsDb;
     req.body.trainDetailsCollection =
-      trainDetailsCollection || "Trains_Details";
+      trainDetailsCollection || COLLECTIONS.TRAINS_DETAILS;
 
     // If mongoUri not provided, use backend .env (auto-configuration)
     if (!mongoUri) {

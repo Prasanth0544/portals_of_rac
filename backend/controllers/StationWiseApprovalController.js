@@ -5,6 +5,8 @@
 
 const StationWiseApprovalService = require('../services/StationWiseApprovalService');
 const trainController = require('./trainController');
+const db = require('../config/db');
+const { COLLECTIONS } = require('../config/collections');
 
 class StationWiseApprovalController {
     /**
@@ -145,7 +147,7 @@ class StationWiseApprovalController {
         try {
             const db = require('../config/db');
             const database = db.getPassengersCollection().s.db;
-            const collection = database.collection('station_reallocations');
+            const collection = database.collection(COLLECTIONS.STATION_REALLOCATIONS);
 
             const approved = await collection.find({ status: 'approved' }).sort({ processedAt: -1 }).toArray();
 

@@ -6,7 +6,6 @@ import TrainIcon from '@mui/icons-material/Train';
 
 // Pages/Components
 import LoginPage from './pages/LoginPage';
-import SignUpPage from './pages/SignUpPage';
 import DashboardPage from './pages/DashboardPage';
 import BoardingVerificationPage from './pages/BoardingVerificationPage';
 import PassengersPage from './pages/PassengersPage';
@@ -68,7 +67,7 @@ function App(): React.ReactElement {
     const [currentTab, setCurrentTab] = useState<number>(0);
     const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 960);
     const [menuOpen, setMenuOpen] = useState<boolean>(false);
-    const [showSignUp, setShowSignUp] = useState<boolean>(false);
+
     const [isLoading, setIsLoading] = useState<boolean>(true); // Add loading state
 
     // Helper function to refresh access token
@@ -213,10 +212,7 @@ function App(): React.ReactElement {
 
     // Show login page if not authenticated
     if (!isAuthenticated) {
-        if (showSignUp) {
-            return <SignUpPage onSwitchToLogin={() => setShowSignUp(false)} />;
-        }
-        return <LoginPage onSwitchToSignUp={() => setShowSignUp(true)} />;
+        return <LoginPage />;
     }
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number): void => {

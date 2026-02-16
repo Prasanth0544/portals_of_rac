@@ -4,8 +4,9 @@
 
 require('dotenv').config();
 const { MongoClient } = require('mongodb');
+const { COLLECTIONS, DBS } = require('../config/collections');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017';
 
 async function createIndexes() {
     console.log('🔧 Creating MongoDB indexes for performance optimization...\n');
@@ -17,12 +18,12 @@ async function createIndexes() {
         console.log('✅ Connected to MongoDB\n');
 
         // Get the rac database (for auth collections)
-        const racDb = client.db('rac');
+        const racDb = client.db(DBS.STATIONS);
 
         // ==================== Refresh Tokens Collection ====================
         console.log('📁 Creating indexes on refresh_tokens collection...');
 
-        const refreshTokensCollection = racDb.collection('refresh_tokens');
+        const refreshTokensCollection = racDb.collection(COLLECTIONS.REFRESH_TOKENS);
 
         // TTL index for auto-expiring refresh tokens
         await refreshTokensCollection.createIndex(
@@ -48,7 +49,7 @@ async function createIndexes() {
         // ==================== Passenger Accounts Collection ====================
         console.log('📁 Creating indexes on passenger_accounts collection...');
 
-        const passengerAccountsCollection = racDb.collection('passenger_accounts');
+        const passengerAccountsCollection = racDb.collection(COLLECTIONS.PASSENGER_ACCOUNTS);
 
         await passengerAccountsCollection.createIndex(
             { IRCTC_ID: 1 },
@@ -59,7 +60,7 @@ async function createIndexes() {
         // ==================== TTE Users Collection ====================
         console.log('📁 Creating indexes on tte_users collection...');
 
-        const tteUsersCollection = racDb.collection('tte_users');
+        const tteUsersCollection = racDb.collection(COLLECTIONS.TTE_USERS);
 
         await tteUsersCollection.createIndex(
             { employeeId: 1 },
@@ -70,7 +71,7 @@ async function createIndexes() {
         // ==================== Station Reallocations Collection ====================
         console.log('📁 Creating indexes on station_reallocations collection...');
 
-        const stationReallocationsCollection = racDb.collection('station_reallocations');
+        const stationReallocationsCollection = racDb.collection(COLLECTIONS.STATION_REALLOCATIONS);
 
         // Compound index for pending reallocations query
         await stationReallocationsCollection.createIndex(
@@ -89,7 +90,7 @@ async function createIndexes() {
         // ==================== In-App Notifications Collection ====================
         console.log('📁 Creating indexes on in_app_notifications collection...');
 
-        const notificationsCollection = racDb.collection('in_app_notifications');
+        const notificationsCollection = racDb.collection(COLLECTIONS.IN_APP_NOTIFICATIONS);
 
         await notificationsCollection.createIndex(
             { irctcId: 1, read: 1, createdAt: -1 },
@@ -107,7 +108,7 @@ async function createIndexes() {
         // ==================== Push Subscriptions Collection ====================
         console.log('📁 Creating indexes on push_subscriptions collection...');
 
-        const pushSubsCollection = racDb.collection('push_subscriptions');
+        const pushSubsCollection = racDb.collection(COLLECTIONS.PUSH_SUBSCRIPTIONS);
 
         // Compound unique index on type, userId, and endpoint (matches upsert query)
         await pushSubsCollection.createIndex(
@@ -119,7 +120,7 @@ async function createIndexes() {
         // ==================== Upgrade Notifications Collection ====================
         console.log('📁 Creating indexes on upgrade_notifications collection...');
 
-        const upgradeNotificationsCollection = racDb.collection('upgrade_notifications');
+        const upgradeNotificationsCollection = racDb.collection(COLLECTIONS.UPGRADE_NOTIFICATIONS);
 
         await upgradeNotificationsCollection.createIndex(
             { pnr: 1, status: 1 },

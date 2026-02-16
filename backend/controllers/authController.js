@@ -3,6 +3,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
+const { COLLECTIONS, DEFAULTS } = require('../config/collections');
 const RefreshTokenService = require('../services/RefreshTokenService');
 
 // JWT Secret (in production, use environment variable)
@@ -33,7 +34,7 @@ class AuthController {
 
             // Find user in tte_users collection
             const racDb = await db.getDb();
-            const tteUsersCollection = racDb.collection('tte_users');
+            const tteUsersCollection = racDb.collection(COLLECTIONS.TTE_USERS);
             const user = await tteUsersCollection.findOne({ employeeId });
 
             if (!user) {
@@ -58,6 +59,35 @@ class AuthController {
                     success: false,
                     message: 'Invalid credentials'
                 });
+            }
+
+            // Validate trainNo for TTE role
+            if (user.role === 'TTE') {
+                const { trainNo } = req.body;
+
+                // 1. Ensure trainNo is provided
+                if (!trainNo) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Train number is required for TTE login'
+                    });
+                }
+
+                // 2. Validate employeeId format matches trainNo
+                if (!user.employeeId.startsWith(`${trainNo}_`)) {
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Invalid train number for this TTE ID'
+                    });
+                }
+
+                // 3. Validate trainAssigned field matches
+                if (user.trainAssigned && user.trainAssigned !== trainNo) {
+                    return res.status(403).json({
+                        success: false,
+                        message: `This TTE is assigned to train ${user.trainAssigned}, not ${trainNo}`
+                    });
+                }
             }
 
             // Update last login
@@ -191,7 +221,7 @@ class AuthController {
 
             // Check if employee ID already exists
             const racDb = await db.getDb();
-            const tteUsersCollection = racDb.collection('tte_users');
+            const tteUsersCollection = racDb.collection(COLLECTIONS.TTE_USERS);
             const existingUser = await tteUsersCollection.findOne({
                 employeeId: { $regex: new RegExp(`^${employeeId}$`, 'i') }
             });
@@ -251,6 +281,102 @@ class AuthController {
     }
 
     /**
+     * Register TTE for a specific train (Admin Landing Page)
+     * POST /api/auth/tte/register
+     * Body: { trainNo, name }
+     * Auto-generates employee ID like: 17225_TTE001
+     * Sets default password: Prasanth@123
+     */
+    async registerTTE(req, res) {
+        try {
+            const { trainNo, name, password } = req.body;
+
+            // Validate required fields
+            if (!trainNo || !name) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Train number and TTE name are required'
+                });
+            }
+
+            const racDb = await db.getDb();
+
+            // Verify train exists in Trains_Details
+            const trainsCollection = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
+            const trainExists = await trainsCollection.findOne({ trainNo });
+
+            if (!trainExists) {
+                return res.status(404).json({
+                    success: false,
+                    message: `Train ${trainNo} not found. Please register the train first.`
+                });
+            }
+
+            // Auto-generate TTE ID
+            const tteUsersCollection = racDb.collection(COLLECTIONS.TTE_USERS);
+            const pattern = new RegExp(`^${trainNo}_TTE`, 'i');
+            const existingTTEs = await tteUsersCollection.countDocuments({
+                employeeId: { $regex: pattern }
+            });
+
+            const tteNumber = String(existingTTEs + 1).padStart(3, '0');
+            const employeeId = `${trainNo}_TTE${tteNumber}`;
+
+            // Check if this exact ID already exists (shouldn't happen with count, but safety check)
+            const duplicate = await tteUsersCollection.findOne({ employeeId });
+            if (duplicate) {
+                return res.status(409).json({
+                    success: false,
+                    message: `TTE ID ${employeeId} already exists. Please try again.`
+                });
+            }
+
+            // Use provided password or fall back to default
+            const ttePassword = password || 'Prasanth@123';
+            const passwordHash = await bcrypt.hash(ttePassword, 12);
+
+            // Create TTE user document
+            const newTTE = {
+                employeeId,
+                passwordHash,
+                email: null,
+                name,
+                role: 'TTE',
+                active: true,
+                trainAssigned: trainNo,
+                phone: null,
+                permissions: ['MARK_BOARDING', 'MARK_NO_SHOW', 'VIEW_PASSENGERS'],
+                createdAt: new Date(),
+                lastLogin: null
+            };
+
+            // Insert into database
+            await tteUsersCollection.insertOne(newTTE);
+
+            console.log(`✅ New TTE registered: ${employeeId} for train ${trainNo}`);
+
+            res.status(201).json({
+                success: true,
+                message: `TTE account created successfully!`,
+                user: {
+                    employeeId: newTTE.employeeId,
+                    name: newTTE.name,
+                    role: newTTE.role,
+                    trainAssigned: newTTE.trainAssigned,
+                    defaultPassword: ttePassword // Return it so admin can inform the TTE
+                }
+            });
+
+        } catch (error) {
+            console.error('TTE registration error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error during TTE registration'
+            });
+        }
+    }
+
+    /**
      * Passenger Login
      * POST /api/auth/passenger/login
      * Body: { irctcId, password } OR { email, password }
@@ -276,7 +402,7 @@ class AuthController {
 
             // Find user in passenger_accounts collection
             const racDb = await db.getDb();
-            const passengerAccountsCollection = racDb.collection('passenger_accounts');
+            const passengerAccountsCollection = racDb.collection(COLLECTIONS.PASSENGER_ACCOUNTS);
             const query = irctcId ? { IRCTC_ID: irctcId } : { email };
             const user = await passengerAccountsCollection.findOne(query);
 

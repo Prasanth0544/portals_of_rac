@@ -56,6 +56,15 @@ router.post('/auth/staff/register',
   (req, res) => authController.staffRegister(req, res)
 );
 
+// TTE Registration from Admin Landing Page (Auto-generates ID) ✅ Phase 3
+router.post('/auth/tte/register',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  validationMiddleware.sanitizeBody,
+  (req, res) => authController.registerTTE(req, res)
+);
+
+
 // Mark passenger as NO_SHOW
 router.post('/tte/mark-no-show',
   authMiddleware,
@@ -191,9 +200,6 @@ router.post('/config/setup',
   (req, res) => configController.setup(req, res)
 );
 
-// Get available passenger collections from PassengersDB
-router.get('/config/collections', (req, res) => configController.getPassengerCollections(req, res));
-
 // Get current config (sanitized - no password)
 router.get('/config/current', (req, res) => {
   try {
@@ -216,6 +222,30 @@ router.get('/config/current', (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// ========== MULTI-TRAIN MANAGEMENT ROUTES ========== ✅ Phase 3
+// Register a new train
+router.post('/trains/register',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  validationMiddleware.sanitizeBody,
+  (req, res) => configController.registerTrain(req, res)
+);
+
+// List all registered trains
+router.get('/trains/list',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  (req, res) => configController.listTrains(req, res)
+);
+
+// Get auto-derived configuration for a specific train
+router.get('/trains/:trainNo/config',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  (req, res) => configController.getTrainConfig(req, res)
+);
+
 
 router.post('/train/initialize',
   validationMiddleware.sanitizeBody,

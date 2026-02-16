@@ -1,11 +1,12 @@
 // backend/scripts/resetAdmin.js
 // Delete and recreate ADMIN_01 account with correct password
 
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { MongoClient } = require('mongodb');
+const { COLLECTIONS, DBS } = require('../config/collections');
 
-const MONGO_URI = 'mongodb://localhost:27017';
-const DB_NAME = 'rac';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 
 async function resetAdmin() {
     const client = new MongoClient(MONGO_URI);
@@ -14,8 +15,8 @@ async function resetAdmin() {
         await client.connect();
         console.log('✅ Connected to MongoDB');
 
-        const db = client.db(DB_NAME);
-        const tteUsersCollection = db.collection('tte_users');
+        const db = client.db(DBS.STATIONS);
+        const tteUsersCollection = db.collection(COLLECTIONS.TTE_USERS);
 
         // Delete existing ADMIN_01
         const deleteResult = await tteUsersCollection.deleteOne({ employeeId: 'ADMIN_01' });

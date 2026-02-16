@@ -41,8 +41,8 @@ class Database {
 
         // Default to localhost/rac/Trains_Details if not provided
         this.mongoUri = finalConfig.mongoUri || "mongodb://localhost:27017";
-        this.trainDetailsDbName = finalConfig.trainDetailsDb || "rac";
-        this.trainDetailsCollectionName = finalConfig.trainDetailsCollection || "Trains_Details";
+        this.trainDetailsDbName = finalConfig.trainDetailsDb || DBS.TRAIN_DETAILS;
+        this.trainDetailsCollectionName = finalConfig.trainDetailsCollection || COLLECTIONS.TRAINS_DETAILS;
 
         // Close existing client if any
         if (stationsClient) await stationsClient.close();
@@ -64,7 +64,7 @@ class Database {
       this.trainDetailsDbName = finalConfig.trainDetailsDb || finalConfig.stationsDb;
       this.stationsCollectionName = finalConfig.stationsCollection;
       this.passengersCollectionName = finalConfig.passengersCollection;
-      this.trainDetailsCollectionName = finalConfig.trainDetailsCollection || 'Trains_Details';
+      this.trainDetailsCollectionName = finalConfig.trainDetailsCollection || COLLECTIONS.TRAINS_DETAILS;
       this.currentTrainNo = finalConfig.trainNo;
 
       // Connection pooling configuration for performance
@@ -214,7 +214,7 @@ class Database {
     if (!this.passengersDb) {
       throw new Error('Passengers database not initialized. Call connect() first.');
     }
-    return this.passengersDb.collection('station_reallocations');
+    return this.passengersDb.collection(COLLECTIONS.STATION_REALLOCATIONS);
   }
 
   async close() {

@@ -6,6 +6,7 @@
  */
 
 const db = require('../config/db');
+const { COLLECTIONS } = require('../config/collections');
 
 class PushSubscriptionService {
     constructor() {
@@ -18,7 +19,7 @@ class PushSubscriptionService {
      */
     async getCollection() {
         const racDb = await db.getDb();
-        return racDb.collection('push_subscriptions');
+        return racDb.collection(COLLECTIONS.PUSH_SUBSCRIPTIONS);
     }
 
     /**

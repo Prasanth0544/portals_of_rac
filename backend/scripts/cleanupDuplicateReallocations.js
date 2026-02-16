@@ -5,6 +5,7 @@
 
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
+const { COLLECTIONS, DBS } = require('../config/collections');
 
 async function cleanupDuplicates() {
     const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
@@ -14,8 +15,8 @@ async function cleanupDuplicates() {
         await client.connect();
         console.log('Connected to MongoDB');
 
-        const db = client.db('rac');
-        const collection = db.collection('station_reallocations');
+        const db = client.db(DBS.STATIONS);
+        const collection = db.collection(COLLECTIONS.STATION_REALLOCATIONS);
 
         // Find duplicates (same PNR with pending status)
         const duplicates = await collection.aggregate([

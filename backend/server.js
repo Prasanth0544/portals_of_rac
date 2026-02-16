@@ -5,6 +5,7 @@ const cors = require('cors');
 const http = require('http');
 
 const db = require('./config/db');
+const { COLLECTIONS, DBS } = require('./config/collections');
 const wsManager = require('./config/websocket');
 const apiRoutes = require('./routes/api');
 
@@ -156,60 +157,47 @@ app.use(errorHandler);
 async function startServer() {
   try {
     // ═══════════════════════════════════════════════════════════
-    // AUTO-CONFIGURATION FROM ENVIRONMENT VARIABLES
-    // If .env has database config, use it automatically
+    // MULTI-TRAIN BOOTSTRAP MODE
+    // Connect to MongoDB for auth & Trains_Details only.
+    // Per-train config (stations, passengers) is loaded dynamically
+    // when a train is selected from the Landing Page.
     // ═══════════════════════════════════════════════════════════
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
 
-    if (mongoUri && !global.RAC_CONFIG) {
-      console.log('\n🔧 Auto-configuring from environment variables...\n');
-
-      global.RAC_CONFIG = {
-        mongoUri: mongoUri,
-        stationsDb: process.env.STATIONS_DB || 'rac',
-        passengersDb: process.env.PASSENGERS_DB || 'PassengersDB',
-        trainDetailsDb: process.env.TRAIN_DETAILS_DB || 'rac',
-        stationsCollection: process.env.STATIONS_COLLECTION || '17225',
-        passengersCollection: process.env.PASSENGERS_COLLECTION || 'P_1',
-        trainDetailsCollection: process.env.TRAIN_DETAILS_COLLECTION || 'Trains_Details',
-        trainNo: process.env.DEFAULT_TRAIN_NO || '17225',
-        journeyDate: process.env.DEFAULT_JOURNEY_DATE || '2025-11-15'
-      };
-
-      console.log('✅ Auto-configuration loaded:');
-      console.log(`   📦 Stations: ${global.RAC_CONFIG.stationsDb}/${global.RAC_CONFIG.stationsCollection}`);
-      console.log(`   📦 Passengers: ${global.RAC_CONFIG.passengersDb}/${global.RAC_CONFIG.passengersCollection}`);
-      console.log(`   🚂 Train: ${global.RAC_CONFIG.trainNo}`);
-      console.log(`   📅 Date: ${global.RAC_CONFIG.journeyDate}\n`);
-    }
-
-    // Try DB connect using global config (may be absent on first boot)
+    // Connect in bootstrap mode (auth + Trains_Details only)
     try {
-      await db.connect(global.RAC_CONFIG);
+      if (mongoUri) {
+        const bootstrapConfig = {
+          mongoUri: mongoUri,
+          trainDetailsDb: DBS.TRAIN_DETAILS,
+          trainDetailsCollection: COLLECTIONS.TRAINS_DETAILS,
+        };
+        await db.connect(bootstrapConfig);
+      } else {
+        console.warn('⚠️ No MONGODB_URI in .env — waiting for runtime configuration via /api/config/setup');
+      }
 
       // ═══════════════════════════════════════════════════════════
       // CLEANUP OLD SESSION DATA ON SERVER START
       // This ensures no duplicate reallocations from previous sessions
       // ═══════════════════════════════════════════════════════════
       try {
-        // Use passengersDb where station_reallocations is stored
-        const passengersDb = db.getPassengersDb();
+        // Use rac DB (available in bootstrap mode) to clean session data
+        const racDb = await db.getDb();
+        if (racDb) {
+          const stationReallocations = racDb.collection(COLLECTIONS.STATION_REALLOCATIONS);
+          const reallocResult = await stationReallocations.deleteMany({});
+          if (reallocResult.deletedCount > 0) {
+            console.log(`🗑️ Server start: Cleared ${reallocResult.deletedCount} old reallocations`);
+          }
 
-        // Clear all pending station reallocations
-        const stationReallocations = passengersDb.collection('station_reallocations');
-        const reallocResult = await stationReallocations.deleteMany({});
-        if (reallocResult.deletedCount > 0) {
-          console.log(`🗑️ Server start: Cleared ${reallocResult.deletedCount} old reallocations`);
+          const upgradeNotifications = racDb.collection(COLLECTIONS.UPGRADE_NOTIFICATIONS);
+          const notifResult = await upgradeNotifications.deleteMany({});
+          if (notifResult.deletedCount > 0) {
+            console.log(`🗑️ Server start: Cleared ${notifResult.deletedCount} old notifications`);
+          }
+          console.log('✅ Old session data cleared - fresh start');
         }
-
-        // Clear all upgrade notifications
-        const upgradeNotifications = passengersDb.collection('upgrade_notifications');
-        const notifResult = await upgradeNotifications.deleteMany({});
-        if (notifResult.deletedCount > 0) {
-          console.log(`🗑️ Server start: Cleared ${notifResult.deletedCount} old notifications`);
-        }
-
-        console.log('✅ Old session data cleared - fresh start');
       } catch (cleanupErr) {
         console.warn('⚠️ Could not clear old data on startup:', cleanupErr.message);
       }
@@ -223,23 +211,22 @@ async function startServer() {
     wsManager.initialize(httpServer);
 
     httpServer.listen(PORT, () => {
-      const config = db.getConfig();
 
       console.log('');
-      console.log('╔════════════════════════════════════════════╗');
-      console.log('║   🚂 RAC REALLOCATION API SERVER V2.0    ║');
-      console.log('╚════════════════════════════════════════════╝');
+      console.log('╔════════════════════════════════════════════════╗');
+      console.log('║   🚂 RAC REALLOCATION API SERVER V3.0        ║');
+      console.log('║      Multi-Train Architecture                 ║');
+      console.log('╚════════════════════════════════════════════════╝');
       console.log(`✅ HTTP Server:    http://localhost:${PORT}`);
       console.log(`✅ WebSocket:      ws://localhost:${PORT}`);
       console.log(`✅ Environment:    ${process.env.NODE_ENV || 'development'}`);
       console.log(`✅ Node Version:   ${process.version}`);
       console.log('');
-      console.log('📊 Active Configuration:');
-      console.log(`   Stations DB:     ${config.stationsDb}`);
-      console.log(`   Stations Coll:   ${config.stationsCollection}`);
-      console.log(`   Passengers DB:   ${config.passengersDb}`);
-      console.log(`   Passengers Coll: ${config.passengersCollection}`);
-      console.log(`   Train Number:    ${config.trainNo}`);
+      console.log('📊 Configuration:');
+      console.log(`   Auth DB:         ${DBS.STATIONS}`);
+      console.log(`   Passengers DB:   ${DBS.PASSENGERS}`);
+      console.log(`   Trains Registry: ${COLLECTIONS.TRAINS_DETAILS}`);
+      console.log(`   Mode:            Multi-Train (per-train config from Trains_Details)`);
       console.log('');
       console.log(`📡 WebSocket Server: Ready (${wsManager.getClientCount()} clients)`);
       console.log('');
