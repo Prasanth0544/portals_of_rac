@@ -11,7 +11,7 @@ class TTEController {
     async getAllPassengersFiltered(req, res) {
         try {
             const { status, coach } = req.query;
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -74,7 +74,7 @@ class TTEController {
      */
     async getCurrentlyBoardedPassengers(req, res) {
         try {
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -119,7 +119,7 @@ class TTEController {
      */
     async getBoardedRACPassengers(req, res) {
         try {
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -181,7 +181,7 @@ class TTEController {
             }
 
             const passengersCollection = db.getPassengersCollection();
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -246,7 +246,7 @@ class TTEController {
                 });
             }
 
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -319,7 +319,7 @@ class TTEController {
             }
 
             const UpgradeNotificationService = require('../services/UpgradeNotificationService');
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -329,7 +329,7 @@ class TTEController {
             }
 
             // Validation: Check if notification exists
-            const allNotifications = UpgradeNotificationService.getAllNotifications(pnr);
+            const allNotifications = UpgradeNotificationService.getAllNotifications(pnr, trainState.trainNo);
             const notification = allNotifications.find(n => n.id === notificationId);
 
             if (!notification) {
@@ -348,7 +348,7 @@ class TTEController {
             }
 
             //Accept the notification
-            const acceptedNotification = UpgradeNotificationService.acceptUpgrade(pnr, notificationId);
+            const acceptedNotification = UpgradeNotificationService.acceptUpgrade(pnr, notificationId, trainState.trainNo);
 
             // Perform the actual upgrade
             const upgradeResult = await ReallocationService.upgradeRACPassengerWithCoPassenger(
@@ -419,7 +419,7 @@ class TTEController {
     */
     getStatistics(req, res) {
         try {
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -494,7 +494,7 @@ class TTEController {
      */
     getBoardingQueue(req, res) {
         try {
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -532,7 +532,7 @@ class TTEController {
      */
     async confirmAllBoarded(req, res) {
         try {
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -573,7 +573,7 @@ class TTEController {
                 });
             }
 
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -748,7 +748,7 @@ class TTEController {
                 });
             }
 
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -834,7 +834,7 @@ class TTEController {
      */
     async getActionHistory(req, res) {
         try {
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -864,7 +864,7 @@ class TTEController {
     async undoAction(req, res) {
         try {
             const { actionId } = req.body;
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -1035,7 +1035,7 @@ class TTEController {
                 });
             }
 
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -1156,7 +1156,7 @@ class TTEController {
 
             const upgrade = this.offlineUpgradesQueue[upgradeIndex];
 
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -1257,7 +1257,8 @@ class TTEController {
         try {
             const UpgradeNotificationService = require('../services/UpgradeNotificationService');
 
-            const sentOffers = UpgradeNotificationService.getAllSentNotifications();
+            const trainNo = req.query.trainNo || req.body.trainNo;
+            const sentOffers = UpgradeNotificationService.getAllSentNotifications(trainNo);
 
             res.json({
                 success: true,

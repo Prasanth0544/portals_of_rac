@@ -21,6 +21,7 @@ import ReportDeboardingPage from './pages/ReportDeboardingPage';
 import CancelTicketPage from './pages/CancelTicketPage';
 import ChangeBoardingStationPage from './pages/ChangeBoardingStationPage';
 import FamilyUpgradeSelectionPage from './pages/FamilyUpgradeSelectionPage';
+import QRTicketViewPage from './pages/QRTicketViewPage';
 import NotificationBell from './components/NotificationBell';
 import { initializePushNotifications } from './services/pushNotificationService';
 import axios from 'axios';
@@ -226,7 +227,15 @@ function App(): React.ReactElement {
     };
 
     if (!authenticated) {
-        return <LoginPage />;
+        // Allow QR ticket view without auth (for TTE/phone scanning)
+        return (
+            <Router>
+                <Routes>
+                    <Route path="/ticket-view" element={<QRTicketViewPage />} />
+                    <Route path="*" element={<LoginPage />} />
+                </Routes>
+            </Router>
+        );
     }
 
     return (
@@ -246,6 +255,7 @@ function App(): React.ReactElement {
                             <Route path="/report-deboarding" element={<ReportDeboardingPage />} />
                             <Route path="/cancel-ticket" element={<CancelTicketPage />} />
                             <Route path="/change-boarding" element={<ChangeBoardingStationPage />} />
+                            <Route path="/ticket-view" element={<QRTicketViewPage />} />
                         </Routes>
                     </Box>
 

@@ -43,7 +43,7 @@ class ReallocationController {
         });
       }
 
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({
@@ -233,7 +233,7 @@ class ReallocationController {
    */
   getRACQueue(req, res) {
     try {
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({
@@ -266,7 +266,7 @@ class ReallocationController {
    */
   getVacantBerths(req, res) {
     try {
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({
@@ -344,7 +344,7 @@ class ReallocationController {
     try {
       const { pnr } = req.params;
 
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({
@@ -374,7 +374,7 @@ class ReallocationController {
    */
   getStage1Eligible(req, res) {
     try {
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({
@@ -416,7 +416,7 @@ class ReallocationController {
         });
       }
 
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({
@@ -448,7 +448,7 @@ class ReallocationController {
    */
   getEligibilityMatrix(req, res) {
     try {
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({
@@ -519,7 +519,7 @@ class ReallocationController {
         });
       }
 
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({
@@ -575,7 +575,7 @@ class ReallocationController {
         });
       }
 
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({
@@ -648,7 +648,7 @@ class ReallocationController {
    */
   async getEligibleGroups(req, res) {
     try {
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({
@@ -715,7 +715,7 @@ class ReallocationController {
         }
       }
 
-      const trainState = trainController.getGlobalTrainState();
+      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
       if (!trainState) {
         return res.status(400).json({

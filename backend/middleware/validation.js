@@ -94,7 +94,7 @@ class ValidationMiddleware {
    */
   checkTrainInitialized(req, res, next) {
     const trainController = require("../controllers/trainController");
-    const trainState = trainController.getGlobalTrainState();
+    const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
     if (!trainState) {
       return res.status(400).json({
@@ -111,7 +111,7 @@ class ValidationMiddleware {
    */
   checkJourneyStarted(req, res, next) {
     const trainController = require("../controllers/trainController");
-    const trainState = trainController.getGlobalTrainState();
+    const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
     if (!trainState) {
       return res.status(400).json({

@@ -95,7 +95,7 @@ class ReallocationService {
         if (!rac.boarded) continue;
 
         // Check if passenger already denied this specific berth
-        if (await UpgradeNotificationService.hasDeniedBerth(rac.pnr, vacantBerthInfo.fullBerthNo)) {
+        if (await UpgradeNotificationService.hasDeniedBerth(rac.pnr, vacantBerthInfo.fullBerthNo, trainState.trainNo)) {
           logger.debug(`Skipping ${rac.name} - previously denied ${vacantBerthInfo.fullBerthNo}`);
           continue;
         }
@@ -113,7 +113,9 @@ class ReallocationService {
           const notification = await UpgradeNotificationService.createUpgradeNotification(
             racPassenger,
             vacantBerthInfo,
-            currentStation
+            currentStation,
+            true,
+            trainState.trainNo
           );
 
           if (notification) {

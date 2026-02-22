@@ -20,25 +20,9 @@
   gap: 10px;
 }
 
-.exit-landing-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid #d1d5db;
-  background: #f3f4f6;
-  color: #4b5563;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
 
-.exit-landing-btn:hover {
-  background: #2c3e50;
-  color: white;
-  border-color: #2c3e50;
+.train-config-banner .exit-landing-btn {
+  position: static;
 }
 
 .config-item {
@@ -267,6 +251,48 @@
   background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
   box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
   cursor: default;
+}
+
+/* Journey Complete State - Amber/locked styling */
+.btn-start-journey.journey-complete {
+  background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+  box-shadow: 0 2px 8px rgba(149, 165, 166, 0.3);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* Journey Complete Alert Banner */
+.journey-complete-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+  border: 1px solid #ffc107;
+  border-left: 4px solid #e67e22;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 0 auto 16px auto;
+  max-width: 500px;
+  box-shadow: 0 2px 8px rgba(230, 126, 34, 0.15);
+}
+
+.journey-complete-banner span {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.journey-complete-banner strong {
+  display: block;
+  color: #856404;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.journey-complete-banner p {
+  color: #856404;
+  font-size: 12px;
+  margin: 0;
+  opacity: 0.85;
 }
 
 /* 3. MAIN ACTIONS GRID - 3 Compact Cards */

@@ -68,6 +68,12 @@ const useTteSocket = (): UseTteSocketReturn => {
     const handleMessage = useCallback((msg: WebSocketMessage): void => {
         const { type, data, eventType } = msg;
 
+        // Multi-train filter: only process events for this TTE's assigned train
+        const assignedTrainNo = localStorage.getItem('trainAssigned');
+        if ((msg as any).trainNo && assignedTrainNo && String((msg as any).trainNo) !== String(assignedTrainNo)) {
+            return; // Ignore events for other trains
+        }
+
         setLastUpdate({ type, payload: data, timestamp: new Date() });
 
         // Handle specific event types

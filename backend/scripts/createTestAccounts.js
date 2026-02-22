@@ -59,7 +59,7 @@ async function createTestAccounts() {
                 active: true,
                 trainAssigned: 17225,
                 phone: '9876543210',
-                permissions: ['MARK_BOARDING', 'MARK_NO_SHOW', 'VIEW_PASSENGERS'],
+                permissions: ['MARK_BOARDING', 'MARK_NO_SHOW', 'VIEW_PASSENGERS', 'OFFLINE_UPGRADE'],
                 createdAt: new Date(),
                 lastLogin: null
             });

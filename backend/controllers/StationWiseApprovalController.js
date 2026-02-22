@@ -15,7 +15,7 @@ class StationWiseApprovalController {
      */
     async getPendingReallocations(req, res) {
         try {
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -59,7 +59,7 @@ class StationWiseApprovalController {
                 });
             }
 
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({
@@ -172,7 +172,7 @@ class StationWiseApprovalController {
      */
     async getStationWiseData(req, res) {
         try {
-            const trainState = trainController.getGlobalTrainState();
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
 
             if (!trainState) {
                 return res.status(400).json({

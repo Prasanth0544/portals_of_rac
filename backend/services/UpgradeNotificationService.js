@@ -33,23 +33,24 @@ class UpgradeNotificationService {
     /**
      * Create upgrade notification for RAC passenger
      * Clears any old PENDING notifications for this station before creating new ones
+     * @param {string} trainNo - Train number for scoping
      */
-    async createUpgradeNotification(racPassenger, vacantBerth, currentStation, clearOldFirst = true) {
+    async createUpgradeNotification(racPassenger, vacantBerth, currentStation, clearOldFirst = true, trainNo = null) {
         const collection = await this.getCollection();
 
-        // Clear old pending notifications for this station (prevents duplicates)
+        // Clear old pending notifications for this station AND this train (prevents duplicates)
         if (clearOldFirst) {
-            const deleteResult = await collection.deleteMany({
-                stationCode: currentStation.code,
-                status: 'PENDING'
-            });
+            const filter = { stationCode: currentStation.code, status: 'PENDING' };
+            if (trainNo) filter.trainNo = String(trainNo);
+            const deleteResult = await collection.deleteMany(filter);
             if (deleteResult.deletedCount > 0) {
-                console.log(`   🗑️ Cleared ${deleteResult.deletedCount} old pending notifications for station ${currentStation.code}`);
+                console.log(`   🗑️ Cleared ${deleteResult.deletedCount} old pending notifications for station ${currentStation.code} (train ${trainNo})`);
             }
         }
 
         const notification = {
             id: `UPGRADE_${Date.now()}_${racPassenger.pnr}`,
+            trainNo: trainNo ? String(trainNo) : null,
             pnr: racPassenger.pnr,
             name: racPassenger.name,
             currentBerth: `${racPassenger.coach}-${racPassenger.seatNo}`,
@@ -67,37 +68,40 @@ class UpgradeNotificationService {
 
         await collection.insertOne(notification);
 
-        console.log(`📩 Upgrade notification created for ${racPassenger.name} (${racPassenger.pnr})`);
+        console.log(`📩 [Train ${trainNo}] Upgrade notification created for ${racPassenger.name} (${racPassenger.pnr})`);
         console.log(`   Offered: ${vacantBerth.fullBerthNo} (${vacantBerth.type})`);
 
         return notification;
     }
 
     /**
-     * Clear ALL pending notifications (across all stations)
+     * Clear ALL pending notifications for a specific train
      * Called when new batch is being created at a new station
      * Old station offers should disappear when new ones arrive
+     * @param {string} trainNo - Train number for scoping
      */
-    async clearPendingNotificationsForStation(stationCode) {
+    async clearPendingNotificationsForStation(stationCode, trainNo = null) {
         const collection = await this.getCollection();
-        // Clear ALL pending notifications, not just for this station
-        // This ensures old-station offers disappear when new ones arrive
-        const result = await collection.deleteMany({
-            status: 'PENDING'
-        });
+        // Clear pending notifications scoped to this train
+        const filter = { status: 'PENDING' };
+        if (trainNo) filter.trainNo = String(trainNo);
+        const result = await collection.deleteMany(filter);
         if (result.deletedCount > 0) {
-            console.log(`🗑️ Cleared ${result.deletedCount} old pending notifications (new station: ${stationCode})`);
+            console.log(`🗑️ [Train ${trainNo}] Cleared ${result.deletedCount} old pending notifications (new station: ${stationCode})`);
         }
         return result.deletedCount;
     }
 
     /**
      * Accept upgrade offer
+     * @param {string} trainNo - Train number for scoping
      */
-    async acceptUpgrade(pnr, notificationId) {
+    async acceptUpgrade(pnr, notificationId, trainNo = null) {
         const collection = await this.getCollection();
 
-        const notification = await collection.findOne({ id: notificationId, pnr });
+        const filter = { id: notificationId, pnr };
+        if (trainNo) filter.trainNo = String(trainNo);
+        const notification = await collection.findOne(filter);
 
         if (!notification) {
             throw new Error(`Notification ${notificationId} not found for PNR ${pnr}`);
@@ -117,7 +121,7 @@ class UpgradeNotificationService {
             }
         );
 
-        console.log(`✅ Upgrade accepted by ${notification.name} (${pnr})`);
+        console.log(`✅ [Train ${trainNo}] Upgrade accepted by ${notification.name} (${pnr})`);
 
         return { ...notification, status: 'ACCEPTED', acceptedAt: new Date().toISOString() };
     }
@@ -125,12 +129,15 @@ class UpgradeNotificationService {
     /**
      * Deny upgrade offer
      * UPDATED: Now sets Upgrade_Status = 'REJECTED' on passenger to exclude from future offers
+     * @param {string} trainNo - Train number for scoping
      */
-    async denyUpgrade(pnr, notificationId, reason = 'Passenger declined') {
+    async denyUpgrade(pnr, notificationId, reason = 'Passenger declined', trainNo = null) {
         const collection = await this.getCollection();
         const denialCollection = await this.getDenialCollection();
 
-        const notification = await collection.findOne({ id: notificationId, pnr });
+        const filter = { id: notificationId, pnr };
+        if (trainNo) filter.trainNo = String(trainNo);
+        const notification = await collection.findOne(filter);
 
         if (!notification) {
             throw new Error(`Notification ${notificationId} not found for PNR ${pnr}`);
@@ -153,8 +160,9 @@ class UpgradeNotificationService {
             }
         );
 
-        // Log denial
+        // Log denial with trainNo
         await denialCollection.insertOne({
+            trainNo: trainNo ? String(trainNo) : (notification.trainNo || null),
             pnr,
             name: notification.name,
             offeredBerth: notification.offeredBerth,
@@ -164,7 +172,7 @@ class UpgradeNotificationService {
             createdAt: new Date()
         });
 
-        // ✅ NEW: Mark passenger as rejected in main passengers collection
+        // ✅ Mark passenger as rejected in main passengers collection
         // This excludes them from future upgrade offers
         try {
             const passengersCollection = db.getPassengersCollection();
@@ -178,12 +186,12 @@ class UpgradeNotificationService {
                     }
                 }
             );
-            console.log(`   📝 Updated passenger ${pnr} with Upgrade_Status = 'REJECTED'`);
+            console.log(`   📝 [Train ${trainNo}] Updated passenger ${pnr} with Upgrade_Status = 'REJECTED'`);
         } catch (updateErr) {
             console.error(`   ⚠️ Failed to update passenger Upgrade_Status:`, updateErr.message);
         }
 
-        console.log(`❌ Upgrade denied by ${notification.name} (${pnr}): ${reason}`);
+        console.log(`❌ [Train ${trainNo}] Upgrade denied by ${notification.name} (${pnr}): ${reason}`);
 
         return { ...notification, status: 'DENIED', deniedAt, denialReason: reason };
     }
@@ -191,10 +199,13 @@ class UpgradeNotificationService {
     /**
      * Get pending notifications for passenger
      * Automatically expires offers older than OFFER_EXPIRY_MS (5 minutes)
+     * @param {string} trainNo - Train number for scoping
      */
-    async getPendingNotifications(pnr) {
+    async getPendingNotifications(pnr, trainNo = null) {
         const collection = await this.getCollection();
-        const allPending = await collection.find({ pnr, status: 'PENDING' }).toArray();
+        const filter = { pnr, status: 'PENDING' };
+        if (trainNo) filter.trainNo = String(trainNo);
+        const allPending = await collection.find(filter).toArray();
 
         const now = Date.now();
         const validOffers = [];
@@ -230,18 +241,24 @@ class UpgradeNotificationService {
 
     /**
      * Get all notifications for passenger
+     * @param {string} trainNo - Train number for scoping
      */
-    async getAllNotifications(pnr) {
+    async getAllNotifications(pnr, trainNo = null) {
         const collection = await this.getCollection();
-        return await collection.find({ pnr }).sort({ createdAt: -1 }).toArray();
+        const filter = { pnr };
+        if (trainNo) filter.trainNo = String(trainNo);
+        return await collection.find(filter).sort({ createdAt: -1 }).toArray();
     }
 
     /**
      * Clear notifications for passenger
+     * @param {string} trainNo - Train number for scoping
      */
-    async clearNotifications(pnr) {
+    async clearNotifications(pnr, trainNo = null) {
         const collection = await this.getCollection();
-        await collection.deleteMany({ pnr });
+        const filter = { pnr };
+        if (trainNo) filter.trainNo = String(trainNo);
+        await collection.deleteMany(filter);
     }
 
     /**
@@ -254,25 +271,28 @@ class UpgradeNotificationService {
 
     /**
      * Check if passenger has denied this specific berth recently
+     * @param {string} trainNo - Train number for scoping
      */
-    async hasDeniedBerth(pnr, berthNo) {
+    async hasDeniedBerth(pnr, berthNo, trainNo = null) {
         const collection = await this.getCollection();
-        const denial = await collection.findOne({
-            pnr,
-            offeredBerth: berthNo,
-            status: 'DENIED'
-        });
+        const filter = { pnr, offeredBerth: berthNo, status: 'DENIED' };
+        if (trainNo) filter.trainNo = String(trainNo);
+        const denial = await collection.findOne(filter);
         return !!denial;
     }
 
     /**
      * Get all sent notifications (for TTE portal tracking)
+     * @param {string} trainNo - Train number for scoping
      */
-    async getAllSentNotifications() {
+    async getAllSentNotifications(trainNo = null) {
         const collection = await this.getCollection();
-        const notifications = await collection.find({}).sort({ createdAt: -1 }).toArray();
+        const filter = {};
+        if (trainNo) filter.trainNo = String(trainNo);
+        const notifications = await collection.find(filter).sort({ createdAt: -1 }).toArray();
 
         return notifications.map(notification => ({
+            trainNo: notification.trainNo,
             pnr: notification.pnr,
             passengerName: notification.name,
             offeredBerth: notification.offeredBerth,

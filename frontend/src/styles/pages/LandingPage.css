@@ -1,4 +1,21 @@
-/* frontend/src/styles/pages/LandingPage.css - Classic Professional Theme (matching HomePage) */
+/* frontend/src/styles/pages/LandingPage.css
+   Palette & component patterns mirror HomePage.css exactly.
+   ─────────────────────────────────────────────────────────
+   Tokens (from HomePage):
+     bg card  : linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)
+     border   : #e1e8ed
+     shadow   : 0 2px 6px rgba(44,62,80,.08)
+     text-dark: #2c3e50
+     text-mid : #34495e  /  #5a6c7d
+     text-mute: #7f8c8d
+     blue-pri : #3498db → #2980b9
+     green-pri: #27ae60 → #229954
+     grey-btn : #95a5a6 → #7f8c8d
+   ───────────────────────────────────────────────────────── */
+
+/* ============================================================
+   PAGE WRAPPER  (matches .home-page)
+   ============================================================ */
 
 .landing-page {
     max-width: 1200px;
@@ -12,7 +29,11 @@
     margin: 0 auto;
 }
 
-/* Header - with three-dot menu */
+/* ============================================================
+   HEADER  (dark banner — same two-tone dark as train-config-banner
+            but inverted to navy so it reads as "top-level")
+   ============================================================ */
+
 .landing-header {
     display: flex;
     align-items: center;
@@ -22,6 +43,7 @@
     border-radius: 8px;
     margin-bottom: 15px;
     box-shadow: 0 4px 6px rgba(44, 62, 80, 0.2);
+    border: 1px solid #1a252f;
 }
 
 .landing-header h1 {
@@ -29,16 +51,121 @@
     font-size: 1.4rem;
     font-weight: 600;
     margin: 0;
-    text-shadow: none;
 }
 
-/* Three-dot menu override for dark header */
+/* three-dot menu button inside dark header */
 .landing-header .menu-button {
     color: white;
     font-size: 22px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+    line-height: 1;
 }
 
-/* Actions Section */
+.landing-header .menu-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── user-menu dropdown (matches UserMenu.css pattern) ── */
+.user-menu {
+    position: relative;
+}
+
+.menu-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.2);
+    min-width: 175px;
+    z-index: 200;
+    border: 1px solid #e1e8ed;
+    overflow: hidden;
+    animation: dropIn 0.15s ease;
+}
+
+@keyframes dropIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.menu-user-info {
+    padding: 12px 14px 8px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%);
+}
+
+.menu-user-info p {
+    margin: 2px 0;
+    font-size: 13px;
+    color: #2c3e50;
+}
+
+.user-role {
+    font-size: 11px !important;
+    color: #5a6c7d !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.menu-dropdown hr {
+    border: none;
+    border-top: 1px solid #e1e8ed;
+    margin: 0;
+}
+
+.menu-item {
+    width: 100%;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    color: #34495e;
+    transition: background 0.15s;
+    display: block;
+}
+
+.menu-item:hover {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%);
+}
+
+.menu-item.logout {
+    color: #e74c3c;
+}
+
+.menu-item.logout:hover {
+    background: linear-gradient(135deg, #fff5f5 0%, #fde8e8 100%);
+}
+
+/* ============================================================
+   SECTION TITLE  (matches .section-title in HomePage)
+   ============================================================ */
+
+.section-title {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: #34495e;
+    font-weight: 600;
+}
+
+/* ============================================================
+   ACTIONS SECTION  (matches .action-cards-section / .journey-section)
+   ============================================================ */
+
 .actions-section {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     border-radius: 8px;
@@ -48,34 +175,6 @@
     border: 1px solid #e1e8ed;
 }
 
-.section-title {
-    text-align: center;
-    font-size: 14px;
-    font-weight: 600;
-    color: #34495e;
-    letter-spacing: 1px;
-    margin: 0 0 15px 0;
-    position: relative;
-}
-
-.section-title::before,
-.section-title::after {
-    content: '═════';
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #d5dbdb;
-}
-
-.section-title::before {
-    left: 20%;
-}
-
-.section-title::after {
-    right: 20%;
-}
-
-/* Action Buttons - Match HomePage btn styles */
 .action-buttons {
     display: flex;
     justify-content: center;
@@ -83,8 +182,9 @@
     flex-wrap: wrap;
 }
 
+/* base action button — mirrors .btn-compact sizing + .btn-start-journey shape */
 .action-btn {
-    padding: 10px 20px;
+    padding: 10px 22px;
     border: none;
     border-radius: 6px;
     font-size: 13px;
@@ -97,14 +197,19 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
+.action-btn:active {
+    transform: scale(0.97);
+}
+
 .btn-icon {
     font-size: 16px;
 }
 
-/* Add Train - Blue (matching HomePage primary blue) */
+/* Add Train — blue primary (matches .btn-compact.primary / .btn-start-journey) */
 .add-train-btn {
-    background: linear-gradient(135deg, #3498db 0%, #90479b 100%);
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     color: white;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
 }
 
 .add-train-btn:hover {
@@ -113,10 +218,11 @@
     box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
 }
 
-/* Sign Up TTE - Green (matching HomePage primary green) */
+/* Sign Up TTE — green (matches .btn-compact.primary green variant) */
 .signup-tte-btn {
     background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
     color: white;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
 }
 
 .signup-tte-btn:hover {
@@ -125,10 +231,11 @@
     box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
 }
 
-/* Manual Config - Grey (matching HomePage secondary) */
+/* Manual Config — grey (matches .btn-compact.secondary) */
 .stats-btn {
     background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
     color: white;
+    box-shadow: 0 2px 6px rgba(149, 165, 166, 0.3);
 }
 
 .stats-btn:hover {
@@ -137,74 +244,358 @@
     box-shadow: 0 4px 12px rgba(149, 165, 166, 0.4);
 }
 
-/* Trains Section */
+/* ============================================================
+   TRAINS SECTION WRAPPER  (matches .action-cards-section)
+   ============================================================ */
+
 .trains-section {
-    background: linear-gradient(135deg, #ffffff 0%, #cb9dcb 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
     border: 1px solid #e1e8ed;
 }
 
-.trains-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
-    margin-top: 15px;
+/* ── Trains section header: title + search bar side-by-side ── */
+.trains-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
-/* Train Card - matching HomePage stat-box/nav-card style */
-.train-card {
-    background: linear-gradient(135deg, #ffffff 0%, #cae0d9 100%);
-    border-radius: 6px;
-    padding: 15px;
+/* override the bottom-margin on section-title when it sits inside the header */
+.trains-section-header .section-title {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+/* Search wrapper — mirrors .noshow-input-row feel */
+.train-search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    max-width: 320px;
+    min-width: 200px;
+}
+
+/* SVG magnifier sits inside the wrapper, never overlaps the text */
+.train-search-icon {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+    user-select: none;
+    color: #95a5a6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.train-search-icon svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    display: block;
+}
+
+/* Input — mirrors .input-pnr, left-pad clears the 16px icon + 11px left + 6px gap */
+.train-search-input {
+    width: 100%;
+    padding: 9px 36px 9px 38px;
+    border: 1px solid #d5dbdb;
+    border-radius: 4px;
+    font-size: 13px;
+    background: white;
+    color: #34495e;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.train-search-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+}
+
+.train-search-input::placeholder {
+    color: #95a5a6;
+    font-size: 12px;
+}
+
+/* Clear (✕) button */
+.train-search-clear {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #95a5a6;
+    font-size: 12px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.train-search-clear:hover {
+    color: #e74c3c;
+    background: linear-gradient(135deg, #fff5f5 0%, #fde8e8 100%);
+}
+
+/* No-results row inside .trains-grid */
+.search-no-results {
+    padding: 28px 20px;
     text-align: center;
-    box-shadow: 0 2px 6px rgba(44, 62, 80, 0.08);
-    border: 1px solid #e1e8ed;
-    transition: all 0.3s ease;
+    font-size: 13px;
+    color: #7f8c8d;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%);
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.search-no-results strong {
+    color: #2c3e50;
+}
+
+/* ============================================================
+   TABLE HEADER ROW
+   ============================================================ */
+
+.trains-table-header {
+    display: grid;
+    grid-template-columns: 52px 2fr 1.3fr 1fr 0.8fr 84px;
+    gap: 0;
+    padding: 7px 10px 7px 10px;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    border-radius: 6px 6px 0 0;
+    border: 1px solid #1a252f;
+    border-bottom: none;
+}
+
+.trains-table-header span {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.75);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+}
+
+/* align all header labels flush-left, matching their cell's left padding */
+.trains-table-header span:nth-child(3) {
+    padding-left: 2px;
+}
+
+.trains-table-header span:nth-child(4) {
+    padding-left: 8px;
+}
+
+.trains-table-header span:nth-child(5) {
+    padding-left: 8px;
+}
+
+.trains-table-header span:nth-child(6) {
+    padding-left: 8px;
+}
+
+/* ============================================================
+   TRAINS GRID  (list container)
+   ============================================================ */
+
+.trains-grid {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    position: relative;
+    border: 1px solid #e1e8ed;
+    border-radius: 0 0 6px 6px;
     overflow: hidden;
 }
 
-.train-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, #3498db 0%, #2980b9 100%);
+/* ============================================================
+   TRAIN CARD — compact row (inspired by .nav-card + .stat-box)
+   ============================================================ */
+
+.train-card {
+    display: grid;
+    grid-template-columns: 52px 2fr 1.3fr 1fr 0.8fr 84px;
+    align-items: center;
+    gap: 0;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-bottom: 1px solid #e1e8ed;
+    transition: all 0.3s ease;
+    position: relative;
+    min-height: 58px;
+    cursor: pointer;
 }
 
+.train-card:last-child {
+    border-bottom: none;
+}
+
+.train-card:nth-child(even) {
+    background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f4 100%);
+}
+
+/* mirrors .nav-card:hover */
 .train-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.2);
-    background: linear-gradient(135deg, #ebf5fb 0%, #d6eaf8 100%);
+    background: linear-gradient(135deg, #ebf5fb 0%, #d6eaf8 100%) !important;
     border-color: #3498db;
 }
 
+/* left-edge status stripe */
+.train-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+}
+
+.train-card.status-running-card::before {
+    background: linear-gradient(180deg, #27ae60, #229954);
+}
+
+.train-card.status-ready-card::before {
+    background: linear-gradient(180deg, #f39c12, #e67e22);
+}
+
+.train-card.status-complete-card::before {
+    background: linear-gradient(180deg, #3498db, #2980b9);
+}
+
+.train-card.status-not-init-card::before {
+    background: #bdc3c7;
+}
+
+/* ── Col 1 : icon + number ── */
+.train-col-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 6px 8px 12px;
+    gap: 2px;
+}
+
 .train-icon {
-    font-size: 28px;
-    margin-bottom: 4px;
+    font-size: 20px;
+    line-height: 1;
 }
 
 .train-number {
-    font-size: 18px;
+    font-size: 10px;
     font-weight: 700;
     color: #2c3e50;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+/* ── Col 2 : name ── */
+.train-col-name {
+    padding: 8px 10px 8px 6px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
 }
 
 .train-name {
     font-size: 13px;
-    color: #5a6c7d;
-    font-weight: 500;
-    margin-bottom: 4px;
+    font-weight: 600;
+    color: #2c3e50;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Status Badges - classic flat colors */
+.train-name-sub {
+    font-size: 10px;
+    color: #7f8c8d;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+/* ── Col 3 : coaches ── */
+.train-col-coaches {
+    padding: 8px 6px 8px 2px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+}
+
+.coach-total {
+    font-size: 12px;
+    font-weight: 600;
+    color: #34495e;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.coach-breakdown {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+/* coach class badges — matching timeline-station-code pill style */
+.coach-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-sl {
+    background: #d6eaf8;
+    color: #21618c;
+}
+
+.badge-3ac {
+    background: #d4efdf;
+    color: #1e8449;
+}
+
+.badge-2ac {
+    background: #fdebd0;
+    color: #935116;
+}
+
+.badge-1ac {
+    background: #f9ebea;
+    color: #922b21;
+}
+
+/* ── Col 4 : status ── */
+.train-col-status {
+    padding: 8px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+/* status badges — same pattern as timeline-station-code */
 .status-badge {
     display: inline-flex;
     align-items: center;
@@ -213,9 +604,9 @@
     border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
-    margin: 4px auto;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    white-space: nowrap;
 }
 
 .status-running {
@@ -238,17 +629,47 @@
     color: #21618c;
 }
 
-.train-info {
-    font-size: 12px;
-    color: #7f8c8d;
-    margin: 2px 0;
+/* ── Col 5 : station ── */
+.train-col-station {
+    padding: 8px 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
 }
 
-/* Open Train Button - Matches HomePage nav-card hover */
+.station-label {
+    font-size: 10px;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.station-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.station-progress {
+    font-size: 10px;
+    color: #5a6c7d;
+    font-weight: 500;
+}
+
+/* ── Col 6 : action button ── */
+.train-col-action {
+    padding: 8px 10px 8px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+/* mirrors .open-train-btn from original, same as nav-card button palette */
 .open-train-btn {
-    margin-top: 6px;
-    padding: 8px 16px;
-    background: linear-gradient(135deg, #3498db 0%, #90479b 100%);
+    padding: 7px 14px;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     color: white;
     border: none;
     border-radius: 4px;
@@ -257,18 +678,33 @@
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 2px 6px rgba(52, 152, 219, 0.3);
+    white-space: nowrap;
 }
 
 .open-train-btn:hover {
     background: linear-gradient(135deg, #2980b9 0%, #21618c 100%);
     box-shadow: 0 4px 10px rgba(52, 152, 219, 0.4);
-    transform: scale(1.03);
+    transform: scale(1.04);
 }
 
-/* Loading & Empty States */
+.open-train-btn:active {
+    transform: scale(0.97);
+}
+
+/* legacy — kept so any other component using .train-info still works */
+.train-info {
+    font-size: 12px;
+    color: #7f8c8d;
+    margin: 2px 0;
+}
+
+/* ============================================================
+   LOADING & EMPTY STATES
+   ============================================================ */
+
 .loading-spinner {
     text-align: center;
-    padding: 30px;
+    padding: 40px 20px;
     font-size: 14px;
     color: #5a6c7d;
 }
@@ -280,19 +716,20 @@
     font-size: 14px;
 }
 
-/* Modal */
+/* ============================================================
+   MODAL  (matches .journey-section card feel)
+   ============================================================ */
+
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background: rgba(44, 62, 80, 0.55);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
     backdrop-filter: blur(3px);
+    padding: 16px;
 }
 
 .modal-content {
@@ -300,16 +737,19 @@
     border-radius: 8px;
     padding: 25px;
     max-width: 500px;
-    width: 90%;
+    width: 100%;
     box-shadow: 0 10px 30px rgba(44, 62, 80, 0.3);
-    animation: modalSlideIn 0.3s ease;
+    animation: modalSlideIn 0.25s ease;
     border: 1px solid #e1e8ed;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
 }
 
 @keyframes modalSlideIn {
     from {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translateY(-18px);
     }
 
     to {
@@ -324,8 +764,14 @@
     text-align: center;
     font-size: 18px;
     font-weight: 600;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e1e8ed;
 }
 
+
+
+
+/* form fields — mirrors .input-pnr style */
 .form-group {
     margin-bottom: 15px;
 }
@@ -350,6 +796,7 @@
     background: white;
     color: #34495e;
     transition: all 0.2s ease;
+    box-sizing: border-box;
 }
 
 .form-group input:focus,
@@ -390,6 +837,7 @@
 .btn-submit {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     color: white;
+    box-shadow: 0 2px 6px rgba(52, 152, 219, 0.3);
 }
 
 .btn-submit:hover:not(:disabled) {
@@ -401,10 +849,13 @@
 .btn-submit:disabled {
     background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
     cursor: not-allowed;
-    box-shadow: 0 2px 4px rgba(189, 195, 199, 0.2);
+    box-shadow: none;
 }
 
-/* TTE Success Display */
+/* ============================================================
+   TTE SUCCESS DISPLAY
+   ============================================================ */
+
 .tte-success {
     text-align: center;
 }
@@ -412,12 +863,14 @@
 .success-icon {
     font-size: 48px;
     margin-bottom: 10px;
+    display: block;
 }
 
 .tte-success h3 {
     color: #2c3e50;
-    margin-bottom: 15px;
+    margin: 0 0 15px 0;
     font-weight: 600;
+    font-size: 15px;
 }
 
 .tte-details {
@@ -455,18 +908,75 @@
     font-size: 12px;
     color: #21618c;
     margin-top: 10px;
+    font-weight: 500;
 }
 
-.info-note code {
-    background: #2c3e50;
-    color: #ecf0f1;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+    .trains-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .train-search-wrapper {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .trains-table-header {
+        display: none;
+    }
+
+    .train-card {
+        grid-template-columns: 52px 1fr auto;
+        grid-template-rows: auto auto;
+        min-height: unset;
+        padding: 10px 10px 10px 12px;
+        gap: 2px 8px;
+    }
+
+    .train-col-icon {
+        grid-row: 1 / 3;
+        padding: 0 6px 0 0;
+        align-items: flex-start;
+        justify-content: flex-start;
+    }
+
+    .train-col-name {
+        grid-column: 2;
+        grid-row: 1;
+        padding: 0;
+    }
+
+    .train-col-coaches {
+        grid-column: 2;
+        grid-row: 2;
+        padding: 0;
+    }
+
+    .train-col-status {
+        grid-column: 3;
+        grid-row: 1;
+        padding: 0;
+        justify-content: flex-end;
+    }
+
+    .train-col-station {
+        display: none;
+    }
+
+    .train-col-action {
+        grid-column: 3;
+        grid-row: 2;
+        padding: 0;
+        justify-content: flex-end;
+    }
 }
 
-/* Responsive */
 @media (max-width: 768px) {
     .landing-header {
         flex-direction: column;
@@ -478,11 +988,6 @@
         font-size: 1.1rem;
     }
 
-    .section-title::before,
-    .section-title::after {
-        display: none;
-    }
-
     .action-buttons {
         flex-direction: column;
     }
@@ -491,8 +996,14 @@
         width: 100%;
         justify-content: center;
     }
+}
 
-    .trains-grid {
-        grid-template-columns: 1fr;
+@media (max-width: 480px) {
+    .landing-page {
+        padding: 10px;
+    }
+
+    .modal-content {
+        padding: 18px;
     }
 }

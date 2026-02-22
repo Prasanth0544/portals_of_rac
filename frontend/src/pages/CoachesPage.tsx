@@ -213,7 +213,11 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations, journe
                 <div className="modal-content" onClick={(e: MouseEvent) => e.stopPropagation()}>
                     <div className="modal-header">
                         <h3>🛏️ Berth Details: {berth.fullBerthNo}</h3>
-                        <button className="back-btn" onClick={onClose}>✕</button>
+                        <button className="back-btn" onClick={onClose}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
+                                <path d="M19 12H5M12 19l-7-7 7-7" />
+                            </svg>
+                        </button>
                     </div>
                     <div className="modal-body">
                         <div className="info-row">
@@ -239,7 +243,11 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations, journe
             <div className="modal-content" onClick={(e: MouseEvent) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h3>🛏️ Berth Details: {berth.fullBerthNo}</h3>
-                    <button className="back-btn" onClick={onClose}>✕</button>
+                    <button className="back-btn" onClick={onClose}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
                 </div>
                 <div className="modal-body">
                     <div className="info-row">

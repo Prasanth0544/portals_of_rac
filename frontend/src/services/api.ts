@@ -199,31 +199,34 @@ export const getStationSchedule = async (): Promise<any> => {
 export const initializeTrain = (trainNo: string, journeyDate: string, trainName?: string): Promise<TrainState> =>
     handleRequest(() => api.post('/train/initialize', { trainNo, journeyDate, trainName }));
 
-export const startJourney = (): Promise<any> =>
-    handleRequest(() => api.post('/train/start-journey'));
+export const startJourney = (trainNo?: string): Promise<any> =>
+    handleRequest(() => api.post('/train/start-journey', { trainNo }));
 
-export const getTrainState = (): Promise<TrainState> =>
-    handleRequest(() => api.get('/train/state'));
+export const getTrainState = (trainNo?: string): Promise<TrainState> =>
+    handleRequest(() => api.get('/train/state', { params: { trainNo } }));
 
-export const moveToNextStation = (): Promise<any> =>
-    handleRequest(() => api.post('/train/next-station'));
+export const moveToNextStation = (trainNo?: string): Promise<any> =>
+    handleRequest(() => api.post('/train/next-station', { trainNo }));
 
-export const resetTrain = (): Promise<any> =>
-    handleRequest(() => api.post('/train/reset'));
+export const resetTrain = (trainNo?: string): Promise<any> =>
+    handleRequest(() => api.post('/train/reset', { trainNo }));
 
-export const getTrainStats = (): Promise<any> =>
-    handleRequest(() => api.get('/train/stats'));
+export const getTrainStats = (trainNo?: string): Promise<any> =>
+    handleRequest(() => api.get('/train/stats', { params: { trainNo } }));
+
+export const getEngineStatus = (trainNo?: string): Promise<any> =>
+    handleRequest(() => api.get(trainNo ? '/train/engine-status' : '/train/engines', { params: trainNo ? { trainNo } : {} }));
 
 // ========================== REALLOCATION APIs ==========================
 
 export const markPassengerNoShow = (pnr: string): Promise<any> =>
     handleRequest(() => api.post('/passenger/no-show', { pnr }));
 
-export const getRACQueue = (): Promise<Passenger[]> =>
-    handleRequest(() => api.get('/train/rac-queue'));
+export const getRACQueue = (trainNo?: string): Promise<Passenger[]> =>
+    handleRequest(() => api.get('/train/rac-queue', { params: { trainNo } }));
 
-export const getVacantBerths = (): Promise<any[]> =>
-    handleRequest(() => api.get('/train/vacant-berths'));
+export const getVacantBerths = (trainNo?: string): Promise<any[]> =>
+    handleRequest(() => api.get('/train/vacant-berths', { params: { trainNo } }));
 
 export const searchPassenger = (pnr: string): Promise<Passenger> =>
     handleRequest(() => api.get(`/passenger/search/${pnr}`));

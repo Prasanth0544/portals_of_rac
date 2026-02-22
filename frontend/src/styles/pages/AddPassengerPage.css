@@ -80,33 +80,7 @@
   font-size: 0.95rem;
 }
 
-.back-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #f0f0f0;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
 
-.back-btn:hover {
-  background: #e0e0e0;
-  transform: scale(1.05);
-}
-
-.back-btn svg {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  min-height: 20px;
-  stroke: #2c3e50;
-  display: block;
-}
 
 /* Form Styling */
 .passenger-form {
@@ -454,10 +428,7 @@
     font-size: 1.5rem;
   }
 
-  .back-btn {
-    width: 100%;
-    justify-content: center;
-  }
+
 
   .passenger-form {
     padding: 1.5rem;

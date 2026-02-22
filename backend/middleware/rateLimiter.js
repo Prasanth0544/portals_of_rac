@@ -55,7 +55,7 @@ const otpLimiter = rateLimit({
  */
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Limit to 1000 requests per window
+    max: 5000, // Development: generous limit for polling-heavy UIs
     message: {
         success: false,
         message: 'Too many requests from this IP. Please try again later.',
@@ -64,8 +64,14 @@ const apiLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skip: (req) => {
-        // Skip rate limiting for health checks
-        return req.path === '/health' || req.path === '/api/health';
+        // Skip rate limiting for read-only GET requests (polling, data fetches)
+        // Only rate-limit state-changing POST/PUT/DELETE operations
+        if (req.method === 'GET') return true;
+
+        // Also skip push subscription endpoints (called on every page load)
+        const skipPaths = ['/api/push/subscribe', '/api/passenger/push-subscribe',
+            '/api/push/vapid-key', '/api/push/vapid-public-key', '/api/csrf-token'];
+        return skipPaths.some(p => req.path.includes(p));
     }
 });
 

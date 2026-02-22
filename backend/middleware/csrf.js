@@ -32,10 +32,6 @@ const csrfProtection = (req, res, next) => {
         '/api/admin/push-subscribe',
         '/api/tte/push-subscribe',
         '/api/passenger/push-subscribe',
-        '/api/passenger/booking',          // Multi-passenger booking
-        '/api/passenger/accept-upgrade',   // ✅ FIX: Allow upgrade acceptance
-        '/api/passenger/deny-upgrade',     // ✅ FIX: Allow upgrade denial
-        '/api/passenger/report-deboarding', // ✅ Allow deboarding reports
         '/api/test-email',
         '/api/push/test',
         '/api/passenger/revert-no-show',  // Allow passengers to revert no-show

@@ -6,6 +6,7 @@
     margin: 0 auto;
 }
 
+/* ============= PAGE HEADER ============= */
 .page-header {
     display: flex;
     justify-content: space-between;
@@ -54,7 +55,7 @@
     transform: translateY(-2px);
 }
 
-/* Bulk Actions Bar */
+/* ============= BULK ACTIONS ============= */
 .bulk-actions-bar {
     display: flex;
     justify-content: space-between;
@@ -104,7 +105,119 @@
     cursor: not-allowed;
 }
 
-/* Empty State */
+/* ============= SECTION LAYOUT ============= */
+.reallocation-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.reallocation-section {
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    background: white;
+}
+
+/* Section Headers */
+.section-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.section-header.section-online {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-left: 5px solid #10b981;
+}
+
+.section-header.section-offline {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 5px solid #f59e0b;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.section-title h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.section-icon {
+    font-size: 22px;
+}
+
+.section-count {
+    background: rgba(0, 0, 0, 0.08);
+    color: #475569;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 28px;
+    text-align: center;
+}
+
+.section-online .section-count {
+    background: rgba(16, 185, 129, 0.15);
+    color: #047857;
+}
+
+.section-offline .section-count {
+    background: rgba(245, 158, 11, 0.2);
+    color: #b45309;
+}
+
+.section-description {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+.section-empty {
+    text-align: center;
+    padding: 30px 20px;
+    color: #94a3b8;
+    font-size: 14px;
+    background: #fafbfc;
+}
+
+.section-empty p {
+    margin: 0;
+}
+
+/* ============= SECTION DIVIDER ============= */
+.section-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 0;
+}
+
+.divider-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #cbd5e1, transparent);
+    border-radius: 1px;
+}
+
+.divider-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+/* ============= EMPTY STATE ============= */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -126,7 +239,7 @@
     color: #64748b;
 }
 
-/* Loading */
+/* ============= LOADING ============= */
 .loading {
     text-align: center;
     padding: 60px 20px;
@@ -136,9 +249,6 @@
 
 /* ============= TABLE STYLES ============= */
 .table-container {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow-x: auto;
 }
 
@@ -245,6 +355,7 @@
     gap: 6px;
 }
 
+/* ============= ACTION BUTTONS ============= */
 .btn-approve-small,
 .btn-reject-small {
     padding: 6px 12px;
@@ -275,6 +386,7 @@
     background: #fecaca;
 }
 
+/* ============= REJECTION FORM ============= */
 .rejection-form-inline {
     display: flex;
     gap: 4px;
@@ -308,7 +420,7 @@
     color: #64748b;
 }
 
-/* MOBILE RESPONSIVENESS */
+/* ============= MOBILE RESPONSIVENESS ============= */
 @media (max-width: 768px) {
     .pending-reallocations-page {
         padding: 15px;
@@ -338,6 +450,18 @@
         width: 100%;
     }
 
+    .section-header {
+        padding: 14px 16px;
+    }
+
+    .section-title h2 {
+        font-size: 15px;
+    }
+
+    .section-description {
+        font-size: 12px;
+    }
+
     .table-container {
         overflow-x: auto;
     }
@@ -359,5 +483,9 @@
     .action-buttons button {
         width: 100%;
         min-height: 44px;
+    }
+
+    .divider-label {
+        font-size: 10px;
     }
 }

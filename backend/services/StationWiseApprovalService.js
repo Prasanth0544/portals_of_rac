@@ -81,6 +81,7 @@ class StationWiseApprovalService {
                     passengerTo: topCandidate.to,
                     passengerFromIdx: topCandidate.fromIdx,
                     passengerToIdx: topCandidate.toIdx,
+                    passengerStatus: topCandidate.passengerStatus || 'Offline',
 
                     // Proposed berth details
                     proposedCoach: vacantSegment.berth.coachNo,

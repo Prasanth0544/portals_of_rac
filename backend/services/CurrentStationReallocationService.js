@@ -500,7 +500,7 @@ class CurrentStationReallocationService {
 
         // Clear old notifications ONCE before creating new batch (not on each iteration!)
         if (pendingReallocations.length > 0) {
-            await UpgradeNotificationService.clearPendingNotificationsForStation(currentStation.code);
+            await UpgradeNotificationService.clearPendingNotificationsForStation(currentStation.code, trainState.trainNo);
         }
 
         for (const pending of pendingReallocations) {
@@ -520,7 +520,8 @@ class CurrentStationReallocationService {
                         vacantSegment: { from: pending.stationIdx, to: pending.berthVacantTillIdx }
                     },
                     { name: pending.stationName, code: pending.stationCode },
-                    false // ✅ FIX: Don't clear - we already cleared above
+                    false, // Don't clear - we already cleared above
+                    trainState.trainNo // Train scoping
                 );
                 console.log(`   📬 Created UpgradeNotification for ${pending.passengerName} (${pending.passengerStatus})`);
             } catch (notifErr) {

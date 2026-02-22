@@ -100,6 +100,12 @@ const useSocket = (pnr: string | null | undefined, options: SocketOptions = {}):
             const data: WebSocketMessage = JSON.parse(event.data);
             const { type, payload } = data;
 
+            // Multi-train filter: passengers only process events for their train
+            const passengerTrainNo = localStorage.getItem('trainNo');
+            if ((data as any).trainNo && passengerTrainNo && String((data as any).trainNo) !== String(passengerTrainNo)) {
+                return; // Ignore events for other trains
+            }
+
             // Call global message handler
             if (onMessage) {
                 onMessage(data);

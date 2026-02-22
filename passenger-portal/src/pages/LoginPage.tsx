@@ -28,6 +28,10 @@ function LoginPage(): React.ReactElement {
                 }
                 localStorage.setItem('user', JSON.stringify(response.user));
                 localStorage.setItem('tickets', JSON.stringify(response.tickets));
+                // Store trainNo from first ticket for multi-train API scoping
+                if (response.tickets?.length > 0 && response.tickets[0].trainNumber) {
+                    localStorage.setItem('trainNo', String(response.tickets[0].trainNumber));
+                }
                 window.location.reload();
             }
         } catch (err: any) {

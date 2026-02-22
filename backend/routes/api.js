@@ -56,15 +56,6 @@ router.post('/auth/staff/register',
   (req, res) => authController.staffRegister(req, res)
 );
 
-// TTE Registration from Admin Landing Page (Auto-generates ID) ✅ Phase 3
-router.post('/auth/tte/register',
-  authMiddleware,
-  requireRole(['ADMIN']),
-  validationMiddleware.sanitizeBody,
-  (req, res) => authController.registerTTE(req, res)
-);
-
-
 // Mark passenger as NO_SHOW
 router.post('/tte/mark-no-show',
   authMiddleware,
@@ -101,12 +92,6 @@ router.post('/passenger/change-boarding-station',
 router.post('/passenger/self-cancel',
   authMiddleware,
   (req, res) => passengerController.selfCancelTicket(req, res)
-);
-
-// ✅ Report early deboarding (passenger left train before destination)
-router.post('/passenger/report-deboarding',
-  authMiddleware,
-  (req, res) => passengerController.reportDeboarding(req, res)
 );
 
 // ✅ DUAL-APPROVAL: Passenger can approve their own RAC upgrade
@@ -193,6 +178,11 @@ router.post('/tte/undo',
 
 // ========== TRAIN ROUTES ==========
 router.get('/trains', (req, res) => trainController.list(req, res));
+router.get('/trains/:trainNo/config', (req, res) => configController.getTrainConfig(req, res));
+router.put('/trains/:trainNo/config', (req, res) => configController.updateTrainConfig(req, res));
+// Engine status (for admin dashboard countdown + landing page)
+router.get('/train/engine-status', (req, res) => trainController.getEngineStatus(req, res));
+router.get('/train/engines', (req, res) => trainController.getEngineStatus(req, res));
 // Dynamic configuration setup (from frontend)
 router.post('/config/setup',
   validationMiddleware.sanitizeBody,
@@ -222,30 +212,6 @@ router.get('/config/current', (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
-
-// ========== MULTI-TRAIN MANAGEMENT ROUTES ========== ✅ Phase 3
-// Register a new train
-router.post('/trains/register',
-  authMiddleware,
-  requireRole(['ADMIN']),
-  validationMiddleware.sanitizeBody,
-  (req, res) => configController.registerTrain(req, res)
-);
-
-// List all registered trains
-router.get('/trains/list',
-  authMiddleware,
-  requireRole(['ADMIN']),
-  (req, res) => configController.listTrains(req, res)
-);
-
-// Get auto-derived configuration for a specific train
-router.get('/trains/:trainNo/config',
-  authMiddleware,
-  requireRole(['ADMIN']),
-  (req, res) => configController.getTrainConfig(req, res)
-);
-
 
 router.post('/train/initialize',
   validationMiddleware.sanitizeBody,
@@ -316,29 +282,6 @@ router.get('/reallocation/eligibility',
   validationMiddleware.checkJourneyStarted,
   (req, res) => reallocationController.getEligibilityMatrix(req, res)
 );
-
-// ✨ NEW: Get eligible PNR groups for group selective upgrade
-router.get('/reallocation/eligible-groups',
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
-  (req, res) => reallocationController.getEligibleGroups(req, res)
-);
-
-// ✨ NEW: Select specific passengers from a group for upgrade
-router.post('/reallocation/select-passengers',
-  authMiddleware,
-  validationMiddleware.sanitizeBody,
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
-  (req, res) => reallocationController.selectPassengersForUpgrade(req, res)
-);
-
-// ✨ NEW: Check group upgrade offer status (for reconnection)
-router.get('/reallocation/group-upgrade-status/:pnr',
-  authMiddleware,
-  (req, res) => reallocationController.getGroupUpgradeStatus(req, res)
-);
-
 
 // ========== STATION-WISE APPROVAL ROUTES ========== ✅ NEW
 // Get pending reallocations awaiting TTE approval
@@ -636,10 +579,8 @@ router.get('/visualization/vacancy-matrix',
 );
 
 // ========== NEW PASSENGER PORTAL ROUTES ==========
-// Public PNR lookup (requires journey to have started)
+// Public PNR lookup (no restrictions — passengers can view details anytime)
 router.get('/passenger/pnr/:pnr',
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.getPNRDetails(req, res)
 );
 
@@ -650,17 +591,9 @@ router.get('/passengers/by-irctc/:irctcId',
   (req, res) => passengerController.getPassengerByIRCTC(req, res)
 );
 
-// Get all passengers by PNR (for multi-passenger bookings)
-router.get('/passengers/by-pnr/:pnr',
-  authMiddleware,
-  (req, res) => passengerController.getPassengersByPNR(req, res)
-);
-
 // Self-cancellation (mark no-show)
 router.post('/passenger/cancel',
   validationMiddleware.sanitizeBody,
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.markNoShow(req, res)
 );
 
@@ -668,54 +601,22 @@ router.post('/passenger/cancel',
 router.post('/passenger/set-status',
   authMiddleware,
   validationMiddleware.sanitizeBody,
-  validationMiddleware.checkTrainInitialized,
   (req, res) => passengerController.setPassengerStatus(req, res)
 );
 
 // Upgrade notification endpoints
 router.get('/passenger/upgrade-notifications/:pnr',
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.getUpgradeNotifications(req, res)
 );
 
 router.post('/passenger/accept-upgrade',
   validationMiddleware.sanitizeBody,
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.acceptUpgrade(req, res)
 );
 
 router.post('/passenger/deny-upgrade',
   validationMiddleware.sanitizeBody,
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.denyUpgrade(req, res)
-);
-
-// ========== MULTI-PASSENGER ROUTES (NEW) ==========
-// Create a new booking with multiple passengers
-router.post('/passenger/booking',
-  validationMiddleware.sanitizeBody,
-  (req, res) => passengerController.addBooking(req, res)
-);
-
-// Get all passengers in a booking group (works without train init - uses DB fallback)
-router.get('/passenger/booking/:pnr',
-  (req, res) => passengerController.getBookingGroup(req, res)
-);
-
-// Update seat preference for a specific passenger
-router.put('/passenger/:pnr/:passengerIndex/preference',
-  validationMiddleware.sanitizeBody,
-  (req, res) => passengerController.updateSeatPreference(req, res)
-);
-
-// Board all passengers in a group
-router.post('/passenger/:pnr/board-all',
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
-  (req, res) => passengerController.boardPassengerGroup(req, res)
 );
 
 // ========== TTE/ADMIN PORTAL ROUTES ==========

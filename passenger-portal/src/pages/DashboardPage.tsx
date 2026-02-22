@@ -159,30 +159,38 @@ function DashboardPage(): React.ReactElement {
             const userData = JSON.parse(localStorage.getItem('user') || '{}');
             const irctcId = userData.irctcId || 'IR_8001';
 
-            const [passengerRes, trainRes] = await Promise.all([
-                axios.get(`${API_URL}/passengers/by-irctc/${irctcId}`, {
+            // Fetch passenger booking — this should work even without train initialization
+            try {
+                const passengerRes = await axios.get(`${API_URL}/passengers/by-irctc/${irctcId}`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                }),
-                axios.get(`${API_URL}/train/state`)
-            ]);
+                });
 
-            if (passengerRes.data.success && passengerRes.data.data) {
-                setPassenger(passengerRes.data.data);
-                // ✅ Check if passenger rejected an upgrade offer
-                if (passengerRes.data.data.Upgrade_Status === 'REJECTED') {
-                    setIsRejected(true);
+                if (passengerRes.data.success && passengerRes.data.data) {
+                    setPassenger(passengerRes.data.data);
+                    // ✅ Check if passenger rejected an upgrade offer
+                    if (passengerRes.data.data.Upgrade_Status === 'REJECTED') {
+                        setIsRejected(true);
+                    }
+                } else {
+                    setError('No booking found for your IRCTC ID');
                 }
-            } else {
-                setError('No booking found for your IRCTC ID');
+            } catch (err) {
+                console.error('Error fetching passenger data:', err);
+                const axiosError = err as { response?: { data?: { message?: string } } };
+                setError(axiosError.response?.data?.message || 'Failed to load your booking details');
             }
 
-            if (trainRes.data.success && trainRes.data.data) {
-                setTrainState(trainRes.data.data);
+            // Fetch train state separately — this may fail if train isn't initialized yet
+            // Don't block passenger details if it fails
+            try {
+                const trainRes = await axios.get(`${API_URL}/train/state`);
+                if (trainRes.data.success && trainRes.data.data) {
+                    setTrainState(trainRes.data.data);
+                }
+            } catch {
+                // Train not initialized yet — that's OK, passenger details still show
+                console.log('[Dashboard] Train state not available (train may not be initialized yet)');
             }
-        } catch (err) {
-            console.error('Error fetching data:', err);
-            const axiosError = err as { response?: { data?: { message?: string } } };
-            setError(axiosError.response?.data?.message || 'Failed to load your booking details');
         } finally {
             setLoading(false);
         }
@@ -265,6 +273,12 @@ function DashboardPage(): React.ReactElement {
             try {
                 const data: WebSocketMessage = JSON.parse(event.data);
 
+                // Multi-train filter: ignore broadcast events for other trains
+                const myTrainNo = userData.trainNo || localStorage.getItem('trainNo');
+                if ((data as any).trainNo && myTrainNo && String((data as any).trainNo) !== String(myTrainNo)) {
+                    return; // Not our train
+                }
+
                 if (data.type === 'upgradeOffer' && data.irctcId === userData.irctcId) {
                     console.log('🎉 Upgrade offer received:', data);
                     setUpgradeOffer(data.offer || null);
@@ -290,7 +304,7 @@ function DashboardPage(): React.ReactElement {
                 if (data.type === 'GROUP_UPGRADE_AVAILABLE') {
                     // Match PNR - check both pnr and PNR_Number fields
                     const passengerPNR = userData.pnr || userData.PNR_Number;
-                    const groupData = data.data || data;
+                    const groupData: any = data.data || data;
 
                     if (passengerPNR && groupData.pnr === passengerPNR) {
                         console.log('🎯 Group upgrade offer received!', data);

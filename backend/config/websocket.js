@@ -561,6 +561,7 @@ class WebSocketManager {
     return this.broadcast({
       type: "TRAIN_UPDATE",
       eventType: eventType,
+      trainNo: data?.trainNo || null,
       data: data,
     });
   }
@@ -571,6 +572,7 @@ class WebSocketManager {
   broadcastStationArrival(stationData) {
     return this.broadcast({
       type: "STATION_ARRIVAL",
+      trainNo: stationData?.trainNo || null,
       data: stationData,
     });
   }
@@ -581,6 +583,7 @@ class WebSocketManager {
   broadcastRACReallocation(reallocationData) {
     return this.broadcast({
       type: "RAC_REALLOCATION",
+      trainNo: reallocationData?.trainNo || null,
       data: reallocationData,
     });
   }
@@ -591,6 +594,7 @@ class WebSocketManager {
   broadcastNoShow(passengerData) {
     return this.broadcast({
       type: "NO_SHOW",
+      trainNo: passengerData?.trainNo || null,
       data: passengerData,
     });
   }
@@ -601,6 +605,7 @@ class WebSocketManager {
   broadcastStatsUpdate(stats) {
     return this.broadcast({
       type: "STATS_UPDATE",
+      trainNo: stats?.trainNo || null,
       data: { stats },
     });
   }

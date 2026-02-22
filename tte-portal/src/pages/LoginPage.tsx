@@ -10,7 +10,6 @@ interface LoginPageProps {
 function LoginPage({ }: LoginPageProps): React.ReactElement {
     const [employeeId, setEmployeeId] = useState<string>('');
     const [password, setPassword] = useState<string>('');
-    const [trainNo, setTrainNo] = useState<string>(''); // NEW: Train number field
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
@@ -21,7 +20,7 @@ function LoginPage({ }: LoginPageProps): React.ReactElement {
         setLoading(true);
 
         try {
-            const response = await tteAPI.login(employeeId, password, trainNo); // Pass trainNo
+            const response = await tteAPI.login(employeeId, password);
 
             if (response.success && response.token && response.user) {
                 // Map API response to localStorage format
@@ -29,7 +28,8 @@ function LoginPage({ }: LoginPageProps): React.ReactElement {
                 const userForStorage = {
                     username: apiUser.name || apiUser.employeeId || '',
                     role: apiUser.role || 'TTE',
-                    userId: apiUser.employeeId || ''
+                    userId: apiUser.employeeId || '',
+                    trainAssigned: apiUser.trainAssigned || ''
                 };
 
                 localStorage.setItem('token', response.token);
@@ -37,9 +37,15 @@ function LoginPage({ }: LoginPageProps): React.ReactElement {
                     localStorage.setItem('refreshToken', response.refreshToken);
                 }
                 localStorage.setItem('user', JSON.stringify(userForStorage));
+                localStorage.setItem('trainAssigned', String(apiUser.trainAssigned || ''));
                 window.location.reload();
             }
         } catch (err: any) {
+            // Clear any stale auth data so it doesn't interfere with the next login attempt
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('trainAssigned');
             setError(err.response?.data?.message || 'Login failed. Please try again.');
         } finally {
             setLoading(false);
@@ -76,19 +82,6 @@ function LoginPage({ }: LoginPageProps): React.ReactElement {
                             value={password}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                             placeholder="Enter password"
-                            required
-                            disabled={loading}
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label htmlFor="trainNo">Train Number</label>
-                        <input
-                            type="text"
-                            id="trainNo"
-                            value={trainNo}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setTrainNo(e.target.value)}
-                            placeholder="Enter assigned train number (e.g., 17225)"
                             required
                             disabled={loading}
                         />

@@ -17,6 +17,7 @@ interface Reallocation {
     proposedBerthType: string;
     berthVacantFrom: string;
     berthVacantTo: string;
+    passengerStatus?: string; // 'Online' | 'Offline'
 }
 
 const PendingReallocationsPage: React.FC = () => {
@@ -88,6 +89,15 @@ const PendingReallocationsPage: React.FC = () => {
         }
     };
 
+    const toggleSelectGroup = (groupIds: string[]): void => {
+        const allSelected = groupIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !groupIds.includes(id)));
+        } else {
+            setSelectedIds(prev => [...new Set([...prev, ...groupIds])]);
+        }
+    };
+
     const approveBatch = async (): Promise<void> => {
         if (selectedIds.length === 0) {
             alert('Please select at least one reallocation to approve');
@@ -137,6 +147,125 @@ const PendingReallocationsPage: React.FC = () => {
         }
     };
 
+    // Split into online and offline groups
+    const onlineReallocations = pendingReallocations.filter(
+        r => r.passengerStatus?.toLowerCase() === 'online'
+    );
+    const offlineReallocations = pendingReallocations.filter(
+        r => r.passengerStatus?.toLowerCase() !== 'online'
+    );
+
+    const renderReallocationRow = (realloc: Reallocation) => (
+        <tr key={realloc._id} className={selectedIds.includes(realloc._id) ? 'selected' : ''}>
+            <td>
+                <input
+                    type="checkbox"
+                    checked={selectedIds.includes(realloc._id)}
+                    onChange={() => toggleSelection(realloc._id)}
+                />
+            </td>
+            <td className="passenger-name">{realloc.passengerName}</td>
+            <td className="pnr">{realloc.passengerPNR}</td>
+            <td>
+                <span className="station-badge">📍 {realloc.stationName}</span>
+            </td>
+            <td className="journey">
+                {realloc.passengerFrom} → {realloc.passengerTo}
+            </td>
+            <td className="current-status">
+                <span className="status-rac">
+                    {realloc.currentBerth} ({realloc.currentRAC})
+                </span>
+            </td>
+            <td className="proposed-berth">
+                <span className="status-proposed">
+                    ✨ {realloc.proposedBerthFull} ({realloc.proposedBerthType})
+                </span>
+            </td>
+            <td className="berth-vacant">
+                {realloc.berthVacantFrom} → {realloc.berthVacantTo}
+            </td>
+            <td className="actions">
+                {rejecting === realloc._id ? (
+                    <div className="rejection-form-inline">
+                        <input
+                            type="text"
+                            placeholder="Reason..."
+                            value={rejectionReason}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setRejectionReason(e.target.value)}
+                            autoFocus
+                        />
+                        <button
+                            className="btn-confirm-small"
+                            onClick={() => rejectReallocation(realloc._id)}
+                            disabled={processing}
+                        >
+                            ✓
+                        </button>
+                        <button
+                            className="btn-cancel-small"
+                            onClick={() => {
+                                setRejecting(null);
+                                setRejectionReason('');
+                            }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                ) : (
+                    <div className="action-buttons">
+                        <button
+                            className="btn-approve-small"
+                            onClick={() => {
+                                setSelectedIds([realloc._id]);
+                                setTimeout(() => approveBatch(), 100);
+                            }}
+                            disabled={processing}
+                        >
+                            ✅ Select
+                        </button>
+                        <button
+                            className="btn-reject-small"
+                            onClick={() => setRejecting(realloc._id)}
+                            disabled={processing}
+                        >
+                            ❌ Reject
+                        </button>
+                    </div>
+                )}
+            </td>
+        </tr>
+    );
+
+    const renderTable = (reallocations: Reallocation[], groupIds: string[]) => (
+        <div className="table-container">
+            <table className="reallocations-table">
+                <thead>
+                    <tr>
+                        <th>
+                            <input
+                                type="checkbox"
+                                checked={groupIds.length > 0 && groupIds.every(id => selectedIds.includes(id))}
+                                onChange={() => toggleSelectGroup(groupIds)}
+                            />
+                        </th>
+                        <th>Passenger Name</th>
+                        <th>PNR</th>
+                        <th>Station</th>
+                        <th>Journey</th>
+                        <th>Current Status</th>
+                        <th>Proposed Berth</th>
+                        <th>Berth Vacant</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {reallocations.map(renderReallocationRow)}
+                </tbody>
+            </table>
+        </div>
+    );
+
     if (loading) {
         return (
             <div className="pending-reallocations-page">
@@ -185,7 +314,7 @@ const PendingReallocationsPage: React.FC = () => {
                 </div>
             )}
 
-            {/* Reallocations Table */}
+            {/* Empty State */}
             {pendingReallocations.length === 0 ? (
                 <div className="empty-state">
                     <div className="empty-icon">✨</div>
@@ -193,111 +322,55 @@ const PendingReallocationsPage: React.FC = () => {
                     <p>All reallocations have been processed</p>
                 </div>
             ) : (
-                <div className="table-container">
-                    <table className="reallocations-table">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedIds.length === pendingReallocations.length}
-                                        onChange={toggleSelectAll}
-                                    />
-                                </th>
-                                <th>Passenger Name</th>
-                                <th>PNR</th>
-                                <th>Station</th>
-                                <th>Journey</th>
-                                <th>Current Status</th>
-                                <th>Proposed Berth</th>
-                                <th>Berth Vacant</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {pendingReallocations.map((realloc) => (
-                                <tr key={realloc._id} className={selectedIds.includes(realloc._id) ? 'selected' : ''}>
-                                    <td>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedIds.includes(realloc._id)}
-                                            onChange={() => toggleSelection(realloc._id)}
-                                        />
-                                    </td>
-                                    <td className="passenger-name">{realloc.passengerName}</td>
-                                    <td className="pnr">{realloc.passengerPNR}</td>
-                                    <td>
-                                        <span className="station-badge">📍 {realloc.stationName}</span>
-                                    </td>
-                                    <td className="journey">
-                                        {realloc.passengerFrom} → {realloc.passengerTo}
-                                    </td>
-                                    <td className="current-status">
-                                        <span className="status-rac">
-                                            {realloc.currentBerth} ({realloc.currentRAC})
-                                        </span>
-                                    </td>
-                                    <td className="proposed-berth">
-                                        <span className="status-proposed">
-                                            ✨ {realloc.proposedBerthFull} ({realloc.proposedBerthType})
-                                        </span>
-                                    </td>
-                                    <td className="berth-vacant">
-                                        {realloc.berthVacantFrom} → {realloc.berthVacantTo}
-                                    </td>
-                                    <td className="actions">
-                                        {rejecting === realloc._id ? (
-                                            <div className="rejection-form-inline">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Reason..."
-                                                    value={rejectionReason}
-                                                    onChange={(e: ChangeEvent<HTMLInputElement>) => setRejectionReason(e.target.value)}
-                                                    autoFocus
-                                                />
-                                                <button
-                                                    className="btn-confirm-small"
-                                                    onClick={() => rejectReallocation(realloc._id)}
-                                                    disabled={processing}
-                                                >
-                                                    ✓
-                                                </button>
-                                                <button
-                                                    className="btn-cancel-small"
-                                                    onClick={() => {
-                                                        setRejecting(null);
-                                                        setRejectionReason('');
-                                                    }}
-                                                >
-                                                    ✕
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="action-buttons">
-                                                <button
-                                                    className="btn-approve-small"
-                                                    onClick={() => {
-                                                        setSelectedIds([realloc._id]);
-                                                        setTimeout(() => approveBatch(), 100);
-                                                    }}
-                                                    disabled={processing}
-                                                >
-                                                    ✅ Select
-                                                </button>
-                                                <button
-                                                    className="btn-reject-small"
-                                                    onClick={() => setRejecting(realloc._id)}
-                                                    disabled={processing}
-                                                >
-                                                    ❌ Reject
-                                                </button>
-                                            </div>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div className="reallocation-sections">
+                    {/* Online Passengers Section */}
+                    <div className="reallocation-section">
+                        <div className="section-header section-online">
+                            <div className="section-title">
+                                <span className="section-icon">🌐</span>
+                                <h2>Online Passengers</h2>
+                                <span className="section-count">{onlineReallocations.length}</span>
+                            </div>
+                            <p className="section-description">
+                                Passengers connected via Passenger Portal — upgrade offers will be sent digitally
+                            </p>
+                        </div>
+                        {onlineReallocations.length === 0 ? (
+                            <div className="section-empty">
+                                <p>No online passenger upgrades pending</p>
+                            </div>
+                        ) : (
+                            renderTable(onlineReallocations, onlineReallocations.map(r => r._id))
+                        )}
+                    </div>
+
+                    {/* ── Divider ── */}
+                    <div className="section-divider">
+                        <span className="divider-line"></span>
+                        <span className="divider-label">Offline / Online Separation</span>
+                        <span className="divider-line"></span>
+                    </div>
+
+                    {/* Offline Passengers Section */}
+                    <div className="reallocation-section">
+                        <div className="section-header section-offline">
+                            <div className="section-title">
+                                <span className="section-icon">📴</span>
+                                <h2>Offline Passengers</h2>
+                                <span className="section-count">{offlineReallocations.length}</span>
+                            </div>
+                            <p className="section-description">
+                                Passengers not on the app — TTE must manually inform and confirm upgrade
+                            </p>
+                        </div>
+                        {offlineReallocations.length === 0 ? (
+                            <div className="section-empty">
+                                <p>No offline passenger upgrades pending</p>
+                            </div>
+                        ) : (
+                            renderTable(offlineReallocations, offlineReallocations.map(r => r._id))
+                        )}
+                    </div>
                 </div>
             )}
         </div>
@@ -305,4 +378,3 @@ const PendingReallocationsPage: React.FC = () => {
 };
 
 export default PendingReallocationsPage;
-

@@ -20,7 +20,7 @@ class PassengerService {
         const AllocationService = require('./reallocation/AllocationService');
 
         // Get notification
-        const allNotifications = await UpgradeNotificationService.getAllNotifications(pnr);
+        const allNotifications = await UpgradeNotificationService.getAllNotifications(pnr, trainState.trainNo);
         const notification = allNotifications.find(n => n.id === notificationId);
 
         if (!notification) {
@@ -56,7 +56,7 @@ class PassengerService {
         }
 
         // Mark notification as accepted
-        const acceptedNotification = await UpgradeNotificationService.acceptUpgrade(pnr, notificationId);
+        const acceptedNotification = await UpgradeNotificationService.acceptUpgrade(pnr, notificationId, trainState.trainNo);
 
         // Update MongoDB passenger record with new status
         const passengersCollection = db.getPassengersCollection();
@@ -98,12 +98,13 @@ class PassengerService {
      * Deny upgrade offer
      * @param {string} pnr - Passenger PNR
      * @param {string} notificationId - Notification ID
+     * @param {string} trainNo - Train number for scoping
      * @returns {Promise<Object>} Denial result
      * @throws {Error} If notification not found or invalid status
      */
-    async denyUpgrade(pnr, notificationId) {
+    async denyUpgrade(pnr, notificationId, trainNo = null) {
         // Get notification
-        const allNotifications = await UpgradeNotificationService.getAllNotifications(pnr);
+        const allNotifications = await UpgradeNotificationService.getAllNotifications(pnr, trainNo);
         const notification = allNotifications.find(n => n.id === notificationId);
 
         if (!notification) {
@@ -116,7 +117,7 @@ class PassengerService {
         }
 
         // Deny the notification
-        const deniedNotification = await UpgradeNotificationService.denyUpgrade(pnr, notificationId);
+        const deniedNotification = await UpgradeNotificationService.denyUpgrade(pnr, notificationId, 'Passenger declined', trainNo);
 
         return {
             success: true,
@@ -128,10 +129,11 @@ class PassengerService {
     /**
      * Get upgrade notifications for passenger
      * @param {string} pnr - Passenger PNR
+     * @param {string} trainNo - Train number for scoping
      * @returns {Array} Array of notifications
      */
-    async getUpgradeNotifications(pnr) {
-        return await UpgradeNotificationService.getAllNotifications(pnr);
+    async getUpgradeNotifications(pnr, trainNo = null) {
+        return await UpgradeNotificationService.getAllNotifications(pnr, trainNo);
     }
 
     /**

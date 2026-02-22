@@ -1,12 +1,14 @@
-// backend/controllers/trainController.js (WITH WEBSOCKET)
+// backend/controllers/trainController.js (WITH WEBSOCKET + MULTI-TRAIN)
 
 const DataService = require('../services/DataService');
 const StationEventService = require('../services/StationEventService');
 const RuntimeStateService = require('../services/RuntimeStateService');
+const TrainEngineService = require('../services/TrainEngineService');
 const db = require('../config/db');
 const { COLLECTIONS } = require('../config/collections');
 
-let trainState = null;
+// Multi-train state storage: Map<trainNo, TrainState>
+const trainStates = new Map();
 let wsManager = null;
 
 // Initialize wsManager after server starts
@@ -14,17 +16,38 @@ setTimeout(() => {
   wsManager = require('../config/websocket');
 }, 1000);
 
+/**
+ * Update train status in MongoDB (Trains_Details collection)
+ * so the landing page can show real-time status and current station.
+ */
+async function updateTrainStatus(trainNo, status, extraFields = {}) {
+  try {
+    const racDb = await db.getDb();
+    const trainsCollection = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
+    await trainsCollection.updateOne(
+      { $or: [{ trainNo: trainNo }, { Train_No: parseInt(trainNo, 10) }] },
+      { $set: { status, ...extraFields, updatedAt: new Date() } }
+    );
+    console.log(`   📝 Train ${trainNo} status → ${status}`);
+  } catch (err) {
+    console.warn(`   ⚠️ Failed to update train status in DB:`, err.message);
+  }
+}
+
 class TrainController {
   /**
    * Initialize train with data from TWO MongoDB databases
    */
-  async reloadTrainAfterAdd() {
-    const trainNo = trainState.trainNo;
-    const journeyDate = trainState.journeyDate;
-    trainState = await DataService.loadTrainData(trainNo, journeyDate);
-    trainState.updateStats();
+  async reloadTrainAfterAdd(reloadTrainNo) {
+    const ts = reloadTrainNo ? trainStates.get(String(reloadTrainNo)) : trainStates.values().next().value;
+    if (!ts) return;
+    const trainNo = ts.trainNo;
+    const journeyDate = ts.journeyDate;
+    const newState = await DataService.loadTrainData(trainNo, journeyDate);
+    newState.updateStats();
+    trainStates.set(String(trainNo), newState);
     if (wsManager) {
-      wsManager.broadcastStatsUpdate(trainState.stats);
+      wsManager.broadcastStatsUpdate(newState.stats);
     }
   }
 
@@ -76,7 +99,8 @@ class TrainController {
         // Continue with initialization even if cleanup fails
       }
 
-      trainState = await DataService.loadTrainData(train, date, name);
+      const trainState = await DataService.loadTrainData(train, date, name);
+      trainStates.set(String(train), trainState);
 
       // ═══════════════════════════════════════════════════════════
       // RESTORE RUNTIME STATE FROM MONGODB (survives server restart)
@@ -141,6 +165,12 @@ class TrainController {
         journeyStarted: trainState.journeyStarted
       };
 
+      // Update status in MongoDB for landing page
+      await updateTrainStatus(train, 'READY', {
+        currentStation: trainState.getCurrentStation()?.name || null,
+        totalStations: trainState.stations.length
+      });
+
       // Broadcast train initialization
       if (wsManager) {
         wsManager.broadcastTrainUpdate('TRAIN_INITIALIZED', responseData);
@@ -166,6 +196,9 @@ class TrainController {
    */
   async startJourney(req, res) {
     try {
+      const trainNo = req.body.trainNo || req.query.trainNo;
+      const trainState = trainNo ? trainStates.get(String(trainNo)) : trainStates.values().next().value;
+
       if (!trainState) {
         return res.status(400).json({
           success: false,
@@ -201,6 +234,16 @@ class TrainController {
         wsManager.broadcastTrainUpdate('JOURNEY_STARTED', responseData);
       }
 
+      // Update status in MongoDB for landing page
+      await updateTrainStatus(trainState.trainNo, 'RUNNING', {
+        currentStation: trainState.getCurrentStation()?.name || null,
+        currentStationIdx: trainState.currentStationIdx,
+        totalStations: trainState.stations?.length || null
+      });
+
+      // Start the backend engine timer (auto-moves every 2 minutes)
+      TrainEngineService.startEngine(trainState.trainNo, { intervalMs: 2 * 60 * 1000 });
+
       res.json({
         success: true,
         message: "Journey started",
@@ -221,6 +264,9 @@ class TrainController {
    */
   getTrainState(req, res) {
     try {
+      const trainNo = req.query.trainNo || req.body.trainNo;
+      const trainState = trainNo ? trainStates.get(String(trainNo)) : trainStates.values().next().value;
+
       if (!trainState) {
         return res.status(400).json({
           success: false,
@@ -269,6 +315,9 @@ class TrainController {
    */
   async moveToNextStation(req, res) {
     try {
+      const trainNo = req.body.trainNo || req.query.trainNo;
+      const trainState = trainNo ? trainStates.get(String(trainNo)) : trainStates.values().next().value;
+
       if (!trainState) {
         return res.status(400).json({
           success: false,
@@ -292,6 +341,11 @@ class TrainController {
           totalNoShows: trainState.stats.totalNoShows,
           totalRACUpgraded: trainState.stats.totalRACUpgraded
         };
+
+        // Mark as COMPLETE in MongoDB
+        await updateTrainStatus(trainState.trainNo, 'COMPLETE', {
+          currentStation: trainState.stations[trainState.stations.length - 1].name
+        });
 
         // Broadcast journey complete
         if (wsManager) {
@@ -346,6 +400,22 @@ class TrainController {
         currentStationIdx: trainState.currentStationIdx
       });
 
+      // Update current station in MongoDB for landing page
+      const currentStationName = trainState.getCurrentStation()?.name || null;
+      if (trainState.isJourneyComplete()) {
+        await updateTrainStatus(trainState.trainNo, 'COMPLETE', {
+          currentStation: currentStationName,
+          currentStationIdx: trainState.currentStationIdx,
+          totalStations: trainState.stations?.length || null
+        });
+      } else {
+        await updateTrainStatus(trainState.trainNo, 'RUNNING', {
+          currentStation: currentStationName,
+          currentStationIdx: trainState.currentStationIdx,
+          totalStations: trainState.stations?.length || null
+        });
+      }
+
     } catch (error) {
       console.error("❌ Error moving to next station:", error);
       res.status(500).json({
@@ -360,6 +430,9 @@ class TrainController {
    */
   async resetTrain(req, res) {
     try {
+      const reqTrainNo = req.body.trainNo || req.query.trainNo;
+      const trainState = reqTrainNo ? trainStates.get(String(reqTrainNo)) : trainStates.values().next().value;
+
       if (!trainState) {
         return res.status(400).json({
           success: false,
@@ -372,13 +445,17 @@ class TrainController {
 
       console.log(`\n🔄 Resetting train ${trainNo}...`);
 
-      trainState = await DataService.loadTrainData(trainNo, journeyDate);
+      // Stop the background engine if running
+      TrainEngineService.stopEngine(trainNo);
+
+      const newTrainState = await DataService.loadTrainData(trainNo, journeyDate);
+      trainStates.set(String(trainNo), newTrainState);
 
       const responseData = {
-        trainNo: trainState.trainNo,
-        currentStation: trainState.getCurrentStation().name,
-        journeyStarted: trainState.journeyStarted,
-        stats: trainState.stats
+        trainNo: newTrainState.trainNo,
+        currentStation: newTrainState.getCurrentStation().name,
+        journeyStarted: newTrainState.journeyStarted,
+        stats: newTrainState.stats
       };
 
       // Broadcast train reset
@@ -393,7 +470,7 @@ class TrainController {
       });
 
       // Clear persisted state on reset
-      await RuntimeStateService.clearState();
+      await RuntimeStateService.clearState(trainNo);
 
     } catch (error) {
       console.error("❌ Error resetting train:", error);
@@ -409,6 +486,9 @@ class TrainController {
    */
   getTrainStats(req, res) {
     try {
+      const trainNo = req.query.trainNo || req.body.trainNo;
+      const trainState = trainNo ? trainStates.get(String(trainNo)) : trainStates.values().next().value;
+
       if (!trainState) {
         return res.status(400).json({
           success: false,
@@ -458,12 +538,22 @@ class TrainController {
         const stationKey = Object.keys(d).find(k => k.trim() === 'Station_Collection_Name');
         const stationCollectionName = stationKey ? d[stationKey] : null;
 
+        // Calculate total coaches from sleeper + 3AC counts
+        const sleeperCount = d.Sleeper_Coaches_Count || 0;
+        const threeAcCount = d.Three_TierAC_Coaches_Count || 0;
+
         return {
           trainNo: d.Train_No,
           trainName: d.Train_Name,
-          sleeperCount: d.Sleeper_Coaches_Count,
-          threeAcCount: d.Three_TierAC_Coaches_Count,
-          stationCollectionName: stationCollectionName
+          status: d.status || 'NOT_INIT',
+          currentStation: d.currentStation || null,
+          totalStations: d.totalStations || null,
+          currentStationIdx: d.currentStationIdx || null,
+          totalCoaches: sleeperCount + threeAcCount,
+          sleeperCoachesCount: sleeperCount,
+          threeTierACCoachesCount: threeAcCount,
+          stationsCollection: stationCollectionName,
+          passengersCollection: d.Passengers_Collection_Name || null
         };
       });
       res.json({ success: true, data: items });
@@ -477,6 +567,9 @@ class TrainController {
    */
   getAllocationErrors(req, res) {
     try {
+      const trainNo = req.query.trainNo || req.body.trainNo;
+      const trainState = trainNo ? trainStates.get(String(trainNo)) : trainStates.values().next().value;
+
       if (!trainState) {
         return res.status(400).json({
           success: false,
@@ -503,10 +596,39 @@ class TrainController {
 
   /**
    * Get global train state (for other controllers)
+   * @param {string} [trainNo] - If provided, returns state for that train. Otherwise returns first loaded train.
    */
-  getGlobalTrainState() {
-    return trainState;
+  getGlobalTrainState(trainNo) {
+    if (!trainNo) return trainStates.values().next().value || null;
+    return trainStates.get(String(trainNo)) || null;
+  }
+
+  /**
+   * Get engine status (for admin dashboard)
+   */
+  getEngineStatus(req, res) {
+    const trainNo = req.query.trainNo;
+    if (trainNo) {
+      res.json({
+        success: true,
+        data: {
+          isRunning: TrainEngineService.isRunning(trainNo),
+          timeUntilNextTick: TrainEngineService.getTimeUntilNextTick(trainNo)
+        }
+      });
+    } else {
+      res.json({
+        success: true,
+        data: {
+          runningEngines: TrainEngineService.getRunningEngines(),
+          totalTrainsLoaded: trainStates.size
+        }
+      });
+    }
   }
 }
 
-module.exports = new TrainController();
+const trainControllerInstance = new TrainController();
+// Export both the instance and updateTrainStatus for use by TrainEngineService
+module.exports = trainControllerInstance;
+module.exports.updateTrainStatus = updateTrainStatus;

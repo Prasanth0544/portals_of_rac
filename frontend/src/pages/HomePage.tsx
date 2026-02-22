@@ -34,6 +34,7 @@ type PageType = 'config' | 'home' | 'rac-queue' | 'coaches' | 'passengers' | 're
 interface HomePageProps {
     trainData: TrainData | null;
     journeyStarted: boolean;
+    isJourneyComplete: boolean;
     loading: boolean;
     onStartJourney: () => void;
     onNextStation: () => void;
@@ -47,6 +48,7 @@ interface HomePageProps {
 function HomePage({
     trainData,
     journeyStarted,
+    isJourneyComplete,
     loading,
     onStartJourney,
     onNextStation,
@@ -133,12 +135,22 @@ function HomePage({
                 </div>
             </div>
 
+            {isJourneyComplete && (
+                <div className="journey-complete-banner">
+                    <span>🏁</span>
+                    <div>
+                        <strong>Journey Complete</strong>
+                        <p>Train has reached its final destination. All operations are locked.</p>
+                    </div>
+                </div>
+            )}
+
             <button
                 onClick={onStartJourney}
-                disabled={loading || journeyStarted}
-                className={`btn-start-journey ${journeyStarted ? 'journey-started' : ''}`}
+                disabled={loading || journeyStarted || isJourneyComplete}
+                className={`btn-start-journey ${journeyStarted ? 'journey-started' : ''} ${isJourneyComplete ? 'journey-complete' : ''}`}
             >
-                {loading ? 'Starting...' : journeyStarted ? '✅ Journey Started' : '🚀 Start Journey'}
+                {loading ? 'Starting...' : isJourneyComplete ? '🏁 Journey Complete' : journeyStarted ? '✅ Journey Started' : '🚀 Start Journey'}
             </button>
 
             <div className="main-actions-grid">

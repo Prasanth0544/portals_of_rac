@@ -224,6 +224,7 @@ function App(): React.ReactElement {
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
+        localStorage.removeItem('trainAssigned');
         setIsAuthenticated(false);
         setUser(null);
         setMenuOpen(false);
@@ -242,6 +243,17 @@ function App(): React.ReactElement {
                             </Typography>
                         </Box>
                         <Box sx={{ flexGrow: 1 }} />
+                        {localStorage.getItem('trainAssigned') && (
+                            <Typography variant="body2" sx={{
+                                mr: 2, px: 1.5, py: 0.5,
+                                bgcolor: 'rgba(255,255,255,0.15)',
+                                borderRadius: 1,
+                                fontWeight: 600,
+                                fontSize: '0.8rem'
+                            }}>
+                                🚂 Train {localStorage.getItem('trainAssigned')}
+                            </Typography>
+                        )}
                         <Typography variant="body2" sx={{ mr: 2, opacity: 0.9 }}>
                             Welcome, {user?.username || 'TTE'}
                         </Typography>

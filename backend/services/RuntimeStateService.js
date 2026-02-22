@@ -5,7 +5,7 @@
 const db = require('../config/db');
 
 const COLLECTION_NAME = 'runtime_state';
-const STATE_KEY = 'train_runtime_state';
+const STATE_KEY_PREFIX = 'runtime_state_';
 
 class RuntimeStateService {
     /**
@@ -22,8 +22,10 @@ class RuntimeStateService {
 
             const collection = passengersDb.collection(COLLECTION_NAME);
 
+            const stateKey = `${STATE_KEY_PREFIX}${state.trainNo}`;
+
             const stateDoc = {
-                key: STATE_KEY,
+                key: stateKey,
                 trainNo: state.trainNo,
                 journeyDate: state.journeyDate,
                 journeyStarted: state.journeyStarted || false,
@@ -32,7 +34,7 @@ class RuntimeStateService {
             };
 
             await collection.updateOne(
-                { key: STATE_KEY },
+                { key: stateKey },
                 { $set: stateDoc },
                 { upsert: true }
             );
@@ -62,7 +64,7 @@ class RuntimeStateService {
             const collection = passengersDb.collection(COLLECTION_NAME);
 
             const stateDoc = await collection.findOne({
-                key: STATE_KEY,
+                key: `${STATE_KEY_PREFIX}${trainNo}`,
                 trainNo: trainNo,
                 journeyDate: journeyDate
             });
@@ -86,7 +88,7 @@ class RuntimeStateService {
     /**
      * Clear runtime state (on train reset)
      */
-    async clearState() {
+    async clearState(trainNo) {
         try {
             const passengersDb = db.getPassengersDb();
             if (!passengersDb) {
@@ -94,7 +96,14 @@ class RuntimeStateService {
             }
 
             const collection = passengersDb.collection(COLLECTION_NAME);
-            await collection.deleteOne({ key: STATE_KEY });
+            if (trainNo) {
+                await collection.deleteOne({ key: `${STATE_KEY_PREFIX}${trainNo}` });
+                console.log(`[RuntimeState] State cleared for train ${trainNo}`);
+            } else {
+                // Legacy: clear all (fallback)
+                await collection.deleteMany({ key: { $regex: /^runtime_state_/ } });
+                console.log('[RuntimeState] All states cleared');
+            }
 
             console.log('[RuntimeState] State cleared');
             return true;
