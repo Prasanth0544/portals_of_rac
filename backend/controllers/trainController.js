@@ -262,15 +262,80 @@ class TrainController {
   /**
    * Get complete train state
    */
-  getTrainState(req, res) {
+  async getTrainState(req, res) {
     try {
       const trainNo = req.query.trainNo || req.body.trainNo;
       const trainState = trainNo ? trainStates.get(String(trainNo)) : trainStates.values().next().value;
 
       if (!trainState) {
-        return res.status(400).json({
-          success: false,
-          message: "Train not initialized"
+        // No in-memory state — try loading station data from DB
+        try {
+          const racDb = await db.getDb();
+          const trainsCol = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
+
+          // Find the specific train or just the first one
+          const query = trainNo ? {
+            $or: [
+              { Train_No: trainNo }, { Train_No: String(trainNo) }, { Train_No: Number(trainNo) }
+            ]
+          } : {};
+          const trainDoc = await trainsCol.findOne(query);
+
+          if (trainDoc) {
+            // Get station collection name (handle trailing spaces)
+            const stationKey = Object.keys(trainDoc).find(k => k.trim() === 'Station_Collection_Name');
+            const stationColName = stationKey ? trainDoc[stationKey]?.trim() : null;
+
+            let stations = [];
+            if (stationColName) {
+              const rawStations = await racDb.collection(stationColName)
+                .find({}).sort({ SNO: 1 }).toArray();
+              // Map DB field names to frontend-expected format
+              stations = rawStations.map(s => ({
+                idx: (s.SNO || 0) - 1,
+                sno: s.SNO,
+                code: s.Station_Code,
+                name: s.Station_Name,
+                arrival: s.Arrival_Time,
+                departure: s.Departure_Time,
+                distance: s.Distance,
+                day: s.Day,
+                halt: s.Halt_Duration,
+                zone: s.Railway_Zone,
+                division: s.Division,
+                platform: s.Platform_Number,
+                remarks: s.Remarks,
+              }));
+            }
+
+            return res.json({
+              success: true,
+              data: {
+                initialized: false,
+                journeyStarted: false,
+                trainNo: trainDoc.Train_No,
+                trainName: trainDoc.Train_Name,
+                stations: stations,
+                coaches: [],
+                racQueue: [],
+                stats: {}
+              }
+            });
+          }
+        } catch (dbErr) {
+          console.warn('⚠️ Could not load stations from DB:', dbErr.message);
+        }
+
+        return res.json({
+          success: true,
+          data: {
+            initialized: false,
+            journeyStarted: false,
+            stations: [],
+            coaches: [],
+            racQueue: [],
+            stats: {}
+          }
         });
       }
 
@@ -672,7 +737,12 @@ class TrainController {
       }
 
       // 4. Build per-train overview
-      const passengersDb = db.getPassengersDb ? await db.getPassengersDb() : null;
+      let passengersDb = null;
+      try {
+        passengersDb = db.getPassengersDb ? await db.getPassengersDb() : null;
+      } catch (e) {
+        // Passengers DB not connected yet — that's fine, we'll skip DB fallback
+      }
       const trainOverviews = [];
 
       for (const train of trains) {

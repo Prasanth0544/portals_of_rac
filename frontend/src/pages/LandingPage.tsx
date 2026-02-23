@@ -212,8 +212,8 @@ const LandingPage: React.FC = () => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
     return (
-      t.trainNo.toLowerCase().includes(q) ||
-      t.trainName.toLowerCase().includes(q)
+      String(t.trainNo).toLowerCase().includes(q) ||
+      String(t.trainName || '').toLowerCase().includes(q)
     );
   });
 
@@ -284,35 +284,30 @@ const LandingPage: React.FC = () => {
         {/* Trains List */}
         <div className="trains-section">
           <div className="trains-section-header">
-            <h2 className="section-title">TRAINS LIST</h2>
+            <h2 className="section-title">
+              TRAINS LIST
+              {searchQuery && (
+                <span className="search-result-count">
+                  {filteredTrains.length} of {trains.length} trains
+                </span>
+              )}
+            </h2>
 
             {/* Search bar */}
-            <div className="train-search-wrapper">
-              <span className="train-search-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <line x1="16.5" y1="16.5" x2="22" y2="22" />
-                </svg>
-              </span>
+            <div className="train-search-row">
               <input
                 type="text"
-                className="train-search-input"
-                placeholder="Search by train no. or name…"
+                className="train-search-field"
+                placeholder="🔍  Search by train no. or name…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
                 <button
-                  className="train-search-clear"
+                  className="train-search-clear-btn"
                   onClick={() => setSearchQuery("")}
-                  title="Clear search"
                 >
-                  ✕
+                  ✕ Clear
                 </button>
               )}
             </div>
@@ -340,7 +335,11 @@ const LandingPage: React.FC = () => {
               <div className="trains-grid">
                 {filteredTrains.length === 0 ? (
                   <div className="search-no-results">
-                    No trains match <strong>"{searchQuery}"</strong>
+                    <div className="search-no-results-icon">🔍</div>
+                    <p>No trains found matching <strong>"{searchQuery}"</strong></p>
+                    <button className="search-no-results-reset" onClick={() => setSearchQuery("")}>
+                      Show all trains
+                    </button>
                   </div>
                 ) : null}
                 {filteredTrains.map((train) => {
@@ -428,24 +427,24 @@ const LandingPage: React.FC = () => {
                       {overview[train.trainNo] && (
                         <div className="train-overview-stats" onClick={(e) => e.stopPropagation()}>
                           <span className="overview-stat" title="TTEs assigned">
-                            👤 {overview[train.trainNo].ttes.count} TTE{overview[train.trainNo].ttes.count !== 1 ? 's' : ''}
-                            {overview[train.trainNo].ttes.list.length > 0 && (
+                            👤 {overview[train.trainNo]?.ttes?.count ?? 0} TTE{(overview[train.trainNo]?.ttes?.count ?? 0) !== 1 ? 's' : ''}
+                            {(overview[train.trainNo]?.ttes?.list?.length ?? 0) > 0 && (
                               <span className="overview-detail">
                                 ({overview[train.trainNo].ttes.list.map((t: any) => t.name || t.employeeId).join(', ')})
                               </span>
                             )}
                           </span>
                           <span className="overview-stat" title="Total passengers">
-                            🎫 {overview[train.trainNo].passengers.total} passengers
+                            🎫 {overview[train.trainNo]?.passengers?.total ?? 0} passengers
                           </span>
                           <span className="overview-stat" title="Passengers onboard">
-                            🚶 {overview[train.trainNo].passengers.onboard} onboard
+                            🚶 {overview[train.trainNo]?.passengers?.onboard ?? 0} onboard
                           </span>
                           <span className="overview-stat" title="Push notifications enabled">
-                            🔔 {overview[train.trainNo].passengers.notifications.pushEnabled} push
+                            🔔 {overview[train.trainNo]?.passengers?.notifications?.pushEnabled ?? 0} push
                           </span>
                           <span className="overview-stat" title="Email notifications enabled">
-                            📧 {overview[train.trainNo].passengers.notifications.emailEnabled} email
+                            📧 {overview[train.trainNo]?.passengers?.notifications?.emailEnabled ?? 0} email
                           </span>
                         </div>
                       )}

@@ -247,13 +247,17 @@ class ConfigController {
       // Check if train exists in Trains_Details (handle both old and new schemas)
       const racDb = await db.getDb();
       const trainsCollection = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
-      // Try new schema (trainNo as string) first, then old schema (Train_No as number)
-      let trainDoc = await trainsCollection.findOne({ trainNo });
-      if (!trainDoc) {
-        trainDoc = await trainsCollection.findOne({
-          Train_No: Number(trainNo),
-        });
-      }
+      // Try all possible field names and types (string/number)
+      let trainDoc = await trainsCollection.findOne({
+        $or: [
+          { trainNo },
+          { trainNo: Number(trainNo) },
+          { Train_No: trainNo },
+          { Train_No: Number(trainNo) },
+          { Train_Number: trainNo },
+          { Train_Number: Number(trainNo) },
+        ]
+      });
 
       if (!trainDoc) {
         return res.status(404).json({

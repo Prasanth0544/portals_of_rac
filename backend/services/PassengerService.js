@@ -144,8 +144,43 @@ class PassengerService {
      * @throws {Error} If passenger not found
      */
     async getPassengerDetails(pnr, trainState) {
-        const passengersCollection = db.getPassengersCollection();
-        const passenger = await passengersCollection.findOne({ PNR_Number: pnr });
+        let passenger = null;
+
+        // Strategy 1: Try configured collection first
+        try {
+            const col = db.getPassengersCollection();
+            passenger = await col.findOne({ PNR_Number: pnr });
+        } catch (_) {
+            // Collection not configured — fall through
+        }
+
+        // Strategy 2: Search across all trains' passenger collections
+        if (!passenger) {
+            try {
+                const passengersDb = db.getPassengersDb();
+                const racDb = await db.getDb();
+                const { COLLECTIONS } = require('../config/collections');
+                const trainsCol = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
+                const trains = await trainsCol.find({}, {
+                    projection: { Passengers_Collection_Name: 1, passengersCollection: 1 }
+                }).toArray();
+
+                const collectionNames = new Set();
+                for (const t of trains) {
+                    const name = t.passengersCollection || t.Passengers_Collection_Name;
+                    if (name) collectionNames.add(name.trim());
+                }
+
+                for (const colName of collectionNames) {
+                    try {
+                        passenger = await passengersDb.collection(colName).findOne({ PNR_Number: pnr });
+                        if (passenger) break;
+                    } catch (e) { /* skip */ }
+                }
+            } catch (e) {
+                // DB not ready
+            }
+        }
 
         if (!passenger) {
             throw new Error('PNR not found');

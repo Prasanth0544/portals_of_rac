@@ -245,7 +245,9 @@ function App({ initialPage }: AppProps): React.ReactElement {
     setupWebSocket();
 
     return () => {
-      wsService.disconnect();
+      // Don't disconnect — just remove THIS component's listeners
+      // so the WebSocket stays alive for other trains / landing page.
+      cleanupWebSocketListeners();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -366,35 +368,54 @@ function App({ initialPage }: AppProps): React.ReactElement {
     }
   };
 
+  // Store listener refs for targeted cleanup on unmount
+  const wsListenersRef = useRef<{ event: string; callback: (...args: any[]) => void }[]>([]);
+
+  const cleanupWebSocketListeners = (): void => {
+    for (const { event, callback } of wsListenersRef.current) {
+      wsService.off(event, callback);
+    }
+    wsListenersRef.current = [];
+  };
+
   const setupWebSocket = (): void => {
     const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
     wsService.connect(WS_URL);
 
-    wsService.on('connected', () => {
+    // Remove any previously registered listeners from this component
+    cleanupWebSocketListeners();
+
+    // Helper to register and track listeners for cleanup on unmount
+    const addListener = (event: string, cb: (...args: any[]) => void) => {
+      wsService.on(event, cb);
+      wsListenersRef.current.push({ event, callback: cb });
+    };
+
+    addListener('connected', () => {
       console.log('âœ… WebSocket connected');
       setWsConnected(true);
       webSocketConnectedToast();
     });
 
-    wsService.on('disconnected', () => {
+    addListener('disconnected', () => {
       console.log('âŒ WebSocket disconnected');
       setWsConnected(false);
       webSocketDisconnectedToast();
     });
 
-    wsService.on('train_update', (data: WebSocketUpdateData) => {
+    addListener('train_update', (data: WebSocketUpdateData) => {
       console.log('ðŸ“¡ Train update:', data.eventType);
       handleWebSocketUpdate(data);
     });
 
-    wsService.on('station_arrival', (data: StationArrivalData) => {
+    addListener('station_arrival', (data: StationArrivalData) => {
       console.log('ðŸš‰ Station arrival:', data.data.station);
       // Reset the countdown timer for the next station interval
       setTimerSeconds(TIMER_DURATION);
       loadTrainState();
     });
 
-    wsService.on('rac_reallocation', (data: RACReallocationData) => {
+    addListener('rac_reallocation', (data: RACReallocationData) => {
       console.log('ðŸŽ¯ RAC reallocation:', data.data.totalAllocated);
       if (data.data.totalAllocated > 0) {
         alert(`âœ… RAC Reallocation: ${data.data.totalAllocated} passengers upgraded!`);
@@ -402,12 +423,12 @@ function App({ initialPage }: AppProps): React.ReactElement {
       loadTrainState();
     });
 
-    wsService.on('no_show', (data: NoShowData) => {
+    addListener('no_show', (data: NoShowData) => {
       console.log('âŒ No-show:', data.data.passenger.name);
       loadTrainState();
     });
 
-    wsService.on('stats_update', (data: any) => {
+    addListener('stats_update', (data: any) => {
       console.log('ðŸ“Š Stats updated');
       if (trainData) {
         setTrainData(prev => ({
@@ -630,6 +651,11 @@ function App({ initialPage }: AppProps): React.ReactElement {
   ]);
 
   const handleClosePage = (): void => {
+    // If on the standalone manual config route (/config), go back to landing page
+    if (initialPage === 'config') {
+      navigate('/');
+      return;
+    }
     setCurrentPage('home');
     loadTrainState();
   };
@@ -731,6 +757,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
         <div className="app-content">
           <ConfigPage
             onClose={handleClosePage}
+            onApplySuccess={initialPage === 'config' ? (trainNo: string) => { window.location.href = `/train/${trainNo}`; } : undefined}
             loadTrainState={loadTrainState}
           />
         </div>

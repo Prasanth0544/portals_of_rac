@@ -272,100 +272,104 @@
     white-space: nowrap;
 }
 
-/* Search wrapper — mirrors .noshow-input-row feel */
-.train-search-wrapper {
-    position: relative;
+/* ── Train Search ── */
+.train-search-row {
     display: flex;
+    gap: 8px;
     align-items: center;
-    flex: 1;
-    max-width: 320px;
-    min-width: 200px;
 }
 
-/* SVG magnifier sits inside the wrapper, never overlaps the text */
-.train-search-icon {
-    position: absolute;
-    left: 11px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
-    pointer-events: none;
-    user-select: none;
-    color: #95a5a6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.train-search-icon svg {
-    width: 16px;
-    height: 16px;
-    stroke: currentColor;
-    fill: none;
-    display: block;
-}
-
-/* Input — mirrors .input-pnr, left-pad clears the 16px icon + 11px left + 6px gap */
-.train-search-input {
-    width: 100%;
-    padding: 9px 36px 9px 38px;
-    border: 1px solid #d5dbdb;
-    border-radius: 4px;
+.train-search-field {
+    width: 260px;
+    padding: 8px 14px;
+    border: 2px solid #d5dbdb;
+    border-radius: 6px;
     font-size: 13px;
-    background: white;
-    color: #34495e;
-    transition: all 0.2s ease;
-    box-sizing: border-box;
+    color: #2c3e50;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.train-search-input:focus {
+.train-search-field:focus {
     outline: none;
     border-color: #3498db;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.12);
 }
 
-.train-search-input::placeholder {
-    color: #95a5a6;
-    font-size: 12px;
+.train-search-field::placeholder {
+    color: #aab7c4;
+    font-size: 12.5px;
 }
 
-/* Clear (✕) button */
-.train-search-clear {
-    position: absolute;
-    right: 8px;
-    background: none;
+.train-search-clear-btn {
+    padding: 7px 14px;
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
     border: none;
-    cursor: pointer;
-    color: #95a5a6;
+    border-radius: 6px;
     font-size: 12px;
-    line-height: 1;
-    padding: 2px 4px;
-    border-radius: 3px;
+    font-weight: 600;
+    cursor: pointer;
     transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    white-space: nowrap;
 }
 
-.train-search-clear:hover {
-    color: #e74c3c;
-    background: linear-gradient(135deg, #fff5f5 0%, #fde8e8 100%);
+.train-search-clear-btn:hover {
+    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3);
 }
 
-/* No-results row inside .trains-grid */
+/* Result count badge */
+.search-result-count {
+    display: inline-block;
+    margin-left: 12px;
+    padding: 3px 10px;
+    background: #d6eaf8;
+    color: #2980b9;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+/* No-results state */
 .search-no-results {
-    padding: 28px 20px;
+    padding: 40px 20px;
     text-align: center;
-    font-size: 13px;
-    color: #7f8c8d;
     background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%);
     border-bottom: 1px solid #e1e8ed;
 }
 
+.search-no-results-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+.search-no-results p {
+    font-size: 14px;
+    color: #5a6c7d;
+    margin: 0 0 14px 0;
+}
+
 .search-no-results strong {
     color: #2c3e50;
+}
+
+.search-no-results-reset {
+    padding: 6px 16px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-no-results-reset:hover {
+    background: #2980b9;
 }
 
 /* ============================================================
@@ -922,9 +926,13 @@
         gap: 10px;
     }
 
-    .train-search-wrapper {
-        max-width: 100%;
+    .train-search-row {
         width: 100%;
+    }
+
+    .train-search-field {
+        max-width: 100%;
+        flex: 1;
     }
 
     .trains-table-header {

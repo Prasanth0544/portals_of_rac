@@ -42,7 +42,7 @@ class Database {
         !finalConfig.passengersCollection
       ) {
         console.warn(
-          "⚠️ Partial config. Initializing Trains_Details only for bootstrapping...",
+          "⚠️ Partial config. Initializing with env defaults for bootstrapping...",
         );
 
         // Default to localhost/rac/Trains_Details if not provided
@@ -52,8 +52,13 @@ class Database {
         this.trainDetailsCollectionName =
           finalConfig.trainDetailsCollection || COLLECTIONS.TRAINS_DETAILS;
 
-        // Close existing client if any
-        if (stationsClient) await stationsClient.close();
+        // Also connect stationsDb and passengersDb from env defaults
+        this.stationsDbName = finalConfig.stationsDb || process.env.STATIONS_DB || 'rac';
+        this.passengersDbName = finalConfig.passengersDb || process.env.PASSENGERS_DB || 'PassengersDB';
+
+        // Close existing clients if any
+        if (stationsClient) { try { await stationsClient.close(); } catch (e) { } }
+        if (passengersClient) { try { await passengersClient.close(); } catch (e) { } }
 
         stationsClient = new MongoClient(this.mongoUri);
         await stationsClient.connect();
@@ -63,7 +68,18 @@ class Database {
           this.trainDetailsCollectionName,
         );
 
-        console.log("✅ Connected to Trains_Details (Bootstrap Mode)");
+        // Connect stationsDb (same client, possibly same DB as trainDetails)
+        this.stationsDb = stationsClient.db(this.stationsDbName);
+
+        // Connect passengersDb via separate client
+        passengersClient = new MongoClient(this.mongoUri);
+        await passengersClient.connect();
+        this.passengersDb = passengersClient.db(this.passengersDbName);
+
+        console.log("✅ Connected in Bootstrap Mode:");
+        console.log(`   📦 Trains_Details: ${this.trainDetailsDbName}`);
+        console.log(`   📦 Stations: ${this.stationsDbName}`);
+        console.log(`   📦 Passengers: ${this.passengersDbName}`);
         return this;
       }
 

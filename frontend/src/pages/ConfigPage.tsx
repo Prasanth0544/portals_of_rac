@@ -1,5 +1,6 @@
 // frontend/src/pages/ConfigPage.tsx
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { setupConfig, initializeTrain, getTrains } from "../services/apiWithErrorHandling";
 import "../styles/pages/ConfigPage.css";
 
@@ -14,18 +15,22 @@ interface FormState {
 interface TrainItem {
     trainNo: string | number;
     trainName?: string;
-    stationCollectionName?: string;
+    stationsCollection?: string;
     passengersCollection?: string;
     sleeperCount?: number;
     threeAcCount?: number;
+    sleeperCoachesCount?: number;
+    threeTierACCoachesCount?: number;
 }
 
 interface ConfigPageProps {
     onClose: () => void;
+    onApplySuccess?: (trainNo: string) => void;
     loadTrainState: () => Promise<void>;
 }
 
-function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactElement {
+function ConfigPage({ onClose, onApplySuccess, loadTrainState }: ConfigPageProps): React.ReactElement {
+    const navigate = useNavigate();
     const [form, setForm] = useState<FormState>({
         stationsDb: "rac",
         stationsCollection: "",
@@ -59,8 +64,8 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
             const item = trainList.find((t) => String(t.trainNo) === form.trainNo);
 
             let stationsCollection = form.stationsCollection;
-            if (!stationsCollection && item?.stationCollectionName) {
-                stationsCollection = item.stationCollectionName;
+            if (!stationsCollection && item?.stationsCollection) {
+                stationsCollection = item.stationsCollection;
                 update("stationsCollection", stationsCollection);
             }
 
@@ -91,10 +96,16 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
             if (!init.success)
                 throw new Error((init as any).message || "Initialization failed");
 
+            // For standalone/manual config: navigate immediately to the train dashboard.
+            // The destination page will handle its own state loading.
+            if (onApplySuccess) {
+                onApplySuccess(form.trainNo);
+                return; // Exit early — don't call loadTrainState or delays
+            }
+
+            // For homepage config: wait and reload state before closing
             await new Promise(resolve => setTimeout(resolve, 500));
-
-            await loadTrainState();
-
+            try { await loadTrainState(); } catch (_) { /* non-blocking */ }
             await new Promise(resolve => setTimeout(resolve, 300));
             onClose();
         } catch (err: any) {
@@ -155,8 +166,8 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
                                     update("trainNo", no);
                                     if (item) {
                                         update("trainName", item.trainName || "");
-                                        if (item.stationCollectionName) {
-                                            update("stationsCollection", item.stationCollectionName);
+                                        if (item.stationsCollection) {
+                                            update("stationsCollection", item.stationsCollection);
                                         }
                                     }
                                 }}
@@ -165,7 +176,7 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
                                 {trainList.map((t) => (
                                     <option key={String(t.trainNo)} value={String(t.trainNo)}>
                                         {t.trainNo} - {t.trainName || "Unnamed"} (SL:
-                                        {t.sleeperCount || 0}, 3A:{t.threeAcCount || 0})
+                                        {t.sleeperCoachesCount || t.sleeperCount || 0}, 3A:{t.threeTierACCoachesCount || t.threeAcCount || 0})
                                     </option>
                                 ))}
                             </select>
@@ -185,8 +196,8 @@ function ConfigPage({ onClose, loadTrainState }: ConfigPageProps): React.ReactEl
                                 update("trainNo", no);
                                 if (item) {
                                     update("trainName", item.trainName || "");
-                                    if (item.stationCollectionName) {
-                                        update("stationsCollection", item.stationCollectionName);
+                                    if (item.stationsCollection) {
+                                        update("stationsCollection", item.stationsCollection);
                                     }
                                 }
                             }}

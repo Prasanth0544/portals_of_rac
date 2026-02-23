@@ -40,6 +40,8 @@ class PassengerController {
 
   /**
    * Get passenger details by IRCTC_ID (for passenger portal)
+   * Searches across ALL registered trains' passenger collections
+   * so it works even without admin "Apply Configuration".
    */
   async getPassengerByIRCTC(req, res) {
     try {
@@ -52,24 +54,48 @@ class PassengerController {
         });
       }
 
-      // Find passenger in database by IRCTC_ID
-      const passenger = await db.getPassengersCollection().findOne({
-        IRCTC_ID: irctcId
-      });
-
-      if (!passenger) {
-        return res.status(404).json({
-          success: false,
-          message: "No booking found for this IRCTC ID"
-        });
+      // Strategy 1: If a specific passengers collection is configured, try it first
+      try {
+        const col = db.getPassengersCollection();
+        const passenger = await col.findOne({ IRCTC_ID: irctcId });
+        if (passenger) {
+          return res.json({ success: true, data: passenger });
+        }
+      } catch (_) {
+        // Collection not configured — fall through to multi-train search
       }
 
-      // Passenger already has Train_Name, Train_Number, Booking_Date, etc. from database
-      // No need to enrich with train state data
+      // Strategy 2: Search across ALL trains' passenger collections
+      const passengersDb = db.getPassengersDb();
+      const racDb = await db.getDb();
+      const { COLLECTIONS } = require("../config/collections");
+      const trainsCol = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
+      const trains = await trainsCol.find({}, {
+        projection: { Passengers_Collection_Name: 1, passengersCollection: 1 }
+      }).toArray();
 
-      res.json({
-        success: true,
-        data: passenger
+      // Collect unique passenger collection names
+      const collectionNames = new Set();
+      for (const t of trains) {
+        const name = t.passengersCollection || t.Passengers_Collection_Name;
+        if (name) collectionNames.add(name.trim());
+      }
+
+      // Search each collection for the IRCTC_ID
+      for (const colName of collectionNames) {
+        try {
+          const passenger = await passengersDb.collection(colName).findOne({ IRCTC_ID: irctcId });
+          if (passenger) {
+            return res.json({ success: true, data: passenger });
+          }
+        } catch (e) {
+          // Collection might not exist, skip
+        }
+      }
+
+      return res.status(404).json({
+        success: false,
+        message: "No booking found for this IRCTC ID"
       });
     } catch (error) {
       console.error("❌ Error getting passenger by IRCTC ID:", error);

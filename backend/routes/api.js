@@ -178,6 +178,12 @@ router.post('/tte/undo',
 
 // ========== TRAIN ROUTES ==========
 router.get('/trains', (req, res) => trainController.list(req, res));
+router.get('/trains/:trainNo/config', (req, res) => configController.getTrainConfig(req, res));
+router.put('/trains/:trainNo/config', (req, res) => configController.updateTrainConfig(req, res));
+router.post('/trains/register',
+  validationMiddleware.sanitizeBody,
+  (req, res) => configController.registerTrain(req, res)
+);
 // Dynamic configuration setup (from frontend)
 router.post('/config/setup',
   validationMiddleware.sanitizeBody,
@@ -220,7 +226,6 @@ router.post('/train/start-journey',
 );
 
 router.get('/train/state',
-  validationMiddleware.checkTrainInitialized,
   (req, res) => trainController.getTrainState(req, res)
 );
 
@@ -244,6 +249,13 @@ router.get('/train/allocation-errors',
   validationMiddleware.checkTrainInitialized,
   (req, res) => trainController.getAllocationErrors(req, res)
 );
+
+// Engine status routes (for admin dashboard polling)
+router.get('/train/engine-status', (req, res) => trainController.getEngineStatus(req, res));
+router.get('/train/engines', (req, res) => trainController.getEngineStatus(req, res));
+
+// Admin train overview — TTEs, passenger counts, notification stats per train
+router.get('/admin/train-overview', (req, res) => trainController.getTrainOverview(req, res));
 
 // ========== REALLOCATION ROUTES ==========
 router.post('/passenger/no-show',
@@ -574,10 +586,8 @@ router.get('/visualization/vacancy-matrix',
 );
 
 // ========== NEW PASSENGER PORTAL ROUTES ==========
-// Public PNR lookup (requires journey to have started)
+// Public PNR lookup (works even before journey starts)
 router.get('/passenger/pnr/:pnr',
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.getPNRDetails(req, res)
 );
 
@@ -835,7 +845,7 @@ router.get('/push/subscriptions-count', async (req, res) => {
   try {
     const PushSubscriptionService = require('../services/PushSubscriptionService');
     const count = await PushSubscriptionService.getTotalCount();
-    
+
     const adminSubs = await PushSubscriptionService.getAllAdminSubscriptions();
     const tteSubs = await PushSubscriptionService.getAllTTESubscriptions();
     const collection = await PushSubscriptionService.getCollection();
@@ -863,11 +873,11 @@ router.post('/push/test', async (req, res) => {
     console.log('🔔 Sending test push notification to all subscribers...');
 
     const PushSubscriptionService = require('../services/PushSubscriptionService');
-    
+
     // Get all subscriptions
     const adminSubs = await PushSubscriptionService.getAllAdminSubscriptions();
     const tteSubs = await PushSubscriptionService.getAllTTESubscriptions();
-    
+
     // Get all passenger subscriptions (need to query collection directly)
     const collection = await PushSubscriptionService.getCollection();
     const passengerSubs = await collection.find({ type: 'passenger' }).toArray();
@@ -875,8 +885,8 @@ router.post('/push/test', async (req, res) => {
     const allSubscriptions = [...adminSubs, ...passengerSubs, ...tteSubs];
 
     if (allSubscriptions.length === 0) {
-      return res.json({ 
-        success: false, 
+      return res.json({
+        success: false,
         message: 'No subscriptions found',
         details: { admin: 0, passenger: 0, tte: 0 }
       });
@@ -906,8 +916,8 @@ router.post('/push/test', async (req, res) => {
       }
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: `Test push sent to ${successCount} subscribers`,
       details: {
         total: allSubscriptions.length,
@@ -923,8 +933,8 @@ router.post('/push/test', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Test push error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: error.message,
       error: error.toString()
     });
@@ -935,11 +945,11 @@ router.post('/push/test', async (req, res) => {
 router.post('/test-email', async (req, res) => {
   try {
     const { recipientEmail, testType } = req.body;
-    
+
     if (!recipientEmail) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'recipientEmail is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'recipientEmail is required'
       });
     }
 
@@ -1035,9 +1045,9 @@ router.post('/test-email', async (req, res) => {
     }
 
     await notificationService.emailTransporter.sendMail(mailOptions);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: `Test email sent from ${process.env.EMAIL_USER} to ${recipientEmail}`,
       details: {
         from: process.env.EMAIL_USER,
@@ -1047,8 +1057,8 @@ router.post('/test-email', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Test email error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: error.message,
       error: error.toString()
     });
