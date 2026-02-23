@@ -342,6 +342,10 @@ export const getTrains = (): Promise<ApiResult> =>
 export const listTrains = (): Promise<ApiResult> =>
   safeRequest(() => api.get("/trains"));
 
+export const getTrainOverview = (trainNo?: string): Promise<ApiResult> =>
+  safeRequest(() => api.get("/admin/train-overview", { params: trainNo ? { trainNo } : {} }));
+
+
 export const registerTrain = (
   trainNo: string,
   trainName: string,

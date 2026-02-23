@@ -121,7 +121,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
   // Restore persisted state on mount AND verify with backend
   useEffect(() => {
     const restoreState = async () => {
-      const saved = await loadAppState();
+      const saved = await loadAppState(urlTrainNo);
       // If initialPage is 'config', always force config page (manual config route)
       if (initialPage === "config") {
         console.log("[App] Manual config route â€” forcing config page");
@@ -190,7 +190,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
             currentPage: restoredPage,
             journeyStarted: backendJourneyStarted,
             autoInitAttempted: restoredAutoInit,
-          });
+          }, urlTrainNo);
         } else {
           // Backend returned no valid data â€” keep saved page so auto-init can fill trainData
           console.log(
@@ -227,7 +227,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
     }
     // Only save after state has been restored
     if (stateRestored) {
-      saveAppState({ currentPage, journeyStarted, autoInitAttempted });
+      saveAppState({ currentPage, journeyStarted, autoInitAttempted }, urlTrainNo);
     }
   }, [currentPage, journeyStarted, autoInitAttempted, stateRestored]);
 

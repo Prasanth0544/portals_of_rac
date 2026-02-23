@@ -1007,3 +1007,69 @@
         padding: 18px;
     }
 }
+
+/* ============================================================
+   TRAIN OVERVIEW STATS ROW (below each train card)
+   ============================================================ */
+
+.train-overview-stats {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 8px 16px;
+    margin-top: 4px;
+    background: linear-gradient(135deg, #f0f4f8 0%, #e8eef3 100%);
+    border-top: 1px solid #e1e8ed;
+    border-radius: 0 0 10px 10px;
+    cursor: default;
+}
+
+.overview-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    color: #34495e;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid #dce3ea;
+    white-space: nowrap;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.overview-stat:hover {
+    background: rgba(255, 255, 255, 1);
+}
+
+.overview-detail {
+    color: #7f8c8d;
+    font-weight: 400;
+    font-size: 0.72rem;
+    margin-left: 2px;
+}
+
+/* Status-aware card styling — make stats row match */
+.train-card.card-running .train-overview-stats {
+    background: linear-gradient(135deg, #eafaf1 0%, #d5f5e3 100%);
+    border-top-color: #c8e6c9;
+}
+
+.train-card.card-completed .train-overview-stats {
+    background: linear-gradient(135deg, #eaf2fa 0%, #d4e6f1 100%);
+    border-top-color: #bbd3e8;
+}
+
+@media (max-width: 768px) {
+    .train-overview-stats {
+        gap: 6px;
+        padding: 6px 10px;
+    }
+
+    .overview-stat {
+        font-size: 0.7rem;
+        padding: 2px 7px;
+    }
+}

@@ -4,7 +4,8 @@
 const DB_NAME = 'RACAdminState';
 const DB_VERSION = 1;
 const STORE_NAME = 'appState';
-const STATE_KEY = 'currentState';
+const STATE_KEY_PREFIX = 'currentState';
+const getStateKey = (trainNo?: string) => trainNo ? `${STATE_KEY_PREFIX}_${trainNo}` : STATE_KEY_PREFIX;
 
 // State interface
 export interface PersistedState {
@@ -45,7 +46,7 @@ const DEBOUNCE_MS = 500;
 /**
  * Save app state to IndexedDB (debounced to avoid excessive writes)
  */
-export const saveAppState = async (state: Omit<PersistedState, 'timestamp'>): Promise<void> => {
+export const saveAppState = async (state: Omit<PersistedState, 'timestamp'>, trainNo?: string): Promise<void> => {
     // Clear previous pending save
     if (saveTimeout) {
         clearTimeout(saveTimeout);
@@ -59,7 +60,7 @@ export const saveAppState = async (state: Omit<PersistedState, 'timestamp'>): Pr
             const store = tx.objectStore(STORE_NAME);
 
             const stateToSave: PersistedState & { key: string } = {
-                key: STATE_KEY,
+                key: getStateKey(trainNo),
                 ...state,
                 timestamp: Date.now()
             };
@@ -84,14 +85,14 @@ export const saveAppState = async (state: Omit<PersistedState, 'timestamp'>): Pr
 /**
  * Load app state from IndexedDB
  */
-export const loadAppState = async (): Promise<PersistedState | null> => {
+export const loadAppState = async (trainNo?: string): Promise<PersistedState | null> => {
     try {
         const db = await openDB();
 
         return new Promise((resolve) => {
             const tx = db.transaction(STORE_NAME, 'readonly');
             const store = tx.objectStore(STORE_NAME);
-            const request = store.get(STATE_KEY);
+            const request = store.get(getStateKey(trainNo));
 
             request.onsuccess = () => {
                 const result = request.result;
@@ -132,12 +133,12 @@ export const loadAppState = async (): Promise<PersistedState | null> => {
 /**
  * Clear persisted state (call on logout/reset)
  */
-export const clearAppState = async (): Promise<void> => {
+export const clearAppState = async (trainNo?: string): Promise<void> => {
     try {
         const db = await openDB();
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
-        store.delete(STATE_KEY);
+        store.delete(getStateKey(trainNo));
 
         tx.oncomplete = () => {
             console.log('[StateStore] State cleared');

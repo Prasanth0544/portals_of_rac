@@ -143,7 +143,7 @@ class TrainEngineService {
                 });
 
                 // Broadcast updated statistics
-                wsManager.broadcastStatsUpdate(trainState.stats);
+                wsManager.broadcastStatsUpdate({ ...trainState.stats, trainNo });
             }
 
             // ─── STEP 8: If journey complete, stop engine ───

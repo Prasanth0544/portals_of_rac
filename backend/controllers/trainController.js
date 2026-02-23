@@ -626,6 +626,137 @@ class TrainController {
       });
     }
   }
+
+  /**
+   * Get admin train overview — TTEs, passenger counts, notification stats per train
+   * GET /api/admin/train-overview?trainNo=17225  (specific train)
+   * GET /api/admin/train-overview                (all trains)
+   */
+  async getTrainOverview(req, res) {
+    try {
+      const db = require('../config/db');
+      const { COLLECTIONS, DBS } = require('../config/collections');
+      const PushSubscriptionService = require('../services/PushSubscriptionService');
+
+      const racDb = await db.getDb();
+      const requestedTrainNo = req.query.trainNo;
+
+      // 1. Get all trains from Trains_Details
+      const trainsCollection = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
+      const trainFilter = requestedTrainNo ? { Train_Number: { $in: [requestedTrainNo, Number(requestedTrainNo)] } } : {};
+      const trains = await trainsCollection.find(trainFilter).toArray();
+
+      if (trains.length === 0) {
+        return res.json({ success: true, data: { trains: [], summary: { totalTrains: 0 } } });
+      }
+
+      // 2. Get all TTEs
+      const tteCollection = racDb.collection(COLLECTIONS.TTE_USERS);
+      const tteFilter = requestedTrainNo ? { role: 'TTE', trainAssigned: String(requestedTrainNo) } : { role: 'TTE' };
+      const allTTEs = await tteCollection.find(tteFilter, {
+        projection: { employeeId: 1, name: 1, trainAssigned: 1, email: 1 }
+      }).toArray();
+
+      // 3. Get push subscription stats
+      const pushCollection = racDb.collection(COLLECTIONS.PUSH_SUBSCRIPTIONS);
+      const pushStats = await pushCollection.aggregate([
+        { $group: { _id: { type: '$type', userId: '$userId' }, count: { $sum: 1 } } }
+      ]).toArray();
+
+      // Build set of users with push enabled
+      const pushEnabledUsers = new Set();
+      const pushEnabledTTEs = new Set();
+      for (const stat of pushStats) {
+        if (stat._id.type === 'passenger') pushEnabledUsers.add(stat._id.userId);
+        if (stat._id.type === 'tte') pushEnabledTTEs.add(stat._id.userId);
+      }
+
+      // 4. Build per-train overview
+      const passengersDb = db.getPassengersDb ? await db.getPassengersDb() : null;
+      const trainOverviews = [];
+
+      for (const train of trains) {
+        const trainNo = String(train.Train_Number);
+        const collectionName = train.Passengers_Collection_Name;
+
+        // TTEs for this train
+        const trainTTEs = allTTEs.filter(t => String(t.trainAssigned) === trainNo);
+
+        // Passenger stats from in-memory state (most accurate)
+        const trainState = trainStates.get(trainNo);
+        let passengerStats = { total: 0, onboard: 0, rac: 0, waitlist: 0, cnf: 0, cancelled: 0 };
+        let emailEnabled = 0;
+        let pushEnabled = 0;
+
+        if (trainState && trainState.passengers) {
+          const passengers = Array.isArray(trainState.passengers) ? trainState.passengers : [];
+          passengerStats.total = passengers.length;
+
+          for (const p of passengers) {
+            const status = (p.Current_Status || p.Booking_Status || '').toUpperCase();
+            if (status === 'CNF' || status === 'CONFIRMED') passengerStats.cnf++;
+            else if (status === 'RAC') passengerStats.rac++;
+            else if (status === 'WL' || status === 'WAITLIST') passengerStats.waitlist++;
+            else if (status === 'CAN' || status === 'CANCELLED') passengerStats.cancelled++;
+
+            if (p.Boarding_Status === 'Boarded') passengerStats.onboard++;
+            if (p.Email) emailEnabled++;
+            if (p.IRCTC_ID && pushEnabledUsers.has(p.IRCTC_ID)) pushEnabled++;
+          }
+        } else if (collectionName && passengersDb) {
+          // Fallback: query MongoDB if train not loaded in memory
+          try {
+            const pCol = passengersDb.collection(collectionName);
+            passengerStats.total = await pCol.countDocuments();
+            passengerStats.cnf = await pCol.countDocuments({ $or: [{ Current_Status: 'CNF' }, { Current_Status: 'Confirmed' }] });
+            passengerStats.rac = await pCol.countDocuments({ Current_Status: 'RAC' });
+            passengerStats.waitlist = await pCol.countDocuments({ $or: [{ Current_Status: 'WL' }, { Current_Status: 'Waitlist' }] });
+            passengerStats.cancelled = await pCol.countDocuments({ $or: [{ Current_Status: 'CAN' }, { Current_Status: 'Cancelled' }] });
+            emailEnabled = await pCol.countDocuments({ Email: { $exists: true, $ne: '' } });
+          } catch (e) { /* collection may not exist yet */ }
+        }
+
+        // TTE push enabled count
+        const ttePushEnabled = trainTTEs.filter(t => pushEnabledTTEs.has(t.employeeId)).length;
+
+        trainOverviews.push({
+          trainNo,
+          trainName: train.Train_Name || trainNo,
+          status: train.status || (trainState?.journeyStarted ? 'RUNNING' : 'READY'),
+          isEngineRunning: TrainEngineService.isRunning(trainNo),
+          currentStation: trainState?.getCurrentStation()?.name || train.currentStation || null,
+          ttes: {
+            count: trainTTEs.length,
+            list: trainTTEs.map(t => ({ employeeId: t.employeeId, name: t.name || t.employeeId })),
+            pushEnabled: ttePushEnabled
+          },
+          passengers: {
+            ...passengerStats,
+            notifications: {
+              pushEnabled,
+              emailEnabled
+            }
+          }
+        });
+      }
+
+      // 5. Summary
+      const summary = {
+        totalTrains: trainOverviews.length,
+        totalTTEs: allTTEs.length,
+        totalPassengers: trainOverviews.reduce((s, t) => s + t.passengers.total, 0),
+        totalOnboard: trainOverviews.reduce((s, t) => s + t.passengers.onboard, 0),
+        totalPushEnabled: trainOverviews.reduce((s, t) => s + t.passengers.notifications.pushEnabled, 0),
+        totalEmailEnabled: trainOverviews.reduce((s, t) => s + t.passengers.notifications.emailEnabled, 0)
+      };
+
+      res.json({ success: true, data: { trains: trainOverviews, summary } });
+
+    } catch (error) {
+      console.error('❌ Error getting train overview:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
 }
 
 const trainControllerInstance = new TrainController();

@@ -5,6 +5,7 @@ import {
   listTrains,
   registerTrain,
   registerTTE,
+  getTrainOverview,
 } from "../services/apiWithErrorHandling";
 import "../styles/pages/LandingPage.css";
 import "../UserMenu.css";
@@ -30,6 +31,7 @@ const LandingPage: React.FC = () => {
   const [trains, setTrains] = useState<Train[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [overview, setOverview] = useState<Record<string, any>>({});
 
   // Add Train Modal State
   const [showAddTrainModal, setShowAddTrainModal] = useState(false);
@@ -61,11 +63,21 @@ const LandingPage: React.FC = () => {
 
   const loadTrains = async () => {
     setLoading(true);
-    const result = await listTrains();
-    if (result.success && result.data) {
-      setTrains(result.data);
+    const [trainResult, overviewResult] = await Promise.all([
+      listTrains(),
+      getTrainOverview(),
+    ]);
+    if (trainResult.success && trainResult.data) {
+      setTrains(trainResult.data);
     } else {
-      console.error("Failed to load trains:", result.error);
+      console.error("Failed to load trains:", trainResult.error);
+    }
+    if (overviewResult.success && overviewResult.data?.trains) {
+      const map: Record<string, any> = {};
+      for (const t of overviewResult.data.trains) {
+        map[t.trainNo] = t;
+      }
+      setOverview(map);
     }
     setLoading(false);
   };
@@ -411,6 +423,32 @@ const LandingPage: React.FC = () => {
                           Open ↗
                         </button>
                       </div>
+
+                      {/* Overview Stats Row */}
+                      {overview[train.trainNo] && (
+                        <div className="train-overview-stats" onClick={(e) => e.stopPropagation()}>
+                          <span className="overview-stat" title="TTEs assigned">
+                            👤 {overview[train.trainNo].ttes.count} TTE{overview[train.trainNo].ttes.count !== 1 ? 's' : ''}
+                            {overview[train.trainNo].ttes.list.length > 0 && (
+                              <span className="overview-detail">
+                                ({overview[train.trainNo].ttes.list.map((t: any) => t.name || t.employeeId).join(', ')})
+                              </span>
+                            )}
+                          </span>
+                          <span className="overview-stat" title="Total passengers">
+                            🎫 {overview[train.trainNo].passengers.total} passengers
+                          </span>
+                          <span className="overview-stat" title="Passengers onboard">
+                            🚶 {overview[train.trainNo].passengers.onboard} onboard
+                          </span>
+                          <span className="overview-stat" title="Push notifications enabled">
+                            🔔 {overview[train.trainNo].passengers.notifications.pushEnabled} push
+                          </span>
+                          <span className="overview-stat" title="Email notifications enabled">
+                            📧 {overview[train.trainNo].passengers.notifications.emailEnabled} email
+                          </span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
