@@ -180,9 +180,6 @@ router.post('/tte/undo',
 router.get('/trains', (req, res) => trainController.list(req, res));
 router.get('/trains/:trainNo/config', (req, res) => configController.getTrainConfig(req, res));
 router.put('/trains/:trainNo/config', (req, res) => configController.updateTrainConfig(req, res));
-// Engine status (for admin dashboard countdown + landing page)
-router.get('/train/engine-status', (req, res) => trainController.getEngineStatus(req, res));
-router.get('/train/engines', (req, res) => trainController.getEngineStatus(req, res));
 // Dynamic configuration setup (from frontend)
 router.post('/config/setup',
   validationMiddleware.sanitizeBody,
@@ -579,8 +576,10 @@ router.get('/visualization/vacancy-matrix',
 );
 
 // ========== NEW PASSENGER PORTAL ROUTES ==========
-// Public PNR lookup (no restrictions — passengers can view details anytime)
+// Public PNR lookup (requires journey to have started)
 router.get('/passenger/pnr/:pnr',
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.getPNRDetails(req, res)
 );
 
@@ -594,6 +593,8 @@ router.get('/passengers/by-irctc/:irctcId',
 // Self-cancellation (mark no-show)
 router.post('/passenger/cancel',
   validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.markNoShow(req, res)
 );
 
@@ -601,21 +602,28 @@ router.post('/passenger/cancel',
 router.post('/passenger/set-status',
   authMiddleware,
   validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
   (req, res) => passengerController.setPassengerStatus(req, res)
 );
 
 // Upgrade notification endpoints
 router.get('/passenger/upgrade-notifications/:pnr',
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.getUpgradeNotifications(req, res)
 );
 
 router.post('/passenger/accept-upgrade',
   validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.acceptUpgrade(req, res)
 );
 
 router.post('/passenger/deny-upgrade',
   validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.denyUpgrade(req, res)
 );
 

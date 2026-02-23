@@ -88,8 +88,9 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
     }
 
     const checkExistingState = async () => {
-      // If user clicked "Open" from landing page, ALWAYS show config (pick date etc.)
-      // location.state.fromLanding does NOT survive browser refresh — that's the key.
+      // From landing page → show config so user can pick journey date
+      // fromLanding is cleared from history.state on mount (see useEffect above)
+      // so it won't survive browser refresh
       if (fromLanding) {
         console.log("[TrainDashboard] Came from landing page — showing config");
         if (trainNo) {
@@ -98,51 +99,51 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
         return;
       }
 
-      // Browser refresh with a trainNo in the URL — go straight to TrainApp
-      // TrainApp has its own restoreState + autoInitializeFromBackend logic
-      // that will handle initialization if the backend restarted.
-      // We should NOT show config on browser refresh.
+      // Browser refresh — auto-initialize and go straight to home
       if (trainNo) {
-        console.log("[TrainDashboard] Browser refresh detected for train", trainNo, "— skipping config, rendering TrainApp directly");
+        console.log("[TrainDashboard] Browser refresh for train", trainNo, "— auto-initializing");
 
-        // Quick attempt to ensure train is initialized on backend
+        // Step 1: Check if train is already initialized on backend
         try {
           const { getTrainState } = await import("../services/apiWithErrorHandling");
           const stateRes = await getTrainState(trainNo);
           if (stateRes?.success && stateRes.data?.trainNo) {
-            console.log("[TrainDashboard] Train already initialized on backend");
-          } else {
-            // Not in memory — try quick auto-reinitialize
-            console.log("[TrainDashboard] Auto-reinitializing train", trainNo);
-            try {
-              const configResult = await getTrainConfig(trainNo);
-              if (configResult.success && configResult.data) {
-                const cfg = configResult.data;
-                setTrainConfig(cfg);
-                await setupConfig({
-                  stationsDb: cfg.stationsDb,
-                  stationsCollection: cfg.stationsCollection,
-                  passengersDb: cfg.passengersDb,
-                  passengersCollection: cfg.passengersCollection,
-                  trainNo: cfg.trainNo || trainNo,
-                  trainName: cfg.trainName || "",
-                  journeyDate: cfg.journeyDate || new Date().toISOString().split("T")[0],
-                });
-                await initializeTrain(
-                  cfg.trainNo || trainNo,
-                  cfg.journeyDate || new Date().toISOString().split("T")[0],
-                );
-                console.log("[TrainDashboard] Auto-reinitialized train", trainNo);
-              }
-            } catch (err) {
-              console.warn("[TrainDashboard] Auto-reinitialize failed (non-blocking):", err);
-            }
+            console.log("[TrainDashboard] Train already initialized — skipping config");
+            setConfigured(true);
+            setLoadingConfig(false);
+            return;
           }
         } catch {
-          console.warn("[TrainDashboard] Backend check failed (non-blocking)");
+          // Backend might be down — continue to auto-reinit
         }
 
-        // ALWAYS proceed to TrainApp regardless of above results
+        // Step 2: Try auto-reinitialize from saved MongoDB config
+        try {
+          const configResult = await getTrainConfig(trainNo);
+          if (configResult.success && configResult.data) {
+            const cfg = configResult.data;
+            console.log("[TrainDashboard] Found saved config, auto-initializing...");
+            setTrainConfig(cfg);
+            await setupConfig({
+              stationsDb: cfg.stationsDb,
+              stationsCollection: cfg.stationsCollection,
+              passengersDb: cfg.passengersDb,
+              passengersCollection: cfg.passengersCollection,
+              trainNo: cfg.trainNo || trainNo,
+              trainName: cfg.trainName || "",
+              journeyDate: cfg.journeyDate || new Date().toISOString().split("T")[0],
+            });
+            await initializeTrain(
+              cfg.trainNo || trainNo,
+              cfg.journeyDate || new Date().toISOString().split("T")[0],
+            );
+            console.log("[TrainDashboard] Auto-initialized from saved config");
+          }
+        } catch (err) {
+          console.warn("[TrainDashboard] Auto-reinitialize failed (non-blocking):", err);
+        }
+
+        // ALWAYS proceed to TrainApp on refresh
         setConfigured(true);
         setLoadingConfig(false);
         return;

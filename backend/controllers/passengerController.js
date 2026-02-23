@@ -20,7 +20,7 @@ class PassengerController {
         });
       }
 
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
       const passengerDetails = await PassengerService.getPassengerDetails(pnr, trainState);
 
       res.json({
@@ -95,7 +95,7 @@ class PassengerController {
       }
 
       const passengersCollection = db.getPassengersCollection();
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
 
       if (!trainState) {
         return res.status(400).json({
@@ -261,7 +261,7 @@ class PassengerController {
           });
         }
       }
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
       if (!trainState) {
         return res
           .status(400)
@@ -479,7 +479,7 @@ class PassengerController {
    */
   getAllPassengers(req, res) {
     try {
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
       if (!trainState) {
         return res.status(400).json({
           success: false,
@@ -511,7 +511,7 @@ class PassengerController {
   getPassengersByStatus(req, res) {
     try {
       const { status } = req.params;
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
 
       if (!trainState) {
         return res.status(400).json({
@@ -578,7 +578,7 @@ class PassengerController {
    */
   getPassengerCounts(req, res) {
     try {
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
 
       if (!trainState) {
         return res.status(400).json({
@@ -656,7 +656,7 @@ class PassengerController {
         });
       }
 
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
 
       if (!trainState) {
         return res.status(400).json({
@@ -766,7 +766,7 @@ class PassengerController {
         });
       }
 
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
       if (!trainState) {
         return res.status(400).json({
           success: false,
@@ -853,7 +853,7 @@ class PassengerController {
       //   });
       // }
 
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
 
       if (!trainState) {
         return res.status(400).json({
@@ -1150,7 +1150,7 @@ class PassengerController {
 
       // Fallback: Try in-memory state if DB lookup fails
       if (!passenger) {
-        const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+        const trainState = trainController.getGlobalTrainState();
         if (trainState) {
           const memPassenger = trainState.findPassengerByPNR(pnr);
           if (memPassenger) {
@@ -1185,7 +1185,7 @@ class PassengerController {
       }
 
       // Get train state to access route
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
       if (!trainState || !trainState.stations || trainState.stations.length === 0) {
         return res.status(400).json({
           success: false,
@@ -1321,7 +1321,7 @@ class PassengerController {
       }
 
       // Get train state to validate new station
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
       if (!trainState || !trainState.stations || trainState.stations.length === 0) {
         return res.status(400).json({
           success: false,
@@ -1482,7 +1482,7 @@ class PassengerController {
       }
 
       // Update in-memory state if train is initialized
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
       if (trainState) {
         const memPassenger = trainState.findPassengerByPNR(pnr);
         if (memPassenger) {
@@ -1609,7 +1609,7 @@ class PassengerController {
       }
 
       // Use existing approval service (same logic as TTE approval)
-      const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+      const trainState = trainController.getGlobalTrainState();
       if (!trainState) {
         return res.status(400).json({
           success: false,
