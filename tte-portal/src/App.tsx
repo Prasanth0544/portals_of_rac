@@ -254,7 +254,7 @@ function App(): React.ReactElement {
                                 🚂 Train {localStorage.getItem('trainAssigned')}
                             </Typography>
                         )}
-                        <Typography variant="body2" sx={{ mr: 2, opacity: 0.9 }}>
+                        <Typography variant="body2" sx={{ mr: 2, opacity: 0.9, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                             Welcome, {user?.username || 'TTE'}
                         </Typography>
                         {/* 3-dot menu */}

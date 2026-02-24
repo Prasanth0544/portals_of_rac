@@ -88,18 +88,22 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
     }
 
     const checkExistingState = async () => {
-      // From landing page → show config so user can pick journey date
-      // fromLanding is cleared from history.state on mount (see useEffect above)
-      // so it won't survive browser refresh
-      if (fromLanding) {
-        console.log("[TrainDashboard] Came from landing page — showing config");
-        if (trainNo) {
-          fetchTrainConfig(trainNo);
-        }
+      // Determine if we should show config page:
+      // 1. Coming from landing page (fromLanding state)
+      // 2. OR localStorage says we were on config page before refresh
+      const pageStateKey = `trainPage_${trainNo}`;
+      const savedPage = localStorage.getItem(pageStateKey);
+      const shouldShowConfig = fromLanding || savedPage === 'config';
+
+      if (shouldShowConfig && trainNo) {
+        // Save that we're on config page (survives refresh)
+        localStorage.setItem(pageStateKey, 'config');
+        console.log("[TrainDashboard] Showing config page for train", trainNo);
+        fetchTrainConfig(trainNo);
         return;
       }
 
-      // Browser refresh — auto-initialize and go straight to home
+      // Browser refresh on home page — auto-initialize and go straight to home
       if (trainNo) {
         console.log("[TrainDashboard] Browser refresh for train", trainNo, "— auto-initializing");
 
@@ -264,6 +268,8 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
         `Train ${targetTrainNo} configured successfully!`,
       );
       await new Promise((resolve) => setTimeout(resolve, 400));
+      // Clear config page state — user is now on home, refresh should stay on home
+      localStorage.removeItem(`trainPage_${trainNo}`);
       setConfigured(true);
     } catch (error: any) {
       setConfigError(error.message || "Configuration failed");
@@ -307,7 +313,7 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
       <div className="app-header">
         <div className="header-content">
           <h1>🚂 RAC Reallocation System</h1>
-          <h2>Train Setup</h2>
+
         </div>
       </div>
 

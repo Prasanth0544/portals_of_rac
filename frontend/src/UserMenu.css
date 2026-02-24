@@ -2,15 +2,16 @@
 .user-menu {
     position: relative;
     margin-left: 8px;
+    flex-shrink: 0;
 }
 
 .menu-button {
     background: transparent;
     border: none;
     color: white;
-    font-size: 20px;
-    width: 36px;
-    height: 36px;
+    font-size: clamp(16px, 1.5vw + 8px, 22px);
+    width: clamp(28px, 3vw, 36px);
+    height: clamp(28px, 3vw, 36px);
     border-radius: 50%;
     cursor: pointer;
     transition: background 0.2s ease;

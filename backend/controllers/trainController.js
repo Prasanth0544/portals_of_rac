@@ -19,13 +19,15 @@ setTimeout(() => {
 /**
  * Update train status in MongoDB (Trains_Details collection)
  * so the landing page can show real-time status and current station.
+ * → Field names from: backend/config/fields.js (SINGLE SOURCE OF TRUTH)
  */
 async function updateTrainStatus(trainNo, status, extraFields = {}) {
   try {
+    const { findTrainByNo } = require('../config/fields');
     const racDb = await db.getDb();
     const trainsCollection = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
     await trainsCollection.updateOne(
-      { $or: [{ trainNo: trainNo }, { Train_No: parseInt(trainNo, 10) }] },
+      findTrainByNo(trainNo),
       { $set: { status, ...extraFields, updatedAt: new Date() } }
     );
     console.log(`   📝 Train ${trainNo} status → ${status}`);
@@ -274,17 +276,13 @@ class TrainController {
           const trainsCol = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
 
           // Find the specific train or just the first one
-          const query = trainNo ? {
-            $or: [
-              { Train_No: trainNo }, { Train_No: String(trainNo) }, { Train_No: Number(trainNo) }
-            ]
-          } : {};
+          const { TRAIN_FIELDS, findTrainByNo, getStationCollectionName } = require('../config/fields');
+          const query = trainNo ? findTrainByNo(trainNo) : {};
           const trainDoc = await trainsCol.findOne(query);
 
           if (trainDoc) {
-            // Get station collection name (handle trailing spaces)
-            const stationKey = Object.keys(trainDoc).find(k => k.trim() === 'Station_Collection_Name');
-            const stationColName = stationKey ? trainDoc[stationKey]?.trim() : null;
+            // Get station collection name (handles trailing spaces via centralized helper)
+            const stationColName = getStationCollectionName(trainDoc);
 
             let stations = [];
             if (stationColName) {
@@ -313,8 +311,8 @@ class TrainController {
               data: {
                 initialized: false,
                 journeyStarted: false,
-                trainNo: trainDoc.Train_No,
-                trainName: trainDoc.Train_Name,
+                trainNo: trainDoc[TRAIN_FIELDS.TRAIN_NO],
+                trainName: trainDoc[TRAIN_FIELDS.TRAIN_NAME],
                 stations: stations,
                 coaches: [],
                 racQueue: [],
@@ -591,36 +589,15 @@ class TrainController {
 
   /**
    * List all trains
+   * → Field names from: backend/config/fields.js (SINGLE SOURCE OF TRUTH)
    */
   async list(req, res) {
     try {
+      const { TRAIN_FIELDS, toTrainConfig } = require('../config/fields');
       const col = db.getTrainDetailsCollection();
-      // Fetch full documents to handle unpredictable field names (e.g. trailing spaces)
-      const docs = await col.find({}).sort({ Train_No: 1 }).toArray();
+      const docs = await col.find({}).sort({ [TRAIN_FIELDS.TRAIN_NO]: 1 }).toArray();
 
-      const items = docs.map(d => {
-        // Robustly find the station collection name key (ignoring spaces)
-        const stationKey = Object.keys(d).find(k => k.trim() === 'Station_Collection_Name');
-        const stationCollectionName = stationKey ? d[stationKey] : null;
-
-        // Calculate total coaches from sleeper + 3AC counts
-        const sleeperCount = d.Sleeper_Coaches_Count || 0;
-        const threeAcCount = d.Three_TierAC_Coaches_Count || 0;
-
-        return {
-          trainNo: d.Train_No,
-          trainName: d.Train_Name,
-          status: d.status || 'NOT_INIT',
-          currentStation: d.currentStation || null,
-          totalStations: d.totalStations || null,
-          currentStationIdx: d.currentStationIdx || null,
-          totalCoaches: sleeperCount + threeAcCount,
-          sleeperCoachesCount: sleeperCount,
-          threeTierACCoachesCount: threeAcCount,
-          stationsCollection: stationCollectionName,
-          passengersCollection: d.Passengers_Collection_Name || null
-        };
-      });
+      const items = docs.map(d => toTrainConfig(d));
       res.json({ success: true, data: items });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
@@ -696,11 +673,13 @@ class TrainController {
    * Get admin train overview — TTEs, passenger counts, notification stats per train
    * GET /api/admin/train-overview?trainNo=17225  (specific train)
    * GET /api/admin/train-overview                (all trains)
+   * → Field names from: backend/config/fields.js (SINGLE SOURCE OF TRUTH)
    */
   async getTrainOverview(req, res) {
     try {
       const db = require('../config/db');
       const { COLLECTIONS, DBS } = require('../config/collections');
+      const { TRAIN_FIELDS, findTrainByNo } = require('../config/fields');
       const PushSubscriptionService = require('../services/PushSubscriptionService');
 
       const racDb = await db.getDb();
@@ -708,7 +687,7 @@ class TrainController {
 
       // 1. Get all trains from Trains_Details
       const trainsCollection = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
-      const trainFilter = requestedTrainNo ? { Train_Number: { $in: [requestedTrainNo, Number(requestedTrainNo)] } } : {};
+      const trainFilter = requestedTrainNo ? findTrainByNo(requestedTrainNo) : {};
       const trains = await trainsCollection.find(trainFilter).toArray();
 
       if (trains.length === 0) {
@@ -746,8 +725,8 @@ class TrainController {
       const trainOverviews = [];
 
       for (const train of trains) {
-        const trainNo = String(train.Train_Number);
-        const collectionName = train.Passengers_Collection_Name;
+        const trainNo = String(train[TRAIN_FIELDS.TRAIN_NO]);
+        const collectionName = train[TRAIN_FIELDS.PASSENGERS_COLLECTION_NAME];
 
         // TTEs for this train
         const trainTTEs = allTTEs.filter(t => String(t.trainAssigned) === trainNo);

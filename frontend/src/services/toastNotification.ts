@@ -45,6 +45,8 @@ const TOAST_ICONS: Record<ToastType, string> = {
     'no-show': '❌'
 };
 
+let _toastCounter = 0;
+
 /**
  * Toast notification object structure
  */
@@ -55,7 +57,7 @@ export const createToast = (
     title: string | null = null
 ): Toast => {
     const toast: Toast = {
-        id: `toast-${Date.now()}-${Math.random()}`,
+        id: `toast-${++_toastCounter}`,
         message,
         title,
         type,

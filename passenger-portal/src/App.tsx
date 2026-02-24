@@ -93,7 +93,7 @@ function Navigation({ user, onLogout, upgradeCount }: NavigationProps): React.Re
         <AppBar position="static" elevation={2}>
             <Toolbar>
                 <TrainIcon sx={{ mr: 2 }} />
-                <Typography variant="h6" component="div" sx={{ mr: 4 }}>
+                <Typography variant="h6" component="div" sx={{ mr: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     Passenger Portal
                 </Typography>
 
@@ -101,6 +101,9 @@ function Navigation({ user, onLogout, upgradeCount }: NavigationProps): React.Re
                     value={getTabValue()}
                     textColor="inherit"
                     indicatorColor="secondary"
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
                     sx={{
                         flexGrow: 1,
                         '& .MuiTab-root': {

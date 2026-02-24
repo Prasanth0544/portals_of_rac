@@ -7,15 +7,12 @@ import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 
 function App(): React.ReactElement {
-    const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(false);
+    // Read token synchronously so the correct route renders immediately on refresh
+    // (useEffect would cause a flash of the login page, losing the URL path)
+    const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(
+        () => !!localStorage.getItem('token')
+    );
     const [showSignUp, setShowSignUp] = React.useState<boolean>(false);
-
-    React.useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            setIsAuthenticated(true);
-        }
-    }, []);
 
     // If not authenticated, show login/signup
     if (!isAuthenticated) {

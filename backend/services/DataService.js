@@ -200,10 +200,12 @@ class DataService {
         queryDate = `${day}-${month}-${year}`;
       }
 
+      const { PASSENGER_FIELDS } = require('../config/fields');
+      // ⚠️ Passengers use Train_Number (NOT Train_No which is for Trains_Details)
       const passengers = await passengersCollection
         .find({
-          Train_Number: trainNo,
-          Journey_Date: queryDate,
+          [PASSENGER_FIELDS.TRAIN_NUMBER]: trainNo,
+          [PASSENGER_FIELDS.JOURNEY_DATE]: queryDate,
         })
         .toArray();
 
@@ -454,10 +456,12 @@ class DataService {
     };
 
     // Try Train_Details collection first
+    // → Field names from: backend/config/fields.js (SINGLE SOURCE OF TRUTH)
     try {
+      const { TRAIN_FIELDS, findTrainByNo } = require('../config/fields');
       const detailsCol = db.getTrainDetailsCollection();
-      const doc = await detailsCol.findOne({ Train_No: parseInt(trainNo) });
-      if (doc && doc.Train_Name) return doc.Train_Name;
+      const doc = await detailsCol.findOne(findTrainByNo(trainNo));
+      if (doc && doc[TRAIN_FIELDS.TRAIN_NAME]) return doc[TRAIN_FIELDS.TRAIN_NAME];
     } catch (error) {
       console.warn('Could not fetch train name from Train_Details collection:', error.message);
     }
@@ -480,11 +484,13 @@ class DataService {
 
   /**
    * Get train details (name and coach counts) from Train_Details collection
+   * → Field names from: backend/config/fields.js (SINGLE SOURCE OF TRUTH)
    */
   async getTrainDetails(trainNo) {
     try {
+      const { findTrainByNo } = require('../config/fields');
       const col = db.getTrainDetailsCollection();
-      const doc = await col.findOne({ Train_No: parseInt(trainNo) });
+      const doc = await col.findOne(findTrainByNo(trainNo));
       if (!doc) return null;
       return doc;
     } catch (error) {

@@ -35,11 +35,14 @@
    ============================================================ */
 
 .landing-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    flex-direction: row !important;
+    gap: 8px;
     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-    padding: 15px 20px;
+    padding: clamp(8px, 0.8vw + 2px, 15px) clamp(10px, 1vw + 4px, 20px);
     border-radius: 8px;
     margin-bottom: 15px;
     box-shadow: 0 4px 6px rgba(44, 62, 80, 0.2);
@@ -48,9 +51,14 @@
 
 .landing-header h1 {
     color: white;
-    font-size: 1.4rem;
+    font-size: clamp(0.7rem, 0.4rem + 1vw, 1.2rem) !important;
     font-weight: 600;
     margin: 0;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
 }
 
 /* three-dot menu button inside dark header */
@@ -1079,5 +1087,119 @@
     .overview-stat {
         font-size: 0.7rem;
         padding: 2px 7px;
+    }
+}
+
+/* ============================================================
+   RESPONSIVE: Train cards — stacked card layout at narrow viewports
+   ============================================================ */
+@media (max-width: 900px) {
+
+    /* Hide the table header row on narrow screens */
+    .trains-table-header {
+        display: none;
+    }
+
+    /* Switch from 6-column grid to stacked card layout */
+    .train-card {
+        display: flex !important;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 12px;
+        min-height: auto;
+    }
+
+    /* Icon + number: inline at the start */
+    .train-col-icon {
+        flex-direction: row;
+        gap: 6px;
+        padding: 0;
+    }
+
+    /* Name: takes remaining space on first row */
+    .train-col-name {
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 0;
+    }
+
+    /* Open button: right-aligned on first row */
+    .train-col-action {
+        padding: 0;
+        margin-left: auto;
+    }
+
+    .open-train-btn {
+        padding: 5px 12px !important;
+        font-size: 11px !important;
+        min-height: auto !important;
+        max-height: none !important;
+    }
+
+    /* Coaches, status, station: second row */
+    .train-col-coaches,
+    .train-col-status,
+    .train-col-station {
+        padding: 2px 0;
+    }
+
+    .train-col-coaches {
+        flex: 0 0 auto;
+    }
+
+    .train-col-status {
+        flex: 0 0 auto;
+    }
+
+    .train-col-station {
+        flex: 1 1 auto;
+        flex-direction: row;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .station-label {
+        display: none;
+    }
+
+    /* Fluid action buttons */
+    .action-buttons {
+        gap: 8px;
+    }
+
+    .action-btn {
+        padding: clamp(6px, 1vw, 10px) clamp(12px, 2vw, 22px) !important;
+        font-size: clamp(11px, 1.2vw + 4px, 13px) !important;
+        min-height: auto !important;
+        max-height: none !important;
+    }
+
+    /* Fluid search bar */
+    .train-search-field {
+        width: clamp(140px, 30vw, 260px) !important;
+        font-size: clamp(11px, 1.2vw + 4px, 13px);
+    }
+
+    /* User menu in landing header — keep inline */
+    .landing-header .user-menu {
+        flex-shrink: 0;
+    }
+}
+
+@media (max-width: 480px) {
+
+    /* Search takes full width */
+    .trains-section-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .train-search-row {
+        width: 100%;
+    }
+
+    .train-search-field {
+        width: 100% !important;
     }
 }

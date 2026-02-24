@@ -178,12 +178,6 @@ router.post('/tte/undo',
 
 // ========== TRAIN ROUTES ==========
 router.get('/trains', (req, res) => trainController.list(req, res));
-router.get('/trains/:trainNo/config', (req, res) => configController.getTrainConfig(req, res));
-router.put('/trains/:trainNo/config', (req, res) => configController.updateTrainConfig(req, res));
-router.post('/trains/register',
-  validationMiddleware.sanitizeBody,
-  (req, res) => configController.registerTrain(req, res)
-);
 // Dynamic configuration setup (from frontend)
 router.post('/config/setup',
   validationMiddleware.sanitizeBody,
@@ -226,6 +220,7 @@ router.post('/train/start-journey',
 );
 
 router.get('/train/state',
+  validationMiddleware.checkTrainInitialized,
   (req, res) => trainController.getTrainState(req, res)
 );
 
@@ -250,14 +245,71 @@ router.get('/train/allocation-errors',
   (req, res) => trainController.getAllocationErrors(req, res)
 );
 
-// Engine status routes (for admin dashboard polling)
-router.get('/train/engine-status', (req, res) => trainController.getEngineStatus(req, res));
-router.get('/train/engines', (req, res) => trainController.getEngineStatus(req, res));
-
 // Admin train overview — TTEs, passenger counts, notification stats per train
-router.get('/admin/train-overview', (req, res) => trainController.getTrainOverview(req, res));
+router.get('/admin/train-overview',
+  (req, res) => trainController.getTrainOverview(req, res)
+);
 
-// ========== REALLOCATION ROUTES ==========
+// Engine status
+router.get('/train/engine-status',
+  (req, res) => trainController.getEngineStatus(req, res)
+);
+
+// Get train config from Trains_Details collection
+// → Field names from: backend/config/fields.js (SINGLE SOURCE OF TRUTH)
+router.get('/trains/:trainNo/config', async (req, res) => {
+  try {
+    const db = require('../config/db');
+    const { findTrainByNo, toTrainConfig } = require('../config/fields');
+    const col = db.getTrainDetailsCollection();
+
+    const train = await col.findOne(findTrainByNo(req.params.trainNo));
+
+    if (!train) {
+      return res.status(404).json({ success: false, message: `Train ${req.params.trainNo} not found` });
+    }
+
+    res.json({ success: true, data: toTrainConfig(train) });
+  } catch (error) {
+    console.error('Error getting train config:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update train config in Trains_Details collection
+// → Field names from: backend/config/fields.js (SINGLE SOURCE OF TRUTH)
+router.put('/trains/:trainNo/config',
+  validationMiddleware.sanitizeBody,
+  async (req, res) => {
+    try {
+      const db = require('../config/db');
+      const { TRAIN_FIELDS, findTrainByNo } = require('../config/fields');
+      const col = db.getTrainDetailsCollection();
+
+      const updateFields = {};
+      if (req.body.trainName) updateFields[TRAIN_FIELDS.TRAIN_NAME] = req.body.trainName;
+      if (req.body.stationsCollection) updateFields[TRAIN_FIELDS.STATION_COLLECTION_NAME] = req.body.stationsCollection;
+      if (req.body.passengersCollection) updateFields[TRAIN_FIELDS.PASSENGERS_COLLECTION_NAME] = req.body.passengersCollection;
+      if (req.body.journeyDate) updateFields[TRAIN_FIELDS.JOURNEY_DATE] = req.body.journeyDate;
+
+      const result = await col.updateOne(
+        findTrainByNo(req.params.trainNo),
+        { $set: updateFields }
+      );
+
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ success: false, message: `Train ${req.params.trainNo} not found` });
+      }
+
+      res.json({ success: true, message: 'Train config updated' });
+    } catch (error) {
+      console.error('Error updating train config:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
+
 router.post('/passenger/no-show',
   validationMiddleware.sanitizeBody,
   validationMiddleware.validatePNR,
@@ -586,8 +638,10 @@ router.get('/visualization/vacancy-matrix',
 );
 
 // ========== NEW PASSENGER PORTAL ROUTES ==========
-// Public PNR lookup (works even before journey starts)
+// Public PNR lookup (requires journey to have started)
 router.get('/passenger/pnr/:pnr',
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.getPNRDetails(req, res)
 );
 

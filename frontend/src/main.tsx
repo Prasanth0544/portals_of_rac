@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import './styles/responsive-global.css';
+import './styles/viewport-scale.css';
 import App from './App';
 
 // Error Boundary to catch runtime crashes

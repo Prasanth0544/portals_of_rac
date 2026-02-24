@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import './styles/responsive-global.css';
+import './styles/viewport-scale.css';
 import App from './App';
 
 // Register service worker for TTE push notifications

@@ -437,17 +437,9 @@ const LandingPage: React.FC = () => {
                           <span className="overview-stat" title="Total passengers">
                             🎫 {overview[train.trainNo]?.passengers?.total ?? 0} passengers
                           </span>
-                          <span className="overview-stat" title="Passengers onboard">
-                            🚶 {overview[train.trainNo]?.passengers?.onboard ?? 0} onboard
-                          </span>
-                          <span className="overview-stat" title="Push notifications enabled">
-                            🔔 {overview[train.trainNo]?.passengers?.notifications?.pushEnabled ?? 0} push
-                          </span>
-                          <span className="overview-stat" title="Email notifications enabled">
-                            📧 {overview[train.trainNo]?.passengers?.notifications?.emailEnabled ?? 0} email
-                          </span>
                         </div>
-                      )}
+                      )
+                      }
                     </div>
                   );
                 })}
@@ -458,214 +450,218 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Add Train Modal */}
-      {showAddTrainModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => setShowAddTrainModal(false)}
-        >
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-back-btn" onClick={() => setShowAddTrainModal(false)} title="Close">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h2>Add New Train</h2>
-            <form onSubmit={handleAddTrain}>
-              <div className="form-group">
-                <label>Train Number</label>
-                <input
-                  type="text"
-                  value={newTrainNo}
-                  onChange={(e) => setNewTrainNo(e.target.value)}
-                  placeholder="e.g., 17225"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Train Name</label>
-                <input
-                  type="text"
-                  value={newTrainName}
-                  onChange={(e) => setNewTrainName(e.target.value)}
-                  placeholder="e.g., Amaravathi Express"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Total Coaches</label>
-                <input
-                  type="number"
-                  value={totalCoaches}
-                  onChange={(e) => setTotalCoaches(e.target.value)}
-                  placeholder="e.g., 16"
-                  min="1"
-                />
-              </div>
-              <div className="form-group">
-                <label>Sleeper Coaches</label>
-                <input
-                  type="number"
-                  value={sleeperCoachesCount}
-                  onChange={(e) => setSleeperCoachesCount(e.target.value)}
-                  placeholder="e.g., 9"
-                  min="0"
-                />
-              </div>
-              <div className="form-group">
-                <label>3-Tier AC Coaches</label>
-                <input
-                  type="number"
-                  value={threeTierACCoachesCount}
-                  onChange={(e) => setThreeTierACCoachesCount(e.target.value)}
-                  placeholder="e.g., 2"
-                  min="0"
-                />
-              </div>
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  onClick={() => setShowAddTrainModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-submit"
-                  disabled={addingTrain}
-                >
-                  {addingTrain ? "Adding..." : "Add Train"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Sign Up TTE Modal */}
-      {showSignUpTTEModal && (
-        <div className="modal-overlay" onClick={handleCloseTTEModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-back-btn" onClick={handleCloseTTEModal} title="Close">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h2>Sign Up TTE</h2>
-            {createdTTE ? (
-              <div className="tte-success">
-                <div className="success-icon">✅</div>
-                <h3>TTE Created Successfully!</h3>
-                <div className="tte-details">
-                  <p>
-                    <strong>TTE ID:</strong> {createdTTE.employeeId}
-                  </p>
-                  <p>
-                    <strong>Name:</strong> {createdTTE.name}
-                  </p>
-                  <p>
-                    <strong>Train:</strong> {createdTTE.trainAssigned}
-                  </p>
-                  <p>
-                    <strong>Password:</strong> {createdTTE.defaultPassword}
-                  </p>
-                </div>
-                <p className="note">
-                  ⚠️ Please share these credentials with the TTE
-                </p>
-                <button className="btn-submit" onClick={handleCloseTTEModal}>
-                  Done
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSignUpTTE}>
+      {
+        showAddTrainModal && (
+          <div
+            className="modal-overlay"
+            onClick={() => setShowAddTrainModal(false)}
+          >
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-back-btn" onClick={() => setShowAddTrainModal(false)} title="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h2>Add New Train</h2>
+              <form onSubmit={handleAddTrain}>
                 <div className="form-group">
-                  <label>Select Train</label>
-                  <select
-                    value={selectedTrain}
-                    onChange={(e) => setSelectedTrain(e.target.value)}
-                    required
-                  >
-                    <option value="">-- Choose Train --</option>
-                    {trains.map((train) => (
-                      <option key={train.trainNo} value={train.trainNo}>
-                        {train.trainNo} - {train.trainName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>TTE Name</label>
+                  <label>Train Number</label>
                   <input
                     type="text"
-                    value={tteName}
-                    onChange={(e) => setTteName(e.target.value)}
-                    placeholder="e.g., Ravi Kumar"
+                    value={newTrainNo}
+                    onChange={(e) => setNewTrainNo(e.target.value)}
+                    placeholder="e.g., 17225"
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label>Employee ID</label>
+                  <label>Train Name</label>
                   <input
                     type="text"
-                    value={tteEmployeeId}
-                    onChange={(e) => setTteEmployeeId(e.target.value)}
-                    placeholder="e.g., TTE_001"
+                    value={newTrainName}
+                    onChange={(e) => setNewTrainName(e.target.value)}
+                    placeholder="e.g., Amaravathi Express"
                     required
                   />
                 </div>
+
                 <div className="form-group">
-                  <label>Password</label>
+                  <label>Total Coaches</label>
                   <input
-                    type="password"
-                    value={ttePassword}
-                    onChange={(e) => setTtePassword(e.target.value)}
-                    placeholder="Enter password for TTE"
-                    required
-                    minLength={6}
+                    type="number"
+                    value={totalCoaches}
+                    onChange={(e) => setTotalCoaches(e.target.value)}
+                    placeholder="e.g., 16"
+                    min="1"
                   />
                 </div>
                 <div className="form-group">
-                  <label>Phone <span style={{ color: '#999', fontWeight: 'normal' }}>(optional)</span></label>
+                  <label>Sleeper Coaches</label>
                   <input
-                    type="tel"
-                    value={ttePhone}
-                    onChange={(e) => setTtePhone(e.target.value)}
-                    placeholder="e.g., 9876543210"
+                    type="number"
+                    value={sleeperCoachesCount}
+                    onChange={(e) => setSleeperCoachesCount(e.target.value)}
+                    placeholder="e.g., 9"
+                    min="0"
                   />
                 </div>
                 <div className="form-group">
-                  <label>Email <span style={{ color: '#999', fontWeight: 'normal' }}>(optional)</span></label>
+                  <label>3-Tier AC Coaches</label>
                   <input
-                    type="email"
-                    value={tteEmail}
-                    onChange={(e) => setTteEmail(e.target.value)}
-                    placeholder="e.g., tte@railway.com"
+                    type="number"
+                    value={threeTierACCoachesCount}
+                    onChange={(e) => setThreeTierACCoachesCount(e.target.value)}
+                    placeholder="e.g., 2"
+                    min="0"
                   />
                 </div>
                 <div className="modal-actions">
                   <button
                     type="button"
                     className="btn-cancel"
-                    onClick={handleCloseTTEModal}
+                    onClick={() => setShowAddTrainModal(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     className="btn-submit"
-                    disabled={signingUpTTE}
+                    disabled={addingTrain}
                   >
-                    {signingUpTTE ? "Creating..." : "Sign Up TTE"}
+                    {addingTrain ? "Adding..." : "Add Train"}
                   </button>
                 </div>
               </form>
-            )}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+
+      {/* Sign Up TTE Modal */}
+      {
+        showSignUpTTEModal && (
+          <div className="modal-overlay" onClick={handleCloseTTEModal}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-back-btn" onClick={handleCloseTTEModal} title="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h2>Sign Up TTE</h2>
+              {createdTTE ? (
+                <div className="tte-success">
+                  <div className="success-icon">✅</div>
+                  <h3>TTE Created Successfully!</h3>
+                  <div className="tte-details">
+                    <p>
+                      <strong>TTE ID:</strong> {createdTTE.employeeId}
+                    </p>
+                    <p>
+                      <strong>Name:</strong> {createdTTE.name}
+                    </p>
+                    <p>
+                      <strong>Train:</strong> {createdTTE.trainAssigned}
+                    </p>
+                    <p>
+                      <strong>Password:</strong> {createdTTE.defaultPassword}
+                    </p>
+                  </div>
+                  <p className="note">
+                    ⚠️ Please share these credentials with the TTE
+                  </p>
+                  <button className="btn-submit" onClick={handleCloseTTEModal}>
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSignUpTTE}>
+                  <div className="form-group">
+                    <label>Select Train</label>
+                    <select
+                      value={selectedTrain}
+                      onChange={(e) => setSelectedTrain(e.target.value)}
+                      required
+                    >
+                      <option value="">-- Choose Train --</option>
+                      {trains.map((train) => (
+                        <option key={train.trainNo} value={train.trainNo}>
+                          {train.trainNo} - {train.trainName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>TTE Name</label>
+                    <input
+                      type="text"
+                      value={tteName}
+                      onChange={(e) => setTteName(e.target.value)}
+                      placeholder="e.g., Ravi Kumar"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Employee ID</label>
+                    <input
+                      type="text"
+                      value={tteEmployeeId}
+                      onChange={(e) => setTteEmployeeId(e.target.value)}
+                      placeholder="e.g., TTE_001"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Password</label>
+                    <input
+                      type="password"
+                      value={ttePassword}
+                      onChange={(e) => setTtePassword(e.target.value)}
+                      placeholder="Enter password for TTE"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone <span style={{ color: '#999', fontWeight: 'normal' }}>(optional)</span></label>
+                    <input
+                      type="tel"
+                      value={ttePhone}
+                      onChange={(e) => setTtePhone(e.target.value)}
+                      placeholder="e.g., 9876543210"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email <span style={{ color: '#999', fontWeight: 'normal' }}>(optional)</span></label>
+                    <input
+                      type="email"
+                      value={tteEmail}
+                      onChange={(e) => setTteEmail(e.target.value)}
+                      placeholder="e.g., tte@railway.com"
+                    />
+                  </div>
+                  <div className="modal-actions">
+                    <button
+                      type="button"
+                      className="btn-cancel"
+                      onClick={handleCloseTTEModal}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-submit"
+                      disabled={signingUpTTE}
+                    >
+                      {signingUpTTE ? "Creating..." : "Sign Up TTE"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 };
 

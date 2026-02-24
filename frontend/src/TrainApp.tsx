@@ -919,7 +919,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
         {currentPage === "phase1" && !journeyStarted && (
           <div className="journey-not-started-container">
             <div className="journey-not-started-card">
-              <div className="notice-icon">ðŸš‚</div>
+              <div className="notice-icon">🚂</div>
               <h2>Journey Not Started</h2>
               <p>
                 The train journey hasn't begun yet. Please start the journey
@@ -946,7 +946,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
           !journeyStarted && (
             <div className="journey-not-started-container">
               <div className="journey-not-started-card">
-                <div className="notice-icon">ðŸš‚</div>
+                <div className="notice-icon">🚂</div>
                 <h2>Journey Not Started</h2>
                 <p>
                   The train journey hasn't begun yet. Please start the journey
