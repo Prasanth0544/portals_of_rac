@@ -1,0 +1,43 @@
+/* ===== Responsive Train Dashboard ===== */
+
+.train-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .train-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-header h1 {
+    font-size: 1.4rem;
+  }
+
+  .app-header h2 {
+    font-size: 1rem;
+  }
+
+  .combined-section-header {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-apply {
+    width: 100%;
+  }
+}

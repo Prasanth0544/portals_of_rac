@@ -142,3 +142,43 @@ code {
   padding: 0 50px;
   /* Space for back button on left */
 }
+/* ===== Responsive Layout System ===== */
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.flex-row {
+  display: flex;
+  gap: 20px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+
+  .flex-row {
+    flex-direction: column !important;
+  }
+
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+}
