@@ -32,6 +32,13 @@ router.post('/auth/passenger/login',
   (req, res) => authController.passengerLogin(req, res)
 );
 
+// Passenger Registration
+router.post('/auth/passenger/register',
+  authLimiter,
+  validationMiddleware.sanitizeBody,
+  (req, res) => authController.passengerRegister(req, res)
+);
+
 // Verify Token
 router.get('/auth/verify',
   authMiddleware,
@@ -220,7 +227,6 @@ router.post('/train/start-journey',
 );
 
 router.get('/train/state',
-  validationMiddleware.checkTrainInitialized,
   (req, res) => trainController.getTrainState(req, res)
 );
 
@@ -640,8 +646,6 @@ router.get('/visualization/vacancy-matrix',
 // ========== NEW PASSENGER PORTAL ROUTES ==========
 // Public PNR lookup (requires journey to have started)
 router.get('/passenger/pnr/:pnr',
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.getPNRDetails(req, res)
 );
 

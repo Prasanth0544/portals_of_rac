@@ -21,6 +21,7 @@ const csrfProtection = (req, res, next) => {
     const publicPaths = [
         '/api/auth/staff/login',
         '/api/auth/passenger/login',
+        '/api/auth/passenger/register',
         '/api/auth/refresh',
         '/api/otp/send',
         '/api/otp/verify',

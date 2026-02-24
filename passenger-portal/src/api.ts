@@ -123,6 +123,7 @@ api.interceptors.response.use(
       const requestUrl: string = error.config?.url || "";
       const isAuthEndpoint =
         requestUrl.includes("/auth/passenger/login") ||
+        requestUrl.includes("/auth/passenger/register") ||
         requestUrl.includes("/auth/staff/login") ||
         requestUrl.includes("/auth/staff/register") ||
         requestUrl.includes("/auth/refresh");
@@ -210,11 +211,24 @@ export const passengerAPI = {
   },
 
   // Passenger login
-  login: async (irctcId: string, password: string): Promise<ApiResponse> => {
-    const response = await api.post("/auth/passenger/login", {
-      irctcId,
-      password,
-    });
+  login: async (loginId: string, password: string, loginType: 'irctcId' | 'email' = 'irctcId'): Promise<ApiResponse> => {
+    const body = loginType === 'email'
+      ? { email: loginId, password }
+      : { irctcId: loginId, password };
+    const response = await api.post("/auth/passenger/login", body);
+    return response.data;
+  },
+
+  // Passenger registration
+  register: async (data: {
+    email: string;
+    irctcId: string;
+    name: string;
+    phone?: string;
+    password: string;
+    confirmPassword: string;
+  }): Promise<ApiResponse> => {
+    const response = await api.post("/auth/passenger/register", data);
     return response.data;
   },
 

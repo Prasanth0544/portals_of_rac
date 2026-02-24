@@ -12,6 +12,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import UpgradeIcon from '@mui/icons-material/TrendingUp';
 import LoginPage from './pages/LoginPage';
+import PassengerSignUpPage from './pages/PassengerSignUpPage';
 import DashboardPage from './pages/DashboardPage';
 import PNRSearchPage from './pages/PNRSearchPage';
 
@@ -188,6 +189,7 @@ function App(): React.ReactElement {
     const [authenticated, setAuthenticated] = useState<boolean>(false);
     const [user, setUser] = useState<User | null>(null);
     const [upgradeCount, setUpgradeCount] = useState<number>(0);
+    const [showSignUp, setShowSignUp] = useState<boolean>(false);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -235,7 +237,11 @@ function App(): React.ReactElement {
             <Router>
                 <Routes>
                     <Route path="/ticket-view" element={<QRTicketViewPage />} />
-                    <Route path="*" element={<LoginPage />} />
+                    <Route path="*" element={
+                        showSignUp
+                            ? <PassengerSignUpPage onSwitchToLogin={() => setShowSignUp(false)} />
+                            : <LoginPage onSwitchToSignUp={() => setShowSignUp(true)} />
+                    } />
                 </Routes>
             </Router>
         );

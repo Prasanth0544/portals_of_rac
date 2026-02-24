@@ -580,6 +580,120 @@ class AuthController {
   }
 
   /**
+     * Passenger Registration
+     * POST /api/auth/passenger/register
+     * Body: { email, password, confirmPassword, name, phone, irctcId }
+     */
+  async passengerRegister(req, res) {
+    try {
+      const { email, password, confirmPassword, name, phone, irctcId } = req.body;
+
+      // Validate required fields
+      if (!email || !password || !confirmPassword || !name || !irctcId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email, IRCTC ID, name, password, and confirm password are required'
+        });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format'
+        });
+      }
+
+      // Validate IRCTC ID format (IR_XXXX)
+      if (!irctcId.toUpperCase().startsWith('IR_')) {
+        return res.status(400).json({
+          success: false,
+          message: 'IRCTC ID must start with IR_ (e.g., IR_0001)'
+        });
+      }
+
+      // Validate passwords match
+      if (password !== confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Passwords do not match'
+        });
+      }
+
+      // Validate password strength (min 8 chars, 1 uppercase, 1 lowercase, 1 number)
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+      if (!passwordRegex.test(password)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 number'
+        });
+      }
+
+      // Check for existing account
+      const racDb = await db.getDb();
+      const passengerAccountsCollection = racDb.collection(COLLECTIONS.PASSENGER_ACCOUNTS);
+
+      const existingEmail = await passengerAccountsCollection.findOne({ email: email.toLowerCase() });
+      if (existingEmail) {
+        return res.status(409).json({
+          success: false,
+          message: 'An account with this email already exists'
+        });
+      }
+
+      const existingIrctc = await passengerAccountsCollection.findOne({
+        IRCTC_ID: irctcId.toUpperCase()
+      });
+      if (existingIrctc) {
+        return res.status(409).json({
+          success: false,
+          message: 'An account with this IRCTC ID already exists'
+        });
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      // Create passenger account document
+      const newPassenger = {
+        email: email.toLowerCase(),
+        IRCTC_ID: irctcId.toUpperCase(),
+        passwordHash,
+        name: name.trim(),
+        role: 'PASSENGER',
+        phone: phone || null,
+        active: true,
+        createdAt: new Date(),
+        lastLogin: null,
+        emailVerified: false,
+        phoneVerified: false
+      };
+
+      await passengerAccountsCollection.insertOne(newPassenger);
+
+      console.log(`✅ New passenger registered: ${irctcId.toUpperCase()} (${email})`);
+
+      res.status(201).json({
+        success: true,
+        message: 'Account created successfully! You can now login.',
+        user: {
+          email: newPassenger.email,
+          IRCTC_ID: newPassenger.IRCTC_ID,
+          name: newPassenger.name,
+          role: 'PASSENGER'
+        }
+      });
+    } catch (error) {
+      console.error('Passenger registration error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error during registration'
+      });
+    }
+  }
+
+  /**
    * Verify Token (for protected routes)
    * GET /api/auth/verify
    * Headers: Authorization: Bearer <token>

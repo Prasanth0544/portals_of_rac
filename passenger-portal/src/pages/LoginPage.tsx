@@ -3,7 +3,11 @@ import React, { useState, FormEvent, ChangeEvent } from 'react';
 import { passengerAPI } from '../api';
 import '../styles/pages/LoginPage.css';
 
-function LoginPage(): React.ReactElement {
+interface LoginPageProps {
+    onSwitchToSignUp?: () => void;
+}
+
+function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
     const [loginType, setLoginType] = useState<number>(0); // 0 = IRCTC ID, 1 = Email
     const [irctcId, setIrctcId] = useState<string>('');
     const [email, setEmail] = useState<string>('');
@@ -19,7 +23,7 @@ function LoginPage(): React.ReactElement {
 
         try {
             const loginId = loginType === 0 ? irctcId : email;
-            const response = await passengerAPI.login(loginId, password);
+            const response = await passengerAPI.login(loginId, password, loginType === 0 ? 'irctcId' : 'email');
 
             if (response.success && response.token) {
                 localStorage.setItem('token', response.token);
@@ -128,6 +132,14 @@ function LoginPage(): React.ReactElement {
                 <div className="login-footer">
                     <p>Passenger Portal</p>
                     <small>Test Credentials: IR_0001 / Prasanth@123</small>
+                    {onSwitchToSignUp && (
+                        <p style={{ marginTop: '12px' }}>
+                            Don't have an account?{' '}
+                            <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToSignUp(); }} style={{ color: '#26a69a', fontWeight: 600 }}>
+                                Sign Up
+                            </a>
+                        </p>
+                    )}
                 </div>
             </div>
         </div>

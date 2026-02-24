@@ -40,6 +40,7 @@ class PassengerController {
 
   /**
    * Get passenger details by IRCTC_ID (for passenger portal)
+   * Works even without train initialization — falls back to searching all passenger collections
    */
   async getPassengerByIRCTC(req, res) {
     try {
@@ -52,10 +53,42 @@ class PassengerController {
         });
       }
 
-      // Find passenger in database by IRCTC_ID
-      const passenger = await db.getPassengersCollection().findOne({
-        IRCTC_ID: irctcId
-      });
+      let passenger = null;
+
+      // Strategy 1: Try configured collection first
+      try {
+        passenger = await db.getPassengersCollection().findOne({ IRCTC_ID: irctcId });
+      } catch (_) {
+        // Collection not configured — fall through to strategy 2
+      }
+
+      // Strategy 2: Search across all trains' passenger collections
+      if (!passenger) {
+        try {
+          const { COLLECTIONS } = require('../config/collections');
+          const racDb = await db.getDb();
+          const passengersDb = db.getPassengersDb();
+          const trainsCol = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
+          const trains = await trainsCol.find({}, {
+            projection: { Passengers_Collection_Name: 1, passengersCollection: 1 }
+          }).toArray();
+
+          const collectionNames = new Set();
+          for (const t of trains) {
+            const name = t.passengersCollection || t.Passengers_Collection_Name;
+            if (name) collectionNames.add(name.trim());
+          }
+
+          for (const colName of collectionNames) {
+            try {
+              passenger = await passengersDb.collection(colName).findOne({ IRCTC_ID: irctcId });
+              if (passenger) break;
+            } catch (e) { /* skip */ }
+          }
+        } catch (e) {
+          console.warn('Could not search passenger collections:', e.message);
+        }
+      }
 
       if (!passenger) {
         return res.status(404).json({
@@ -63,9 +96,6 @@ class PassengerController {
           message: "No booking found for this IRCTC ID"
         });
       }
-
-      // Passenger already has Train_Name, Train_Number, Booking_Date, etc. from database
-      // No need to enrich with train state data
 
       res.json({
         success: true,
