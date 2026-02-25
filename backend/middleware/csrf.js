@@ -43,6 +43,14 @@ const csrfProtection = (req, res, next) => {
         return next();
     }
 
+    // If request has a Bearer JWT token, skip CSRF check.
+    // JWT tokens are manually attached (not auto-sent like cookies),
+    // so they inherently protect against CSRF attacks.
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        return next();
+    }
+
     // Get token from header
     const headerToken = req.headers['x-csrf-token'];
     const cookieToken = req.cookies?.csrfToken;

@@ -67,34 +67,40 @@ print("="*80 + "\n")
 # STATIONS (CORRECTED NAMES)
 # ----------------------------
 stations = [
-    ("Narasapur", 195, 0),
-    ("Palakollu", 98, 11),
-    ("Bhimavaram Jn", 76, 22),
-    ("Bhimavaram Town", 74, 6),
-    ("Akividu", 33, 11),
-    ("Kaikolur", 44, 6),
-    ("Gudivada Jn", 66, 22),
-    ("Vijayawada Jn", 198, 89),
-    ("Guntur Jn", 132, 66),
-    ("Narasaraopet (NR)", 33, 11),
-    ("Vinukonda", 27, 11),
-    ("Kurichedu", 16, 11),
-    ("Donakonda", 11, 22),
-    ("Markapur Road", 39, 11),
-    ("Cumbum", 11, 11),
-    ("Giddalur", 11, 17),
-    ("Nandyal", 44, 33),
-    ("Dhone Jn", 39, 44),
-    ("Pendekallu", 18, 11),
-    ("Guntakal Jn", 94, 111),
-    ("Bellary Jn", 74, 66),
-    ("Toranagallu Jn", 27, 33),
-    ("Hosapete Jn", 39, 66),
-    ("Munirabad", 20, 23),
-    ("Koppal", 27, 44),
-    ("Gadag Jn", 39, 111),
-    ("Annigeri", 20, 56),
-    ("Hubballi Jn", 0, 579)
+    # FIRST 5 STATIONS: Heavy boarding — train fills up here (795 total = 80%)
+    ("Narasapur", 240, 0),         # Origin — massive boarding
+    ("Palakollu", 175, 0),         # Heavy boarding
+    ("Bhimavaram Jn", 150, 0),     # Heavy boarding
+    ("Bhimavaram Town", 130, 0),   # Heavy boarding
+    ("Akividu", 100, 0),           # Train near full after this (795 onboard)
+    # STATIONS 6-7: Minimal activity — peak reaches 820 (within 823 capacity)
+    ("Kaikolur", 20, 5),
+    ("Gudivada Jn", 20, 10),
+    # STATIONS 8-9: MAJOR DEBOARDING WAVES — vacancies open up for RAC reallocation
+    ("Vijayawada Jn", 30, 160),    # 🔴 Deboarding wave 1 — 160 vacancies created
+    ("Guntur Jn", 20, 120),        # 🔴 Deboarding wave 2 — 120 more vacancies
+    # STATIONS 10-15: Gradual deboarding
+    ("Narasaraopet (NR)", 10, 30),
+    ("Vinukonda", 5, 25),
+    ("Kurichedu", 5, 15),
+    ("Donakonda", 5, 20),
+    ("Markapur Road", 5, 15),
+    ("Cumbum", 5, 10),
+    ("Giddalur", 5, 15),
+    # STATIONS 16-19: More deboarding waves
+    ("Nandyal", 10, 50),           # 🔴 Deboarding wave 3
+    ("Dhone Jn", 5, 40),
+    ("Pendekallu", 5, 15),
+    ("Guntakal Jn", 15, 100),      # 🔴 Deboarding wave 4 — major junction
+    # STATIONS 20-27: Final stretch deboarding
+    ("Bellary Jn", 10, 60),
+    ("Toranagallu Jn", 5, 25),
+    ("Hosapete Jn", 5, 45),
+    ("Munirabad", 5, 20),
+    ("Koppal", 5, 30),
+    ("Gadag Jn", 5, 70),
+    ("Annigeri", 0, 35),
+    ("Hubballi Jn", 0, 80)         # Terminus — everyone remaining gets off
 ]
 NUM_STATIONS = len(stations)
 
@@ -776,7 +782,7 @@ print(f"✅ Exported: {json_file}")
 # ==============================
 for db_name, db in databases:
     try:
-        coll = db['17225_passengers']
+        coll = db['17225_testing_2.0']
         coll.delete_many({})
         coll.insert_many(passengers)
         print(f"✅ [{db_name}] MongoDB: PassengersDB.P_1")

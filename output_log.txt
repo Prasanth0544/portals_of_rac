@@ -1,0 +1,23 @@
+﻿================================================================================
+python : Traceback (most recent call last):
+At line:1 char:1
++ python single_pnr_passengers.py 2>&1 | 
+Out-File -FilePath output_log. ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Tra 
+   ceback (most recent call last)::String) [],   
+  RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\prasa\Desktop\RAC\zip_2\single_p
+nr_passengers.py", line 58, in <module>
+    print("\U0001f682 AMARAVATI EXPRESS - 
+CORRECT ALLOCATION LOGIC")
+  File "C:\Users\prasa\AppData\Local\Programs\Pyt
+hon\Python310\lib\encodings\cp1252.py", line 19, 
+in encode
+    return codecs.charmap_encode(input,self.error
+s,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode 
+character '\U0001f682' in position 0: character 
+maps to <undefined>
