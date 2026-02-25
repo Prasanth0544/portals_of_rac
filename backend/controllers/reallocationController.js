@@ -615,7 +615,7 @@ class ReallocationController {
           coach: berthDetails.coach,
           berthNo: berthDetails.berthNo,
           berthType: berthDetails.type || 'Lower',
-          expiresIn: 300 // 5 minutes
+          expiresIn: 900 // 15 minutes
         }
       );
 
@@ -629,7 +629,7 @@ class ReallocationController {
           passengerName: passenger.name,
           offeredBerth: `${berthDetails.coach}-${berthDetails.berthNo}`,
           offerSent: true,
-          expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()
         }
       });
 

@@ -657,13 +657,13 @@ class TrainState {
 
     console.log(`📋 Boarding Verification: ${scheduled.length} passengers pending`);
 
-    // Schedule auto-confirmation after 5 minutes
+    // Schedule auto-confirmation after 15 minutes
     this.autoConfirmTimeout = setTimeout(() => {
       if (this.boardingVerificationQueue.size > 0) {
         console.warn('⚠️ Auto-confirming boarding (TTE timeout)');
         this.confirmAllBoarded();
       }
-    }, 5 * 60 * 1000);
+    }, 15 * 60 * 1000);
 
     return scheduled.length;
   }

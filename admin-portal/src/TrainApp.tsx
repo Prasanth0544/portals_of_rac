@@ -1,4 +1,4 @@
-// admin-portal/src/App.tsx
+ï»¿// admin-portal/src/App.tsx
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -137,7 +137,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
       if (saved) {
         console.log("[App] Restoring persisted state...");
         restoredPage = (saved.currentPage as PageType) || "home";
-        // Never restore to 'config' from IndexedDB — config should only show via explicit navigation
+        // Never restore to 'config' from IndexedDB ï¿½ config should only show via explicit navigation
         if (restoredPage === "config") {
           console.log("[App] Overriding saved 'config' page to 'home' (config only via landing page)");
           restoredPage = "home";
@@ -151,6 +151,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
         const response = await api.getTrainState(urlTrainNo);
         if (response && response.success && response.data) {
           const backendJourneyStarted = response.data.journeyStarted || false;
+          const backendInitialized = response.data.initialized !== false;
 
           // Use backend state as source of truth
           if (restoredJourneyStarted !== backendJourneyStarted) {
@@ -174,23 +175,31 @@ function App({ initialPage }: AppProps): React.ReactElement {
             }
           }
 
-          // Apply verified state
-          setTrainData(response.data);
-          setCurrentPage(restoredPage);
-          setJourneyStarted(backendJourneyStarted);
-          setAutoInitAttempted(restoredAutoInit);
+          if (!backendInitialized) {
+            // Train not in backend memory (e.g., server restarted)
+            console.log("[App] Train not initialized in backend memory, will auto-initialize...");
+            setCurrentPage(restoredPage);
+            setJourneyStarted(false);
+            setAutoInitAttempted(false);
+          } else {
+            // Apply verified state
+            setTrainData(response.data);
+            setCurrentPage(restoredPage);
+            setJourneyStarted(backendJourneyStarted);
+            setAutoInitAttempted(restoredAutoInit);
 
-          // Resume timer polling if journey is already running on backend
-          if (backendJourneyStarted) {
-            startTimerPolling();
+            // Resume timer polling if journey is already running on backend
+            if (backendJourneyStarted) {
+              startTimerPolling();
+            }
+
+            // Save corrected state
+            saveAppState({
+              currentPage: restoredPage,
+              journeyStarted: backendJourneyStarted,
+              autoInitAttempted: restoredAutoInit,
+            }, urlTrainNo);
           }
-
-          // Save corrected state
-          saveAppState({
-            currentPage: restoredPage,
-            journeyStarted: backendJourneyStarted,
-            autoInitAttempted: restoredAutoInit,
-          }, urlTrainNo);
         } else {
           // Backend returned no valid data â€” keep saved page so auto-init can fill trainData
           console.log(
@@ -245,7 +254,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
     setupWebSocket();
 
     return () => {
-      // Don't disconnect — just remove THIS component's listeners
+      // Don't disconnect ï¿½ just remove THIS component's listeners
       // so the WebSocket stays alive for other trains / landing page.
       cleanupWebSocketListeners();
     };
@@ -473,7 +482,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
         await loadTrainState();
       } else {
         setError(response.error || 'Failed to initialize');
-        // Don't redirect to config — user can navigate there via menu if needed
+        // Don't redirect to config ï¿½ user can navigate there via menu if needed
       }
     } catch (err: any) {
       const msg = err.message || 'Failed to initialize train';
@@ -667,7 +676,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
       <div className="App">
         <div className="app-header">
           <div className="header-content">
-            <h1>?? RAC Reallocation System</h1>
+            <h1> RAC Reallocation System</h1>
             <h2>Restoring Session...</h2>
           </div>
         </div>
@@ -696,7 +705,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
       <div className="App">
         <div className="app-header">
           <div className="header-content">
-            <h1>?? RAC Reallocation System</h1>
+            <h1> RAC Reallocation System</h1>
             <h2>Loading Train Configuration...</h2>
           </div>
           <div className="user-menu">
@@ -716,7 +725,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
                 </div>
                 <hr />
                 <button onClick={handleLogout} className="menu-item logout">
-                  ?? Logout
+                   Logout
                 </button>
                 <hr />
                 <button
@@ -726,7 +735,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
                   }}
                   className="menu-item"
                 >
-                  ?? Exit to Landing
+                   Exit to Landing
                 </button>
               </div>
             )}
@@ -750,7 +759,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
       <div className="App app-classic">
         <div className="app-header">
           <div className="header-content">
-            <h1>?? RAC Reallocation System</h1>
+            <h1> RAC Reallocation System</h1>
             <h2>Configuration</h2>
           </div>
         </div>
@@ -770,7 +779,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
       <div className="App">
         <div className="app-header">
           <div className="header-content">
-            <h1>?? RAC Reallocation System</h1>
+            <h1> RAC Reallocation System</h1>
             <h2>Configuration Error</h2>
           </div>
         </div>
@@ -798,7 +807,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
 
       <div className="app-header">
         <div className="header-content">
-          <h1>?? RAC Reallocation System</h1>
+          <h1> RAC Reallocation System</h1>
           {trainData && trainData.trainNo ? (
             <>
               <h2>
@@ -839,10 +848,10 @@ function App({ initialPage }: AppProps): React.ReactElement {
                 }}
                 className="menu-item"
               >
-                ?? Configuration
+                 Configuration
               </button>
               <button onClick={handleLogout} className="menu-item logout">
-                ?? Logout
+                 Logout
               </button>
               <hr />
               <button
@@ -852,7 +861,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
                 }}
                 className="menu-item"
               >
-                ?? Exit to Landing
+                 Exit to Landing
               </button>
             </div>
           )}
@@ -919,7 +928,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
         {currentPage === "phase1" && !journeyStarted && (
           <div className="journey-not-started-container">
             <div className="journey-not-started-card">
-              <div className="notice-icon">??</div>
+              <div className="notice-icon"></div>
               <h2>Journey Not Started</h2>
               <p>
                 The train journey hasn't begun yet. Please start the journey
@@ -946,7 +955,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
           !journeyStarted && (
             <div className="journey-not-started-container">
               <div className="journey-not-started-card">
-                <div className="notice-icon">??</div>
+                <div className="notice-icon"></div>
                 <h2>Journey Not Started</h2>
                 <p>
                   The train journey hasn't begun yet. Please start the journey

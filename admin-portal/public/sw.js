@@ -30,7 +30,7 @@ self.addEventListener('push', (event) => {
         tag: data.tag || 'admin-notification',
         requireInteraction: true,
         data: {
-            url: data.url || 'http://localhost:3000',
+            url: data.url || 'http://localhost:3001',
             type: data.data?.type || 'GENERAL',
             ...data.data
         },
@@ -77,7 +77,7 @@ self.addEventListener('notificationclick', (event) => {
             .then((clientList) => {
                 // Check if Admin portal window is already open
                 for (const client of clientList) {
-                    if (client.url.includes('3000') && 'focus' in client) {
+                    if (client.url.includes('3001') && 'focus' in client) {
                         // Send refresh message before focusing
                         client.postMessage({ type: 'REFRESH_PAGE' });
                         return client.focus();

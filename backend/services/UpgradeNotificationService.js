@@ -9,9 +9,9 @@ class UpgradeNotificationService {
         this.collectionName = COLLECTIONS.UPGRADE_NOTIFICATIONS;
         this.denialLogCollection = process.env.UPGRADE_DENIAL_LOG_COLLECTION || 'upgrade_denial_log';
         this.initialized = false;
-        // ✅ Offer expiration time: 5 minutes
-        this.OFFER_EXPIRY_MS = 5 * 60 * 1000;
-        console.log('📩 UpgradeNotificationService initialized (MongoDB-backed, 5-min expiry)');
+        // ✅ Offer expiration time: 15 minutes
+        this.OFFER_EXPIRY_MS = 15 * 60 * 1000;
+        console.log('📩 UpgradeNotificationService initialized (MongoDB-backed, 15-min expiry)');
     }
 
     /**
@@ -198,7 +198,7 @@ class UpgradeNotificationService {
 
     /**
      * Get pending notifications for passenger
-     * Automatically expires offers older than OFFER_EXPIRY_MS (5 minutes)
+     * Automatically expires offers older than OFFER_EXPIRY_MS (15 minutes)
      * @param {string} trainNo - Train number for scoping
      */
     async getPendingNotifications(pnr, trainNo = null) {
