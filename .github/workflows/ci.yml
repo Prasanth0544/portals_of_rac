@@ -38,7 +38,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: |
             backend/package-lock.json
-            frontend/package-lock.json
+            admin-portal/package-lock.json
             tte-portal/package-lock.json
             passenger-portal/package-lock.json
       
@@ -46,12 +46,12 @@ jobs:
         working-directory: ./backend
         run: npm ci
       
-      - name: Install frontend dependencies
-        working-directory: ./frontend
+      - name: Install admin-portal dependencies
+        working-directory: ./admin-portal
         run: npm ci
       
-      - name: Lint frontend
-        working-directory: ./frontend
+      - name: Lint admin-portal
+        working-directory: ./admin-portal
         run: npm run lint || true  # Don't fail on lint warnings
 
   # ─────────────────────────────────────────
@@ -126,7 +126,7 @@ jobs:
       - name: Build Admin Portal Image
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
+          context: ./admin-portal
           push: false
           tags: rac-admin-portal:${{ github.sha }}
           cache-from: type=gha

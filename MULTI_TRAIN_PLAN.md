@@ -588,7 +588,7 @@ Every broadcast method adds `trainNo` to the message payload:
 
 ---
 
-### 7. ✅ [MODIFY] Admin Portal — `frontend/src/services/api.ts`
+### 7. ✅ [MODIFY] Admin Portal — `admin-portal/src/services/api.ts`
 
 Add `trainNo` parameter to all train-related API functions:
 
@@ -635,15 +635,15 @@ Add `trainNo` parameter to all train-related API functions:
 +     ));
 ```
 
-### 8. ✅ [MODIFY] `frontend/src/services/apiWithErrorHandling.ts` — Same Changes
+### 8. ✅ [MODIFY] `admin-portal/src/services/apiWithErrorHandling.ts` — Same Changes
 
 Identical changes as `api.ts` above — add `trainNo` parameter to all train functions.
 
 ---
 
-### 9. ✅ [MODIFY] Admin Portal — `frontend/src/TrainApp.tsx`
+### 9. ✅ [MODIFY] Admin Portal — `admin-portal/src/TrainApp.tsx`
 
-#### 9a. REMOVE frontend timer (moved to backend)
+#### 9a. REMOVE admin-portal timer (moved to backend)
 
 ```diff
   // REMOVE these lines (94-100):

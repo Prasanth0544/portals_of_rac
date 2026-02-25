@@ -35,7 +35,7 @@ A **real-time Railway RAC (Reservation Against Cancellation) seat reallocation s
 ```
 RAC-Reallocation-System/
 ├── backend/              # Express.js REST API + WebSocket Server (Port 5000)
-├── frontend/             # Vite + React Admin Portal (Port 3000)
+├── admin-portal/          # Vite + React Admin Portal (Port 3000)
 ├── passenger-portal/     # Vite + React Passenger Portal (Port 5175)
 └── tte-portal/           # Vite + React TTE Portal (Port 5174)
 ```
@@ -80,7 +80,7 @@ RAC-Reallocation-System/
 ```bash
 # 1. Install all dependencies
 cd backend && npm install && cd ..
-cd frontend && npm install && cd ..
+cd admin-portal && npm install && cd ..
 cd passenger-portal && npm install && cd ..
 cd tte-portal && npm install && cd ..
 
@@ -98,7 +98,7 @@ cd backend && node scripts/createTestAccounts.js && cd ..
 cd backend && npm run dev
 
 # Terminal 2: Admin Portal
-cd frontend && npm run dev
+cd admin-portal && npm run dev
 
 # Terminal 3: Passenger Portal
 cd passenger-portal && npm run dev

@@ -21,7 +21,7 @@ All three portals (Admin, Passenger, TTE) currently use **breakpoint-based** med
 
 ### Phase 1 — Fluid Viewport Scaling CSS
 
-#### [NEW] `frontend/src/styles/viewport-scale.css`
+#### [NEW] `admin-portal/src/styles/viewport-scale.css`
 #### [NEW] `passenger-portal/src/styles/viewport-scale.css`
 #### [NEW] `tte-portal/src/styles/viewport-scale.css`
 
@@ -52,19 +52,19 @@ Add `import './styles/viewport-scale.css';` after the existing `responsive-globa
 
 ### Phase 2 — Fix Header / Three-Dots Menu
 
-#### [MODIFY] `frontend/src/App.css`
+#### [MODIFY] `admin-portal/src/App.css`
 
 - Change `.app-header` from `flex-wrap: wrap` → `flex-wrap: nowrap`
 - Add `overflow: hidden` and `min-width: 0` to `.header-content` so long text truncates instead of pushing the menu button
 - Add mobile media query to collapse `h2` and `.route` into single-line truncated text
 
-#### [MODIFY] `frontend/src/UserMenu.css`
+#### [MODIFY] `admin-portal/src/UserMenu.css`
 
 - Change `.menu-button` from fixed `36px` → `clamp(28px, 3vw, 36px)` for width/height
 - Change `font-size: 20px` → `clamp(16px, 1.5vw + 8px, 22px)`
 - Add `flex-shrink: 0` to `.user-menu` so it never collapses
 
-#### [MODIFY] `frontend/src/styles/pages/LandingPage.css`
+#### [MODIFY] `admin-portal/src/styles/pages/LandingPage.css`
 
 - Add `flex-wrap: nowrap` to `.landing-header`
 - Add `min-width: 0` + `overflow: hidden` + `text-overflow: ellipsis` to `.landing-header h1`
@@ -89,7 +89,7 @@ Add `import './styles/viewport-scale.css';` after the existing `responsive-globa
 
 ### Phase 3 — Content Scaling
 
-#### [MODIFY] `frontend/src/styles/pages/LandingPage.css`
+#### [MODIFY] `admin-portal/src/styles/pages/LandingPage.css`
 
 - Add responsive grid fallback for `.trains-table-header` and `.train-card` at `≤768px` to switch to a card-style stacked layout instead of a 6-column grid that overflows
 
@@ -107,10 +107,10 @@ Add `import './styles/viewport-scale.css';` after the existing `responsive-globa
 
 ### Existing Playwright E2E Tests
 
-The project has Playwright tests in `frontend/e2e/` with mobile viewport projects (`Pixel 5`, `iPhone 12`) already configured in `playwright.config.ts`.
+The project has Playwright tests in `admin-portal/e2e/` with mobile viewport projects (`Pixel 5`, `iPhone 12`) already configured in `playwright.config.ts`.
 
 ```bash
-cd frontend
+cd admin-portal
 npx playwright test --project="Mobile Chrome" --reporter=list
 ```
 

@@ -30,7 +30,7 @@ mongod --version # Should show v6+
 ```
 RAC-Reallocation-System/
 ├── backend/              # Express.js API + WebSocket (Port 5000)
-├── frontend/             # Admin Portal - Vite + React (Port 3000)
+├── admin-portal/          # Admin Portal - Vite + React (Port 3000)
 ├── tte-portal/           # TTE Portal - Vite + React (Port 5174)
 ├── passenger-portal/     # Passenger Portal - Vite + React (Port 5175)
 ├── QUICKSTART.md         # This setup guide
@@ -64,7 +64,7 @@ cd rac-reallocation-system
 cd backend && npm install && cd ..
 
 # Install Admin Portal (Port 3000)
-cd frontend && npm install && cd ..
+cd admin-portal && npm install && cd ..
 
 # Install TTE Portal (Port 5174)
 cd tte-portal && npm install && cd ..
@@ -193,7 +193,7 @@ Open **4 separate terminals** and run:
 cd backend && npm run dev
 
 # Terminal 2: Admin Portal (Port 3000)
-cd frontend && npm run dev
+cd admin-portal && npm run dev
 
 # Terminal 3: TTE Portal (Port 5174)
 cd tte-portal && npm run dev
@@ -386,7 +386,7 @@ npm run test:watch
 
 ### Run Frontend E2E Tests (Playwright)
 ```bash
-cd frontend
+cd admin-portal
 
 # Install Playwright browsers (one-time)
 npx playwright install
@@ -568,7 +568,7 @@ npm run test:chaos   # Run chaos tests only
 npm run typecheck    # TypeScript type checking
 ```
 
-### Frontend (`frontend/package.json`)
+### Admin Portal (`admin-portal/package.json`)
 ```bash
 npm run dev          # Start Vite dev server (Port 5173)
 npm run build        # Build for production

@@ -44,7 +44,7 @@ function OfflineUpgradeVerification(): React.ReactElement {
 const theme = createTheme({
     palette: {
         primary: {
-            main: '#2c3e50',  // Dark navy - same as frontend
+            main: '#2c3e50',  // Dark navy - same as admin-portal
             light: '#34495e',
             dark: '#1a252f',
         },

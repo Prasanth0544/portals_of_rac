@@ -85,7 +85,7 @@ services:
   # ─────────────────────────────────────────
   admin-portal:
     build:
-      context: ./frontend
+      context: ./admin-portal
       dockerfile: Dockerfile
     container_name: rac-admin-portal
     restart: unless-stopped

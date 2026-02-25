@@ -86,7 +86,7 @@ jobs:
       - name: Build & Push Admin Portal
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
+          context: ./admin-portal
           push: true
           tags: |
             ${{ env.IMAGE_PREFIX }}-admin:${{ steps.version.outputs.version }}

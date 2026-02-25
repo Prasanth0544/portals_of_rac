@@ -10,22 +10,6 @@
   border: 1px solid #e1e8ed;
 }
 
-/* Page Header - Dark Navy */
-.page-header {
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-  padding: 20px 25px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 8px rgba(44, 62, 80, 0.3);
-}
-
-.page-header h2 {
-  margin: 0;
-  color: white;
-  font-size: 20px;
-  font-weight: 600;
-}
-
 /* Vacant Berths Section */
 .vacant-berths-section {
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
@@ -88,24 +72,10 @@
   letter-spacing: 0.5px;
 }
 
-.vacant-berths-table th:nth-child(4),
-.vacant-berths-table th:nth-child(5),
-.vacant-berths-table th:nth-child(6),
-.vacant-berths-table th:nth-child(7) {
-  padding: 12px 6px;
-}
-
 .vacant-berths-table td {
   padding: 12px 10px;
   border-bottom: 1px solid #ecf0f1;
   color: #34495e;
-}
-
-.vacant-berths-table td:nth-child(4),
-.vacant-berths-table td:nth-child(5),
-.vacant-berths-table td:nth-child(6),
-.vacant-berths-table td:nth-child(7) {
-  padding: 12px 6px;
 }
 
 .vacant-berths-table tbody tr {
@@ -119,48 +89,13 @@
 .vacant-berths-table .td-type {
   font-weight: 500;
   color: #5a6c7d;
-  text-align: left;
-  padding-left: 8px;
+  text-align: center;
 }
 
 .vacant-berths-table .td-station {
   text-align: left;
-  padding-left: 8px;
-  padding-right: 4px;
-}
-
-.station-code {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 12px;
-  font-family: 'Courier New', monospace;
-  cursor: help;
-  transition: all 0.2s ease;
-}
-
-.station-code.current {
-  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(39, 174, 96, 0.3);
-}
-
-.station-code.vacant-from {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(52, 152, 219, 0.3);
-}
-
-.station-code.vacant-to {
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(243, 156, 18, 0.3);
-}
-
-.station-code:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  color: #34495e;
+  font-weight: 500;
 }
 
 /* Vacant Berths Filter */
@@ -801,4 +736,202 @@
 
 .passenger-detail-row:hover {
   background: #f1f5f9 !important;
+}
+
+/* ============================================
+   MOBILE RESPONSIVENESS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .passengers-page {
+    padding: 15px;
+    max-height: none;
+  }
+
+  /* Stats grid - 2 columns on mobile */
+  .pass-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .pass-stat {
+    padding: 8px;
+  }
+
+  .pass-stat-label {
+    font-size: 9px;
+  }
+
+  .pass-stat-value {
+    font-size: 18px;
+  }
+
+  /* Filters - stack vertically */
+  .filters {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filter-row {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filter-input,
+  .filter-select {
+    width: 100%;
+    font-size: 16px;
+    /* Prevent iOS zoom */
+    min-height: 44px;
+  }
+
+  .filter-btn,
+  .filter-reset {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  /* Vacant berths section */
+  .vacant-berths-section {
+    padding: 15px;
+  }
+
+  .vacant-toggle-section {
+    margin-bottom: 15px;
+  }
+
+  .vacant-toggle-btn {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  /* Vacant berths filter */
+  .vacant-filter-inputs {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .vacant-filter-input {
+    width: 100%;
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .vacant-filter-reset {
+    width: 100%;
+  }
+
+  /* Tables - horizontal scroll */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 15px;
+  }
+
+  .pass-table,
+  .vacant-berths-table {
+    min-width: 800px;
+    /* Force horizontal scroll */
+    font-size: 11px;
+  }
+
+  .pass-table th,
+  .pass-table td,
+  .vacant-berths-table th,
+  .vacant-berths-table td {
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  /* Station codes */
+  .station-code {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  /* Status badges */
+  .badge {
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+
+  /* Add passenger button */
+  .add-passenger-button-container {
+    padding: 15px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-add-passenger-bottom {
+    width: 100%;
+    min-height: 50px;
+    font-size: 16px;
+  }
+
+  .add-passenger-hint {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  /* Status buttons - larger touch targets */
+  .status-buttons-container {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .status-btn {
+    width: 100%;
+    min-height: 40px;
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .current-status-btn {
+    min-height: 40px;
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+
+  /* Section headers */
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .section-header h3 {
+    font-size: 16px;
+  }
+
+  .badge-count {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+
+  /* Extra small screens */
+  .passengers-page {
+    padding: 10px;
+  }
+
+  .pass-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .pass-table,
+  .vacant-berths-table {
+    font-size: 10px;
+  }
+
+  .pass-table th,
+  .pass-table td {
+    padding: 6px 4px;
+  }
+
+  .section-header h3 {
+    font-size: 15px;
+  }
 }
