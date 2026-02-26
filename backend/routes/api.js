@@ -698,6 +698,73 @@ router.post('/passenger/deny-upgrade',
   (req, res) => passengerController.denyUpgrade(req, res)
 );
 
+// ========== OTP VERIFICATION FOR UPGRADE OFFERS ========== ✅ NEW
+// Step 1: Send OTP to passenger's registered email
+router.post('/passenger/send-upgrade-otp',
+  otpLimiter, // Rate limit OTP sending
+  validationMiddleware.sanitizeBody,
+  (req, res) => otpController.sendOTP(req, res)
+);
+
+// Step 2: Verify OTP and process upgrade accept/deny atomically
+router.post('/passenger/verify-upgrade-otp',
+  validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
+  async (req, res) => {
+    try {
+      const { irctcId, pnr, otp, action, offerId, berth } = req.body;
+
+      // Validate required fields
+      if (!irctcId || !pnr || !otp || !action || !offerId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: irctcId, pnr, otp, action, offerId'
+        });
+      }
+
+      if (!['accept', 'deny'].includes(action)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Action must be "accept" or "deny"'
+        });
+      }
+
+      // Step 1: Verify OTP
+      const OTPService = require('../services/OTPService');
+      const otpResult = await OTPService.verifyOTP(irctcId, pnr, otp);
+
+      if (!otpResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: otpResult.message,
+          verified: false
+        });
+      }
+
+      // Step 2: OTP verified — now process the upgrade action
+      // Inject verified data into req.body for the existing controllers
+      req.body.pnr = pnr;
+      req.body.notificationId = offerId;
+
+      if (action === 'accept') {
+        req.body.berth = berth;
+        return passengerController.acceptUpgrade(req, res);
+      } else {
+        return passengerController.denyUpgrade(req, res);
+      }
+
+    } catch (error) {
+      console.error('❌ Error in verify-upgrade-otp:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to process upgrade verification',
+        error: error.message
+      });
+    }
+  }
+);
+
 // ========== TTE/ADMIN PORTAL ROUTES ==========
 
 // Get all passengers with filters

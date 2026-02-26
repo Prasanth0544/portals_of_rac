@@ -11,7 +11,6 @@
 #
 # ============================================
 
-version: '3.8'
 
 services:
   # ─────────────────────────────────────────
@@ -54,15 +53,11 @@ services:
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
       - VAPID_EMAIL=${VAPID_EMAIL}
-      # Email (optional)
+      # Email configuration
       - EMAIL_HOST=${EMAIL_HOST}
       - EMAIL_PORT=${EMAIL_PORT}
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASSWORD=${EMAIL_PASSWORD}
-      # Twilio (optional)
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
-      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
     deploy:
       resources:
         limits:
@@ -79,47 +74,9 @@ services:
         max-file: "3"
 
   # ─────────────────────────────────────────
-  # Admin Portal - Production Settings
+  # Unified Frontend - Production Settings
   # ─────────────────────────────────────────
-  admin-portal:
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 64M
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
-
-  # ─────────────────────────────────────────
-  # TTE Portal - Production Settings
-  # ─────────────────────────────────────────
-  tte-portal:
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 64M
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
-
-  # ─────────────────────────────────────────
-  # Passenger Portal - Production Settings
-  # ─────────────────────────────────────────
-  passenger-portal:
+  frontend:
     restart: always
     deploy:
       resources:

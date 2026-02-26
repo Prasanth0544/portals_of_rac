@@ -3,17 +3,33 @@ const nodemailer = require('nodemailer');
 
 class NotificationService {
     constructor() {
-        // Email transporter (Gmail)
-        this.emailTransporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD
+        // Email transporter — uses EMAIL_HOST/PORT if set, falls back to Gmail service
+        const transportConfig = process.env.EMAIL_HOST
+            ? {
+                host: process.env.EMAIL_HOST,
+                port: parseInt(process.env.EMAIL_PORT || '587'),
+                secure: process.env.EMAIL_PORT === '465',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASSWORD
+                }
             }
-        });
+            : {
+                service: 'gmail',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASSWORD
+                }
+            };
+
+        this.emailTransporter = nodemailer.createTransport(transportConfig);
+
+        // Configurable frontend URL for email links
+        this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
         console.log('📧 NotificationService initialized');
         console.log('   Email:', process.env.EMAIL_USER ? '✓ Configured' : '✗ Not configured');
+        console.log('   SMTP:', process.env.EMAIL_HOST || 'gmail (default)');
     }
 
     /**
@@ -199,7 +215,7 @@ class NotificationService {
                                     </ul>
                                     
                                     <center>
-                                        <a href="http://localhost:5175" class="action-button">Open Passenger Portal</a>
+                                        <a href="${this.frontendUrl}" class="action-button">Open Passenger Portal</a>
                                     </center>
                                     
                                     <p style="margin-top: 20px; font-size: 13px; color: #666;">
@@ -386,7 +402,7 @@ class NotificationService {
                                 </div>
                                 
                                 <p style="text-align: center;">
-                                    <a href="http://localhost:5175/#/dashboard" class="btn">✓ View & Approve Upgrade</a>
+                                    <a href="${this.frontendUrl}" class="btn">✓ View & Approve Upgrade</a>
                                 </p>
                                 
                                 <p style="color: #e74c3c; font-weight: bold;">

@@ -24,8 +24,8 @@ module.exports = {
   // ============= UPGRADE OFFER CONFIGURATION =============
 
   // Offer expiry time
-  OFFER_EXPIRY_TTL: 3600000, // 1 hour in milliseconds
-  OFFER_EXPIRY_SECONDS: 3600, // Alternative: in seconds
+  OFFER_EXPIRY_TTL: 900000, // 15 minutes in milliseconds
+  OFFER_EXPIRY_SECONDS: 900, // Alternative: in seconds
 
   // Offer status constants
   OFFER_STATUS: {

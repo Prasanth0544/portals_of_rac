@@ -5,7 +5,7 @@ const db = require('../config/db');
 
 class GroupUpgradeService {
     /**
-     * Create a group upgrade offer with 10-minute timeout
+     * Create a group upgrade offer with 15-minute timeout
      * @param {string} pnr - PNR number
      * @param {Array} passengerIds - Array of passenger IDs in the group
      * @param {number} vacantSeatsCount - Number of vacant seats available
@@ -15,7 +15,7 @@ class GroupUpgradeService {
         try {
             const passengersCollection = db.getPassengersCollection();
             const now = new Date();
-            const expiresAt = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes
+            const expiresAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes
 
             // Update all passengers in the group with offer details
             const updateResult = await passengersCollection.updateMany(
@@ -148,7 +148,7 @@ class GroupUpgradeService {
     }
 
     /**
-       * Expire an offer (called after 10 minutes timeout)
+       * Expire an offer (called after 15 minutes timeout)
        * @param {string} pnr - PNR number
        */
     async expireOffer(pnr) {

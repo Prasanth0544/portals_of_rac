@@ -16,7 +16,7 @@ const REALLOCATION_CONSTANTS = {
 
   // Offer Management
   UPGRADE_OFFER: {
-    EXPIRY_TTL: 3600000,            // 1 hour in ms
+    EXPIRY_TTL: 900000,             // 15 minutes in ms
     OFFER_TIMEOUT_CHECK: 60000,     // Check expiry every 1 minute
     MAX_OFFERS_PER_PASSENGER: 1,    // One active offer at a time
   },

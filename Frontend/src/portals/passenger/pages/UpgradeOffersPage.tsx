@@ -1,6 +1,7 @@
-// passenger-portal/src/pages/Upgrade OffersPage.tsx
+// passenger-portal/src/pages/UpgradeOffersPage.tsx
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import UpgradeOtpModal from '../components/UpgradeOtpModal';
 import '../styles/pages/UpgradeOffersPage.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -31,6 +32,26 @@ const UpgradeOffersPage: React.FC = () => {
     const [isRejected, setIsRejected] = useState<boolean>(false);
     const [countdown, setCountdown] = useState<number>(0);
     const [passengerData, setPassengerData] = useState<any>(null);
+
+    // OTP Modal State
+    const [otpModalOpen, setOtpModalOpen] = useState(false);
+    const [otpAction, setOtpAction] = useState<'accept' | 'deny'>('accept');
+    const [selectedOffer, setSelectedOffer] = useState<UpgradeOffer | null>(null);
+
+    const openOtpModal = (offer: UpgradeOffer, action: 'accept' | 'deny') => {
+        setSelectedOffer(offer);
+        setOtpAction(action);
+        setOtpModalOpen(true);
+    };
+
+    const handleOtpSuccess = () => {
+        if (otpAction === 'accept') {
+            toast.success('🎉 Upgrade accepted! Your new berth has been assigned.');
+        } else {
+            toast.success('✅ Upgrade declined. You will not receive further upgrade offers for this journey.');
+        }
+        if (pnr) fetchUpgradeOffers(pnr);
+    };
 
     // Get IRCTC ID from logged-in user (handles both cases)
     const userStr = localStorage.getItem('user');
@@ -398,21 +419,19 @@ const UpgradeOffersPage: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {/* Actions Section */}
+                                    {/* Actions Section - Now opens OTP modal */}
                                     <div className="offer-actions-section">
                                         {offer.status === 'pending' ? (
                                             <>
                                                 <button
                                                     className="btn-accept"
-                                                    onClick={() => acceptOffer(offer)}
-                                                    disabled={accepting === (offer.offerId || offer.id)}
+                                                    onClick={() => openOtpModal(offer, 'accept')}
                                                 >
-                                                    {accepting === (offer.offerId || offer.id) ? 'Accepting...' : '✅ Accept'}
+                                                    ✅ Accept
                                                 </button>
                                                 <button
                                                     className="btn-deny"
-                                                    onClick={() => denyOffer(offer)}
-                                                    disabled={accepting === (offer.offerId || offer.id)}
+                                                    onClick={() => openOtpModal(offer, 'deny')}
                                                 >
                                                     ❌ Decline
                                                 </button>
@@ -427,6 +446,17 @@ const UpgradeOffersPage: React.FC = () => {
                     )}
                 </>
             )}
+
+            {/* OTP Verification Modal */}
+            <UpgradeOtpModal
+                isOpen={otpModalOpen}
+                onClose={() => setOtpModalOpen(false)}
+                onSuccess={handleOtpSuccess}
+                action={otpAction}
+                offerId={selectedOffer?.offerId || selectedOffer?.id || ''}
+                berth={selectedOffer?.berth}
+                pnr={pnr}
+            />
         </div>
     );
 };

@@ -19,6 +19,7 @@ function SignUpPage(): React.ReactElement {
     // Admin fields
     const [employeeId, setEmployeeId] = useState<string>('');
     const [staffRole, setStaffRole] = useState<string>('Admin');
+    const [staffEmail, setStaffEmail] = useState<string>('');
 
     // Passenger fields
     const [email, setEmail] = useState<string>('');
@@ -84,6 +85,7 @@ function SignUpPage(): React.ReactElement {
                     confirmPassword,
                     role: staffRole,
                     name: name || idUpper,
+                    email: staffEmail || undefined,
                 };
             } else {
                 // Validate IRCTC ID prefix
@@ -117,7 +119,7 @@ function SignUpPage(): React.ReactElement {
                 setSuccess(response.data.message || 'Account created successfully! You can now login.');
                 // Clear form
                 setEmployeeId(''); setName(''); setPassword(''); setConfirmPassword('');
-                setEmail(''); setIrctcId(''); setPhone('');
+                setEmail(''); setIrctcId(''); setPhone(''); setStaffEmail('');
                 // Auto-redirect to login after 2s
                 setTimeout(() => {
                     navigate(`/login?role=${role}`);
@@ -177,6 +179,16 @@ function SignUpPage(): React.ReactElement {
                                         onClick={() => setStaffRole('TTE')}
                                     >TTE</button>
                                 </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="staffEmail">Email (Optional)</label>
+                                <input
+                                    type="email" id="staffEmail" value={staffEmail}
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => setStaffEmail(e.target.value)}
+                                    placeholder="your.email@example.com" disabled={loading}
+                                />
+                                <small>We'll send you a welcome email if provided</small>
                             </div>
                         </>
                     ) : (

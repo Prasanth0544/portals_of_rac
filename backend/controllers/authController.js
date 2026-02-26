@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const db = require("../config/db");
 const { COLLECTIONS, DEFAULTS } = require("../config/collections");
 const RefreshTokenService = require("../services/RefreshTokenService");
+const NotificationService = require("../services/NotificationService");
 
 // JWT Secret (in production, use environment variable)
 const JWT_SECRET =
@@ -155,7 +156,7 @@ class AuthController {
    */
   async staffRegister(req, res) {
     try {
-      const { employeeId, password, confirmPassword, role, name } = req.body;
+      const { employeeId, password, confirmPassword, role, name, email } = req.body;
 
       // Validate required fields
       if (!employeeId || !password || !confirmPassword || !role) {
@@ -243,7 +244,7 @@ class AuthController {
       const newUser = {
         employeeId: employeeId.toUpperCase(),
         passwordHash,
-        email: null,
+        email: email?.trim()?.toLowerCase() || null,
         name: name || employeeId.toUpperCase(),
         role: normalizedRole,
         active: true,
@@ -260,6 +261,11 @@ class AuthController {
       console.log(
         `✅ New ${normalizedRole} registered: ${employeeId.toUpperCase()}`,
       );
+
+      // ✅ Send welcome email if email was provided (non-blocking)
+      if (newUser.email) {
+        this._sendWelcomeEmail(newUser.email, newUser.name, normalizedRole, newUser.employeeId);
+      }
 
       res.status(201).json({
         success: true,
@@ -349,6 +355,11 @@ class AuthController {
       await tteUsersCollection.insertOne(newTTE);
 
       console.log(`✅ New TTE registered: ${employeeId} for train ${trainNo}`);
+
+      // ✅ Send welcome email if email was provided (non-blocking)
+      if (newTTE.email) {
+        this._sendWelcomeEmail(newTTE.email, newTTE.name, 'TTE', newTTE.employeeId, trainNo);
+      }
 
       res.status(201).json({
         success: true,
@@ -674,6 +685,9 @@ class AuthController {
 
       console.log(`✅ New passenger registered: ${irctcId.toUpperCase()} (${email})`);
 
+      // ✅ Send welcome email (non-blocking) — email is required for passengers
+      this._sendWelcomeEmail(newPassenger.email, newPassenger.name, 'PASSENGER', newPassenger.IRCTC_ID);
+
       res.status(201).json({
         success: true,
         message: 'Account created successfully! You can now login.',
@@ -828,6 +842,115 @@ class AuthController {
         success: false,
         message: "Failed to refresh token",
       });
+    }
+  }
+
+  /**
+   * Send welcome email after successful registration (non-blocking).
+   * @param {string} email - Recipient email
+   * @param {string} name - User display name
+   * @param {string} role - ADMIN / TTE / PASSENGER
+   * @param {string} userId - Employee ID or IRCTC ID
+   * @param {string} [trainNo] - Train number (TTE only)
+   */
+  async _sendWelcomeEmail(email, name, role, userId, trainNo = null) {
+    try {
+      const roleLabel = role === 'PASSENGER' ? 'Passenger'
+        : role === 'TTE' ? 'Train Ticket Examiner (TTE)'
+          : 'Administrator';
+
+      const roleColor = role === 'PASSENGER' ? '#0ea5e9'
+        : role === 'TTE' ? '#8b5cf6'
+          : '#f59e0b';
+
+      const roleIcon = role === 'PASSENGER' ? '🎫'
+        : role === 'TTE' ? '🚂'
+          : '🛡️';
+
+      const extraInfo = trainNo
+        ? `<p style="margin: 4px 0;"><strong>Train Assigned:</strong> ${trainNo}</p>`
+        : '';
+
+      const idLabel = role === 'PASSENGER' ? 'IRCTC ID' : 'Employee ID';
+
+      await NotificationService.emailTransporter.sendMail({
+        from: `"Indian Railways RAC System" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: `${roleIcon} Welcome to Indian Railways — Registration Successful!`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+              .header { background: linear-gradient(135deg, #1e3a5f, #2d5a87); color: white; padding: 35px 30px; text-align: center; }
+              .header h1 { margin: 0 0 8px; font-size: 24px; }
+              .header p { margin: 0; opacity: 0.85; font-size: 14px; }
+              .body-content { padding: 30px; }
+              .welcome-box { background: linear-gradient(135deg, ${roleColor}15, ${roleColor}08); border: 2px solid ${roleColor}30; border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center; }
+              .welcome-box .icon { font-size: 48px; margin-bottom: 12px; }
+              .welcome-box h2 { color: ${roleColor}; margin: 0 0 8px; font-size: 22px; }
+              .welcome-box p { color: #64748b; margin: 0; font-size: 14px; }
+              .details-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+              .details-card h3 { margin: 0 0 12px; font-size: 16px; color: #1e293b; }
+              .details-card p { margin: 4px 0; font-size: 14px; color: #475569; }
+              .details-card strong { color: #1e293b; }
+              .role-badge { display: inline-block; background: ${roleColor}; color: white; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; margin-top: 8px; }
+              .cta-section { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px 20px; margin-bottom: 24px; border-radius: 0 8px 8px 0; }
+              .cta-section p { margin: 4px 0; font-size: 14px; color: #15803d; }
+              .warning { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 24px; border-radius: 0 8px 8px 0; font-size: 13px; color: #92400e; }
+              .footer { background: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0; }
+              .footer p { margin: 4px 0; font-size: 12px; color: #94a3b8; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>🚆 Indian Railways</h1>
+                <p>RAC Reallocation & Management System</p>
+              </div>
+              <div class="body-content">
+                <div class="welcome-box">
+                  <div class="icon">${roleIcon}</div>
+                  <h2>Welcome, ${name}!</h2>
+                  <p>Your account has been created successfully</p>
+                  <div class="role-badge">${roleLabel}</div>
+                </div>
+
+                <div class="details-card">
+                  <h3>📋 Account Details</h3>
+                  <p><strong>Name:</strong> ${name}</p>
+                  <p><strong>${idLabel}:</strong> ${userId}</p>
+                  <p><strong>Email:</strong> ${email}</p>
+                  <p><strong>Role:</strong> ${roleLabel}</p>
+                  ${extraInfo}
+                  <p><strong>Registered:</strong> ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
+                </div>
+
+                <div class="cta-section">
+                  <p><strong>✅ What's Next?</strong></p>
+                  <p>You can now log in to the ${roleLabel} Portal using your ${idLabel} and password.</p>
+                </div>
+
+                <div class="warning">
+                  <strong>⚠️ Security Reminder:</strong> Never share your password or login credentials with anyone. Indian Railways staff will never ask for your password.
+                </div>
+              </div>
+              <div class="footer">
+                <p>This is an automated email from Indian Railways RAC System</p>
+                <p>Please do not reply to this email</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `
+      });
+
+      console.log(`📧 Welcome email sent to ${email} (${role}: ${userId})`);
+    } catch (error) {
+      // Non-fatal: don't fail registration if email fails
+      console.warn(`⚠️ Failed to send welcome email to ${email}: ${error.message}`);
     }
   }
 }

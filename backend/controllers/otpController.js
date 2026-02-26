@@ -37,12 +37,29 @@ class OTPController {
             }
 
             // Get email (handle both field names)
-            const email = passenger.Email || passenger.email;
+            let email = passenger.Email || passenger.email;
+
+            // ✅ Fallback: If no email on train passenger data, check passenger_accounts
+            if (!email && passenger.IRCTC_ID) {
+                try {
+                    const { COLLECTIONS } = require('../config/collections');
+                    const racDb = await db.getDb();
+                    const accountsCollection = racDb.collection(COLLECTIONS.PASSENGER_ACCOUNTS);
+                    const account = await accountsCollection.findOne({
+                        IRCTC_ID: passenger.IRCTC_ID
+                    });
+                    if (account) {
+                        email = account.email || account.Email;
+                    }
+                } catch (lookupErr) {
+                    console.warn('⚠️ Fallback email lookup failed:', lookupErr.message);
+                }
+            }
 
             if (!email) {
                 return res.status(400).json({
                     success: false,
-                    message: 'No email address found for this passenger'
+                    message: 'No email address found for this passenger. Please register with an email first.'
                 });
             }
 
