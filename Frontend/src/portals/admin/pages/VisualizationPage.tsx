@@ -69,7 +69,7 @@ function VisualizationPage({ trainData, onClose }: VisualizationPageProps): Reac
         {
             id: 1,
             title: "Journey Segments",
-            icon: "🚆",
+            icon: "",
             description: "Each passenger journey is broken into segments (station-to-station).",
             details: `
         <h3>How Journey Segments Work:</h3>
@@ -85,7 +85,7 @@ function VisualizationPage({ trainData, onClose }: VisualizationPageProps): Reac
         {
             id: 2,
             title: "Berth Timeline",
-            icon: "🛏️",
+            icon: "",
             description: "Each berth tracks which segments are occupied. Same berth can serve multiple passengers.",
             details: `
         <h3>Berth Timeline Concept:</h3>
@@ -202,11 +202,11 @@ function VisualizationPage({ trainData, onClose }: VisualizationPageProps): Reac
 
             <div className="station-schedule-section">
                 <div className="section-header">
-                    <h3>📍 Train Station Schedule</h3>
+                    <h3>📌 Train Station Schedule</h3>
                     <div className="schedule-stats">
-                        <span className="stat-badge">🚉 {stations.length} Stations</span>
-                        <span className="stat-badge">📏 {getTotalDistance()} km</span>
-                        <span className="stat-badge">⏱️ {calculateJourneyTime()} hrs</span>
+                        <span className="stat-badge"> {stations.length} Stations</span>
+                        <span className="stat-badge"> {getTotalDistance()} km</span>
+                        <span className="stat-badge">⏱ {calculateJourneyTime()} hrs</span>
                     </div>
                 </div>
 
@@ -291,7 +291,7 @@ function VisualizationPage({ trainData, onClose }: VisualizationPageProps): Reac
 
             <div className="info-cards-section">
                 <h3 className="cards-section-title">
-                    🧠 How Segment-Based Vacancy Works
+                     How Segment-Based Vacancy Works
                 </h3>
                 <div className="info-cards-grid">
                     {infoCards.map((card) => (

@@ -19,7 +19,7 @@ function StationProgress({ stations = [], currentStationIdx = 0 }: StationProgre
 
     return (
         <div className="station-progress-panel">
-            <h3 className="panel-header">🚉 Journey Progress</h3>
+            <h3 className="panel-header"> Journey Progress</h3>
 
             <div className="station-timeline">
                 {stations.map((station, idx) => {
@@ -32,7 +32,7 @@ function StationProgress({ stations = [], currentStationIdx = 0 }: StationProgre
                     return (
                         <div key={station.code} className={`station-node ${statusClass}`}>
                             <div className="station-circle">
-                                {idx < currentStationIdx ? '✓' : station.sno}
+                                {idx < currentStationIdx ? '' : station.sno}
                             </div>
                             <div className="station-info">
                                 <span className="station-name">{station.name}</span>

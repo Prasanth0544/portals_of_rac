@@ -77,11 +77,11 @@ function VisualizationPage(): React.ReactElement {
             {/* Station Schedule Table */}
             <div className="station-schedule-section">
                 <div className="section-header">
-                    <h3>📍 Train Station Schedule</h3>
+                    <h3>📌 Train Station Schedule</h3>
                     <div className="schedule-stats">
-                        <span className="stat-badge">🚉 {stations.length} Stations</span>
-                        <span className="stat-badge">📏 {getTotalDistance()} km</span>
-                        <span className="stat-badge">⏱️ {calculateJourneyTime()} hrs</span>
+                        <span className="stat-badge"> {stations.length} Stations</span>
+                        <span className="stat-badge"> {getTotalDistance()} km</span>
+                        <span className="stat-badge">⏱ {calculateJourneyTime()} hrs</span>
                     </div>
                 </div>
 

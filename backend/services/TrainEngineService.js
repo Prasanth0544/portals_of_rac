@@ -103,7 +103,9 @@ class TrainEngineService {
                 trainNo: trainState.trainNo,
                 journeyDate: trainState.journeyDate,
                 journeyStarted: trainState.journeyStarted,
-                currentStationIdx: trainState.currentStationIdx
+                currentStationIdx: trainState.currentStationIdx,
+                engineRunning: true,
+                lastTickAt: new Date()
             });
 
             // ─── STEP 6: Update train status in Trains_Details ───
@@ -162,6 +164,16 @@ class TrainEngineService {
                 }
 
                 this.stopEngine(trainNo);
+
+                // Persist that engine is no longer running
+                await RuntimeStateService.saveState({
+                    trainNo: trainState.trainNo,
+                    journeyDate: trainState.journeyDate,
+                    journeyStarted: trainState.journeyStarted,
+                    currentStationIdx: trainState.currentStationIdx,
+                    engineRunning: false,
+                    lastTickAt: new Date()
+                });
                 return;
             }
 

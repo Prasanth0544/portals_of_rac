@@ -193,7 +193,7 @@ Requires HTTPS in production (localhost exempt).
 ## 🔗 Related
 
 - [Root Documentation](../README.md)
-- [QUICKSTART.md](../QUICKSTART.md)
+- [README.md](../README.md)
 - [Backend API](../backend/README.md)
 - [Frontend (Admin)](../admin-portal/README.md)
 - [Passenger Portal](../passenger-portal/README.md)

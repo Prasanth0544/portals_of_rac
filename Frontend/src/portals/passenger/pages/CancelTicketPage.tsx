@@ -354,7 +354,7 @@ const CancelTicketPage: React.FC = () => {
                             onClick={sendOTP}
                             disabled={selectedPassengers.length === 0 || processing}
                         >
-                            {processing ? 'Sending OTP...' : `📧 Send OTP (Cancel ${selectedPassengers.length} passenger${selectedPassengers.length !== 1 ? 's' : ''})`}
+                            {processing ? 'Sending OTP...' : `✉️ Send OTP (Cancel ${selectedPassengers.length} passenger${selectedPassengers.length !== 1 ? 's' : ''})`}
                         </button>
                         <button className="btn-secondary" onClick={() => setStep(1)}>
                             ← Back

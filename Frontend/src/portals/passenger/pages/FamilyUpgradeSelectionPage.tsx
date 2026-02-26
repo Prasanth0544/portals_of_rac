@@ -168,7 +168,7 @@ const FamilyUpgradeSelectionPage: React.FC = () => {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            alert('✓ Upgrade offer declined. You will not receive future group upgrade offers for this booking.');
+            alert(' Upgrade offer declined. You will not receive future group upgrade offers for this booking.');
             navigate('/passenger/dashboard');
         } catch (err: any) {
             console.error('Error declining offer:', err);
@@ -270,9 +270,9 @@ const FamilyUpgradeSelectionPage: React.FC = () => {
         <div className="family-upgrade-page">
             <div className="upgrade-container">
                 <div className="header">
-                    <h1>🎉 Your Family is Eligible for Upgrade!</h1>
+                    <h1>✅ Your Family is Eligible for Upgrade!</h1>
                     <div className={`timer ${timeRemaining < 60 ? 'urgent' : ''}`}>
-                        ⏱️ {formatTime(timeRemaining)}
+                        ⏱ {formatTime(timeRemaining)}
                     </div>
                 </div>
 
@@ -327,7 +327,7 @@ const FamilyUpgradeSelectionPage: React.FC = () => {
                                         <span className="age-gender">({passenger.age}{passenger.gender})</span>
                                         {passenger.age < 12 && <span className="tag child">Child</span>}
                                         {passenger.age > 60 && <span className="tag elderly">Elderly</span>}
-                                        {isCNF && <span className="tag cnf">✓ Already Confirmed</span>}
+                                        {isCNF && <span className="tag cnf"> Already Confirmed</span>}
                                     </div>
                                     <div className="passenger-details">
                                         {isCNF ? (

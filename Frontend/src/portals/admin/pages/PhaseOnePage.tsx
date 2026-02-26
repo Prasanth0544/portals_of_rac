@@ -85,6 +85,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
     const [creating, setCreating] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<TabType>('rac');
     const [upgradedPassengers, setUpgradedPassengers] = useState<UpgradedPassenger[]>([]);
+    const [journeyNotStarted, setJourneyNotStarted] = useState<boolean>(false);
 
     useEffect(() => {
         fetchMatchingData();
@@ -133,6 +134,14 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                     fetchMatchingData();
                     fetchUpgradedPassengers();
                 }
+
+                // Auto-recover when journey starts
+                if (message.type === 'TRAIN_UPDATE' && message.eventType === 'JOURNEY_STARTED') {
+                    console.log('🚀 Journey started! Auto-refreshing...');
+                    setJourneyNotStarted(false);
+                    fetchMatchingData();
+                    fetchUpgradedPassengers();
+                }
             } catch (error) {
                 console.error('WebSocket message parse error:', error);
             }
@@ -156,13 +165,18 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
     const fetchMatchingData = async (): Promise<void> => {
         try {
             setLoading(true);
+            setJourneyNotStarted(false);
             const res = await apiClient.get('/reallocation/current-station-matching');
             if (res.data && res.data.data) {
                 setMatchingData(res.data.data);
             }
             setLoading(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching matching data:', error);
+            if (error?.message?.toLowerCase().includes('journey has not started') ||
+                error?.message?.toLowerCase().includes('train is not initialized')) {
+                setJourneyNotStarted(true);
+            }
             setLoading(false);
         }
     };
@@ -227,9 +241,22 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                     <h1>🎯 Phase 1: Current Station Matching</h1>
                 </div>
                 <div className="empty-state-content">
-                    <div className="empty-icon">⚠️</div>
-                    <h3>No Data Available</h3>
-                    <button className="btn-primary" onClick={fetchMatchingData}>🔄 Retry</button>
+                    {journeyNotStarted ? (
+                        <>
+                            <div className="empty-icon">🚂</div>
+                            <h3>Journey Not Started</h3>
+                            <p style={{ color: '#5a6c7d', marginBottom: '16px' }}>
+                                The journey hasn't been started yet. Go to the <strong>Home</strong> page to initialize the train and start the journey.
+                            </p>
+                            <button className="btn-primary" onClick={onClose}>🏠 Go to Home</button>
+                        </>
+                    ) : (
+                        <>
+                            <div className="empty-icon">⚠️</div>
+                            <h3>No Data Available</h3>
+                            <button className="btn-primary" onClick={fetchMatchingData}>🔄 Retry</button>
+                        </>
+                    )}
                 </div>
             </div>
         );
@@ -256,14 +283,14 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                     className={`tab-btn ${activeTab === 'rac' ? 'active' : ''}`}
                     onClick={() => setActiveTab('rac')}
                 >
-                    👥 RAC Passengers
+                    RAC Passengers
                     <span className="tab-badge">{racPassengers?.length || 0}</span>
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'vacant' ? 'active' : ''}`}
                     onClick={() => setActiveTab('vacant')}
                 >
-                    🛏️ Vacant Berths
+                    Vacant Berths
                     <span className="tab-badge">{vacantBerths?.length || 0}</span>
                 </button>
                 <button
@@ -288,7 +315,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
             {activeTab === 'rac' && (
                 <div className="tab-content">
                     <div className="section-header">
-                        <h3>👥 RAC Passengers</h3>
+                        <h3> RAC Passengers</h3>
                         <span className="count-badge">{racPassengers?.length || 0}</span>
                     </div>
                     <div className="table-container">
@@ -335,7 +362,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
             {activeTab === 'vacant' && (
                 <div className="tab-content">
                     <div className="section-header">
-                        <h3>🛏️ Vacant Berths</h3>
+                        <h3> Vacant Berths</h3>
                         <span className="count-badge">{vacantBerths?.length || 0}</span>
                     </div>
                     <div className="table-container">
@@ -383,7 +410,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                             onClick={handleCreatePendingReallocations}
                             disabled={creating || !matches || matches.length === 0}
                         >
-                            {creating ? '⏳ Processing...' : '📤 Send to TTE for Approval'}
+                            {creating ? '⏳ Processing...' : '[OUT] Send to TTE for Approval'}
                         </button>
                     </div>
 
@@ -418,7 +445,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                                             <td className="td-type">{match.berth?.type}</td>
                                             <td className="td-match">
                                                 <span className={`badge ${match.topMatch?.isPerfectMatch ? 'perfect' : 'good'}`}>
-                                                    {match.topMatch?.isPerfectMatch ? '✓ Perfect' : '○ Good'}
+                                                    {match.topMatch?.isPerfectMatch ? ' Perfect' : '○ Good'}
                                                 </span>
                                             </td>
                                         </tr>
@@ -446,7 +473,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                     <div className="table-container">
                         {upgradedPassengers.length === 0 ? (
                             <div className="empty-state">
-                                <div className="empty-icon">📋</div>
+                                <div className="empty-icon">📝</div>
                                 <h3>No Upgrades Yet</h3>
                                 <p>Passengers appear here after TTE approval.</p>
                             </div>
@@ -477,7 +504,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                                             </td>
                                             <td className="td-journey">{p.from} → {p.to}</td>
                                             <td className="td-status">
-                                                <span className="badge cnf">✓ CNF</span>
+                                                <span className="badge cnf"> CNF</span>
                                             </td>
                                         </tr>
                                     ))}

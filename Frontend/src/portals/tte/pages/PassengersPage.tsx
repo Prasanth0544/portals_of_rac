@@ -114,7 +114,7 @@ function PassengerStatusButton({ passenger, onStatusUpdate }: PassengerStatusBut
                     onClick={() => setShowButtons(false)}
                     className="status-btn cancel-btn"
                 >
-                    ✕
+
                 </button>
             </div>
         );
@@ -415,7 +415,7 @@ function PassengersPage(): React.ReactElement {
         return (
             <div className="passengers-page">
                 <div className="page-header">
-                    <h2>👥 Passenger List</h2>
+                    <h2> Passenger List</h2>
                 </div>
                 <div className="loading-container">
                     <div className="spinner-large"></div>
@@ -429,7 +429,7 @@ function PassengersPage(): React.ReactElement {
         <div className="passengers-page">
             <div className="page-header">
                 <h2>
-                    👥 Passenger List ({counts ? counts.total : passengers.length} total)
+                    Passenger List ({counts ? counts.total : passengers.length} total)
                 </h2>
             </div>
 
@@ -509,7 +509,7 @@ function PassengersPage(): React.ReactElement {
                         />
                         <input
                             type="text"
-                            placeholder="🛏️ Berth (S1-4, B2-37)..."
+                            placeholder=" Berth (S1-4, B2-37)..."
                             value={searchBerth}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchBerth(e.target.value)}
                             style={{
@@ -565,7 +565,7 @@ function PassengersPage(): React.ReactElement {
                         onClick={() => setShowVacantBerths(!showVacantBerths)}
                         className="vacant-toggle-btn"
                     >
-                        {showVacantBerths ? "👥 View Passengers List " : "🛏️ View Vacant Berths"}
+                        {showVacantBerths ? " View Passengers List " : " View Vacant Berths"}
                         {!showVacantBerths && (
                             <span className="toggle-count">
                                 ({vacantBerths.length} vacant at{" "}
@@ -630,7 +630,7 @@ function PassengersPage(): React.ReactElement {
                                     className="vacant-filter-reset"
                                     title="Clear Filters"
                                 >
-                                    ✕ Clear
+                                    Clear
                                 </button>
                             </div>
                         </div>
@@ -744,7 +744,7 @@ function PassengersPage(): React.ReactElement {
                                                     >
                                                         <td className="td-no">{++rowIndex}</td>
                                                         <td className="td-pnr" colSpan={2}>
-                                                            <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
+                                                            <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>{">"}</span>
                                                             <strong>{pnr}</strong>
                                                             <span className="passenger-count-badge">
                                                                 {passengerGroup.length} passengers

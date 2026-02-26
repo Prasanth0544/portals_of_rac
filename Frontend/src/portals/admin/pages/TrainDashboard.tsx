@@ -9,6 +9,8 @@ import {
 } from "../services/apiWithErrorHandling";
 import { errorToast, successToast } from "../services/toastNotification";
 import TrainApp from "../TrainApp";
+import { addTrainTab } from "../components/TrainTabBar";
+import TrainTabBar from "../components/TrainTabBar";
 import "../styles/pages/ConfigPage.css";
 import "../styles/pages/TrainDashboard.css";
 
@@ -32,6 +34,7 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const fromLanding = (location.state as any)?.fromLanding === true;
+  const fromTab = (location.state as any)?.fromTab === true;
 
   // CRITICAL: Clear location.state immediately so fromLanding doesn't survive browser refresh.
   // React Router v6 stores location.state in history.state, which persists across page reloads.
@@ -88,6 +91,37 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
     }
 
     const checkExistingState = async () => {
+      // Tab-switch: skip config, go straight to home
+      if (fromTab && trainNo) {
+        console.log("[TrainDashboard] Tab switch for train", trainNo, "— skipping config");
+        window.history.replaceState({}, "", location.pathname);
+        // Auto-initialize from saved MongoDB config
+        try {
+          const configResult = await getTrainConfig(trainNo);
+          if (configResult.success && configResult.data) {
+            const cfg = configResult.data;
+            await setupConfig({
+              stationsDb: cfg.stationsDb,
+              stationsCollection: cfg.stationsCollection,
+              passengersDb: cfg.passengersDb,
+              passengersCollection: cfg.passengersCollection,
+              trainNo: cfg.trainNo || trainNo,
+              trainName: cfg.trainName || "",
+              journeyDate: cfg.journeyDate || new Date().toISOString().split("T")[0],
+            });
+            await initializeTrain(
+              cfg.trainNo || trainNo,
+              cfg.journeyDate || new Date().toISOString().split("T")[0],
+            );
+          }
+        } catch (err) {
+          console.warn("[TrainDashboard] Tab-switch auto-init failed:", err);
+        }
+        setConfigured(true);
+        setLoadingConfig(false);
+        return;
+      }
+
       // Determine if we should show config page:
       // 1. Coming from landing page (fromLanding state)
       // 2. OR localStorage says we were on config page before refresh
@@ -111,8 +145,8 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
         try {
           const { getTrainState } = await import("../services/apiWithErrorHandling");
           const stateRes = await getTrainState(trainNo);
-          if (stateRes?.success && stateRes.data?.trainNo) {
-            console.log("[TrainDashboard] Train already initialized — skipping config");
+          if (stateRes?.success && stateRes.data?.trainNo && stateRes.data?.initialized !== false) {
+            console.log("[TrainDashboard] Train already initialized in memory — skipping config");
             setConfigured(true);
             setLoadingConfig(false);
             return;
@@ -270,6 +304,9 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
       await new Promise((resolve) => setTimeout(resolve, 400));
       // Clear config page state — user is now on home, refresh should stay on home
       localStorage.removeItem(`trainPage_${trainNo}`);
+      // Add to train tab bar
+      addTrainTab(targetTrainNo, editTrainName);
+      window.dispatchEvent(new Event('trainTabsChanged'));
       // Switch to TrainApp view (don't navigate — URL is already correct)
       setConfigured(true);
     } catch (error: any) {
@@ -295,6 +332,7 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
             <h2>Loading Train {trainNo}…</h2>
           </div>
         </div>
+        <TrainTabBar />
         <div className="app-content">
           <div className="initialization-screen">
             <div className="init-card">
@@ -317,6 +355,7 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
 
         </div>
       </div>
+      <TrainTabBar />
 
       <div className="app-content">
         <div className="config-page">
@@ -375,7 +414,7 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
                       className="btn-cancel-edit"
                       onClick={cancelEdit}
                     >
-                      ✕ Cancel
+                       Cancel
                     </button>
                   </div>
                 )}
@@ -502,7 +541,7 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
               {/* ── Journey Date — always editable, shown last ── */}
               <div className="train-info-grid" style={{ marginTop: "10px" }}>
                 <div className="info-row info-row-date">
-                  <span className="info-label">📅 Journey Date</span>
+                  <span className="info-label"> Journey Date</span>
                   <input
                     className="info-input"
                     type="date"

@@ -167,7 +167,7 @@ const PendingReallocationsPage: React.FC = () => {
             <td className="passenger-name">{realloc.passengerName}</td>
             <td className="pnr">{realloc.passengerPNR}</td>
             <td>
-                <span className="station-badge">📍 {realloc.stationName}</span>
+                <span className="station-badge">📌 {realloc.stationName}</span>
             </td>
             <td className="journey">
                 {realloc.passengerFrom} → {realloc.passengerTo}
@@ -179,7 +179,7 @@ const PendingReallocationsPage: React.FC = () => {
             </td>
             <td className="proposed-berth">
                 <span className="status-proposed">
-                    ✨ {realloc.proposedBerthFull} ({realloc.proposedBerthType})
+                    ✅ {realloc.proposedBerthFull} ({realloc.proposedBerthType})
                 </span>
             </td>
             <td className="berth-vacant">
@@ -200,7 +200,7 @@ const PendingReallocationsPage: React.FC = () => {
                             onClick={() => rejectReallocation(realloc._id)}
                             disabled={processing}
                         >
-                            ✓
+                            
                         </button>
                         <button
                             className="btn-cancel-small"
@@ -209,7 +209,7 @@ const PendingReallocationsPage: React.FC = () => {
                                 setRejectionReason('');
                             }}
                         >
-                            ✕
+                            
                         </button>
                     </div>
                 ) : (
@@ -317,7 +317,7 @@ const PendingReallocationsPage: React.FC = () => {
             {/* Empty State */}
             {pendingReallocations.length === 0 ? (
                 <div className="empty-state">
-                    <div className="empty-icon">✨</div>
+                    <div className="empty-icon">✅</div>
                     <h3>No Pending Reallocations</h3>
                     <p>All reallocations have been processed</p>
                 </div>
@@ -355,7 +355,7 @@ const PendingReallocationsPage: React.FC = () => {
                     <div className="reallocation-section">
                         <div className="section-header section-offline">
                             <div className="section-title">
-                                <span className="section-icon">📴</span>
+                                <span className="section-icon">[OFF]</span>
                                 <h2>Offline Passengers</h2>
                                 <span className="section-count">{offlineReallocations.length}</span>
                             </div>

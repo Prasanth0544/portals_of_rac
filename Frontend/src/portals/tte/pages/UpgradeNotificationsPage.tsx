@@ -79,7 +79,7 @@ const UpgradeNotificationsPage: React.FC = () => {
         <div className="upgrade-notifications-page">
             <div className="page-header">
                 <div className="header-content">
-                    <h1>📤 Sent Upgrade Offers</h1>
+                    <h1>[OUT] Sent Upgrade Offers</h1>
                     <p className="header-subtitle">
                         Track RAC upgrade offers sent to online passengers via Passenger Portal
                     </p>
@@ -116,7 +116,7 @@ const UpgradeNotificationsPage: React.FC = () => {
 
             {sentOffers.length === 0 ? (
                 <div className="empty-state">
-                    <div className="empty-icon">📭</div>
+                    <div className="empty-icon">✉️</div>
                     <h3>No Upgrade Offers Sent</h3>
                     <p>Offers sent to online passengers will appear here.</p>
                     <p className="hint">

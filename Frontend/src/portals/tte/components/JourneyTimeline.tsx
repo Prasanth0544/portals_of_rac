@@ -45,7 +45,7 @@ function JourneyTimeline({ stations, currentStationIndex }: JourneyTimelineProps
         <div className="journey-timeline-container">
             {/* Header */}
             <div className="timeline-header">
-                <h2>🚉 Train Simulation - Journey Progress</h2>
+                <h2> Train Simulation - Journey Progress</h2>
                 <span className="station-progress-badge">
                     {currentStationIndex + 1}/{stations.length} Stations
                 </span>
@@ -66,8 +66,8 @@ function JourneyTimeline({ stations, currentStationIndex }: JourneyTimelineProps
 
                                 {/* Station Circle */}
                                 <div className={`timeline-circle ${status}`}>
-                                    {status === 'completed' ? '✓' :
-                                        status === 'current' ? '🚃' :
+                                    {status === 'completed' ? '' :
+                                        status === 'current' ? '' :
                                             station.sno || idx + 1}
                                 </div>
 

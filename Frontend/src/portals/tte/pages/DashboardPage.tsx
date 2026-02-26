@@ -277,7 +277,7 @@ function DashboardPage(): React.ReactElement {
                 <div className="dashboard-header-meta">
                     <p className="dashboard-subtitle">Real-time overview of train journey and passenger status</p>
                     <span className={`ws-status ${isConnected ? 'connected' : 'disconnected'}`}>
-                        {isConnected ? '🟢 Live' : '🔴 Offline'}
+                        {isConnected ? ' Live' : ' Offline'}
                     </span>
                 </div>
             </div>
@@ -448,7 +448,7 @@ function DashboardPage(): React.ReactElement {
                                     onClick={handleMarkNoShow}
                                     disabled={actionLoading || searchResult.deboarded}
                                 >
-                                    {actionLoading ? 'Processing...' : '⛔ Mark as No-Show'}
+                                    {actionLoading ? 'Processing...' : ' Mark as No-Show'}
                                 </button>
                             ) : (
                                 <button
@@ -481,7 +481,7 @@ function DashboardPage(): React.ReactElement {
                             </div>
 
                             <div className="current-station-row">
-                                <span className="current-station-label">🚉 Current Station:</span>
+                                <span className="current-station-label"> Current Station:</span>
                                 <span className="current-station-value">{currentStation?.name || 'N/A'}</span>
                             </div>
 

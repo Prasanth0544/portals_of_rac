@@ -9,7 +9,7 @@ import App from './App';
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
     constructor(props: any) { super(props); this.state = { hasError: false, error: null }; }
     static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
-    componentDidCatch(error: any, info: any) { console.error('🔴 React Error Boundary caught:', error, info); }
+    componentDidCatch(error: any, info: any) { console.error(' React Error Boundary caught:', error, info); }
     render() {
         if (this.state.hasError) {
             return <div style={{ padding: 40, color: '#c0392b', fontFamily: 'monospace' }}>

@@ -165,7 +165,7 @@ export const setupRefreshListener = (refreshCallback?: (data?: RefreshData) => v
     if (!('serviceWorker' in navigator)) return;
 
     navigator.serviceWorker.addEventListener('message', (event: MessageEvent<ServiceWorkerMessage>) => {
-        console.log('📨 Message from SW:', event.data);
+        console.log('✉️ Message from SW:', event.data);
 
         if (event.data?.type === 'REFRESH_PAGE') {
             console.log('🔄 Auto-refreshing page...');

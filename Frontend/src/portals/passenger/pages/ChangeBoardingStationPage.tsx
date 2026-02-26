@@ -302,7 +302,7 @@ const ChangeBoardingStationPage: React.FC = () => {
                                         <span className="passenger-berth">{p.Coach}-{p.Berth_Number}</span>
                                     </div>
                                     <div className="passenger-route">
-                                        🚉 {p.Boarding_Station} → {p.Deboarding_Station}
+                                         {p.Boarding_Station} → {p.Deboarding_Station}
                                     </div>
                                 </div>
                             ))}
@@ -319,7 +319,7 @@ const ChangeBoardingStationPage: React.FC = () => {
                     <div className="step-content">
                         <h2>Step 3: Verify OTP</h2>
                         <p className="hint">
-                            📧 OTP has been sent to {maskedEmail}
+                            ✉️ OTP has been sent to {maskedEmail}
                         </p>
                         <div className="input-group">
                             <label>Enter 6-digit OTP</label>
@@ -336,7 +336,7 @@ const ChangeBoardingStationPage: React.FC = () => {
                             onClick={verifyOTPAndFetchStations}
                             disabled={processing || otp.length !== 6}
                         >
-                            {processing ? 'Verifying...' : '✓ Verify OTP'}
+                            {processing ? 'Verifying...' : ' Verify OTP'}
                         </button>
                         <button className="btn-secondary" onClick={() => setStep(2)}>
                             ← Back

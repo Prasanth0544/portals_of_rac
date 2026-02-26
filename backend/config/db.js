@@ -23,6 +23,11 @@ class Database {
     this.stationsCollectionName = null;
     this.passengersCollectionName = null;
     this.trainDetailsCollectionName = null;
+
+    // Connection-ready gate: blocks queries while reconnecting
+    this._isReady = false;
+    this._readyResolve = null;
+    this._readyPromise = Promise.resolve(); // starts resolved (no gate)
   }
 
   /**
@@ -30,6 +35,10 @@ class Database {
    */
   async connect(config = null) {
     try {
+      // ── Gate: block queries while reconnecting ──
+      this._isReady = false;
+      this._readyPromise = new Promise(resolve => { this._readyResolve = resolve; });
+
       // Use provided config or global config only. No env/default fallbacks.
       const finalConfig = config || global.RAC_CONFIG || {};
 
@@ -80,6 +89,9 @@ class Database {
         console.log(`   📦 Trains_Details: ${this.trainDetailsDbName}`);
         console.log(`   📦 Stations: ${this.stationsDbName}`);
         console.log(`   📦 Passengers: ${this.passengersDbName}`);
+        // ── Gate: connection ready (bootstrap path) ──
+        this._isReady = true;
+        if (this._readyResolve) this._readyResolve();
         return this;
       }
 
@@ -154,11 +166,27 @@ class Database {
       console.log(`📁 Collection: ${this.trainDetailsCollectionName}`);
       console.log("");
 
+      // ── Gate: connection ready ──
+      this._isReady = true;
+      if (this._readyResolve) this._readyResolve();
+
       return this;
     } catch (err) {
+      // Unblock waiters even on failure so they get an error instead of hanging
+      this._isReady = true;
+      if (this._readyResolve) this._readyResolve();
       console.error("❌ MongoDB connection error:", err);
       throw err;
     }
+  }
+
+  /**
+   * Wait until the database connection is fully established.
+   * Used by middleware to hold requests during reconnection.
+   */
+  async waitUntilReady() {
+    if (this._isReady) return;
+    await this._readyPromise;
   }
 
   /**

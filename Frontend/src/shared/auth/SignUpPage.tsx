@@ -130,7 +130,7 @@ function SignUpPage(): React.ReactElement {
         }
     };
 
-    const getTitle = (): string => isAdmin ? '🛡️ Admin Portal' : '🎫 Passenger Portal';
+    const getTitle = (): string => isAdmin ? '🛡️ Admin Portal' : ' Passenger Portal';
 
     return (
         <div className="signup-container">

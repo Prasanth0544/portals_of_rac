@@ -30,7 +30,7 @@ const UpgradeOffersPage: React.FC = () => {
     const [pnr, setPnr] = useState<string | null>(null);
     const [isRejected, setIsRejected] = useState<boolean>(false);
     const [countdown, setCountdown] = useState<number>(0);
-    const [passengerData, setPassengerData] = useState<any>(null); // Track full passenger data including Online_Status
+    const [passengerData, setPassengerData] = useState<any>(null);
 
     // Get IRCTC ID from logged-in user (handles both cases)
     const userStr = localStorage.getItem('user');
@@ -44,6 +44,75 @@ const UpgradeOffersPage: React.FC = () => {
             setLoading(false);
         }
     }, [irctcId]);
+
+    // ✅ WebSocket for real-time offer delivery + polling fallback
+    useEffect(() => {
+        if (!pnr) return;
+
+        const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
+        const ws = new WebSocket(WS_URL);
+
+        ws.onopen = (): void => {
+            console.log('📡 UpgradeOffersPage: WebSocket connected');
+            // Subscribe to PNR-specific offer updates
+            ws.send(JSON.stringify({ type: 'subscribe:offers', payload: { pnr } }));
+            // Identify as passenger
+            ws.send(JSON.stringify({ type: 'IDENTIFY', role: 'PASSENGER', irctcId }));
+        };
+
+        ws.onmessage = (event: MessageEvent): void => {
+            try {
+                const data = JSON.parse(event.data);
+
+                // New offer arrived
+                if (data.type === 'upgrade:offer') {
+                    console.log('🔔 New upgrade offer received via WebSocket:', data.payload);
+                    fetchUpgradeOffers(pnr);
+                }
+
+                // Offer expired
+                if (data.type === 'upgrade:expired') {
+                    console.log('⏰ Offer expired:', data.payload);
+                    fetchUpgradeOffers(pnr);
+                }
+
+                // Upgrade confirmed by TTE
+                if (data.type === 'upgrade:confirmed') {
+                    console.log('✅ Upgrade confirmed:', data.payload);
+                    toast.success('✅ Your upgrade has been confirmed by the TTE!');
+                    fetchUpgradeOffers(pnr);
+                }
+
+                // Upgrade rejected
+                if (data.type === 'upgrade:rejected') {
+                    console.log('❌ Upgrade rejected:', data.payload);
+                    toast.error('Upgrade was not approved.');
+                    fetchUpgradeOffers(pnr);
+                }
+
+                // Broadcast events that may affect offers
+                if (data.type === 'RAC_REALLOCATION_APPROVED' || data.type === 'RAC_REALLOCATION') {
+                    fetchUpgradeOffers(pnr);
+                }
+            } catch (err) {
+                console.error('WebSocket parse error:', err);
+            }
+        };
+
+        ws.onerror = (error: Event): void => {
+            console.error('UpgradeOffersPage WebSocket error:', error);
+        };
+
+        // Polling fallback every 30 seconds
+        const pollInterval = setInterval(() => {
+            fetchUpgradeOffers(pnr);
+        }, 30000);
+
+        return () => {
+            ws.close();
+            clearInterval(pollInterval);
+        };
+    }, [pnr]);
 
     // ✅ Countdown timer - updates every second for offer expiration
     useEffect(() => {
@@ -109,7 +178,9 @@ const UpgradeOffersPage: React.FC = () => {
             const data = await response.json();
 
             if (data.success) {
-                setOffers(data.data || []);
+                // API returns { data: { pnr, count, notifications: [...] } }
+                const notifications = data.data?.notifications || data.data || [];
+                setOffers(Array.isArray(notifications) ? notifications : []);
             }
         } catch (error) {
             console.error('Error fetching upgrade offers:', error);
@@ -137,7 +208,7 @@ const UpgradeOffersPage: React.FC = () => {
             const data = await response.json();
 
             if (data.success) {
-                toast.success('🎉 Upgrade accepted! Your new berth has been assigned.');
+                toast.success('✅ Upgrade accepted! Your new berth has been assigned.');
                 if (pnr) fetchUpgradeOffers(pnr);
             } else {
                 toast.error(data.message || 'Failed to accept upgrade');
@@ -197,7 +268,7 @@ const UpgradeOffersPage: React.FC = () => {
         <div className="upgrade-offers-page">
             {!irctcId ? (
                 <div className="empty-state">
-                    <div className="empty-icon">🔐</div>
+                    <div className="empty-icon"></div>
                     <h3>Login Required</h3>
                     <p>Please log in with your IRCTC ID to view upgrade offers.</p>
                     <p className="hint">You need to be logged in to see available upgrade opportunities.</p>
@@ -211,7 +282,7 @@ const UpgradeOffersPage: React.FC = () => {
                 </div>
             ) : isRejected ? (
                 <div className="empty-state rejected-state">
-                    <div className="empty-icon">🚫</div>
+                    <div className="empty-icon"></div>
                     <h3>Upgrade Not Available</h3>
                     <p>You previously declined an upgrade offer.</p>
                     <p className="hint">Passengers who decline upgrade offers are not eligible for further upgrades during this journey.</p>
@@ -222,7 +293,7 @@ const UpgradeOffersPage: React.FC = () => {
                     {/* Page Header */}
                     <div className="page-header">
                         <div className="header-content">
-                            <h1>🎫 Upgrade Offers</h1>
+                            <h1> Upgrade Offers</h1>
                             <p className="header-subtitle">
                                 {offers.length > 0
                                     ? `You have ${offers.length} pending upgrade offer${offers.length > 1 ? 's' : ''}`
@@ -262,7 +333,7 @@ const UpgradeOffersPage: React.FC = () => {
 
                     {offers.length === 0 ? (
                         <div className="empty-state">
-                            <div className="empty-icon">📭</div>
+                            <div className="empty-icon">✉️</div>
                             <h3>No Upgrade Offers Available</h3>
                             <p>You don't have any pending upgrade offers at the moment.</p>
                             <p className="hint">Offers will appear here when a confirmed berth becomes available.</p>
@@ -285,7 +356,7 @@ const UpgradeOffersPage: React.FC = () => {
                                             </span>
                                             {offer.expiresIn ? (
                                                 <span className={`countdown-timer ${offer.expiresIn < 60000 ? 'urgent' : ''}`}>
-                                                    ⏱️ {Math.floor(offer.expiresIn / 60000)}:{String(Math.floor((offer.expiresIn % 60000) / 1000)).padStart(2, '0')}
+                                                    ⏱ {Math.floor(offer.expiresIn / 60000)}:{String(Math.floor((offer.expiresIn % 60000) / 1000)).padStart(2, '0')}
                                                 </span>
                                             ) : (
                                                 <span className="offer-time">
@@ -317,7 +388,7 @@ const UpgradeOffersPage: React.FC = () => {
                                     <div className="offer-right">
                                         <div className="berth-details">
                                             <div className="berth-main">
-                                                <span className="berth-icon">🛏️</span>
+                                                <span className="berth-icon"></span>
                                                 <span className="berth-number">{offer.berth}</span>
                                             </div>
                                             <div className="berth-meta">

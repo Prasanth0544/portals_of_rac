@@ -111,7 +111,7 @@ function PassengerStatusButton({ passenger, onStatusUpdate }: PassengerStatusBut
                     Offline
                 </button>
                 <button onClick={() => setShowButtons(false)} className="status-btn cancel-btn">
-                    ✕
+
                 </button>
             </div>
         );
@@ -129,6 +129,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
     const [filteredPassengers, setFilteredPassengers] = useState<Passenger[]>([]);
     const [counts, setCounts] = useState<Counts | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [journeyNotStarted, setJourneyNotStarted] = useState<boolean>(false);
 
     const [searchPNR, setSearchPNR] = useState<string>("");
     const [searchCoach, setSearchCoach] = useState<string>("");
@@ -277,6 +278,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
     const loadData = async (): Promise<void> => {
         try {
             setLoading(true);
+            setJourneyNotStarted(false);
 
             const [passengersRes, countsRes] = await Promise.all([
                 getAllPassengers(),
@@ -286,6 +288,11 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
             if (passengersRes.success) {
                 const allPassengers = passengersRes.data.passengers || [];
                 setPassengers(allPassengers);
+            } else if (
+                passengersRes.error?.toLowerCase().includes('journey has not started') ||
+                passengersRes.error?.toLowerCase().includes('train is not initialized')
+            ) {
+                setJourneyNotStarted(true);
             }
 
             if (countsRes.success) {
@@ -385,11 +392,36 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                         </svg>
 
                     </button>
-                    <h2>👥 Passenger List</h2>
+                    <h2> Passenger List</h2>
                 </div>
                 <div className="loading-container">
                     <div className="spinner-large"></div>
                     <p>Loading passengers...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (journeyNotStarted) {
+        return (
+            <div className="passengers-page">
+                <div className="page-header">
+                    <button className="back-btn" onClick={onClose}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h2>Passenger List & Vacant Positions</h2>
+                </div>
+                <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚂</div>
+                    <h3 style={{ marginBottom: '8px', color: '#2c3e50' }}>Journey Not Started</h3>
+                    <p style={{ color: '#5a6c7d', marginBottom: '20px' }}>
+                        The journey hasn't been started yet. Go to the <strong>Home</strong> page to initialize the train and start the journey.
+                    </p>
+                    <button className="back-btn" onClick={onClose} style={{ background: '#0891b2', color: 'white', padding: '10px 24px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '15px', fontWeight: 600 }}>
+                        🏠 Go to Home
+                    </button>
                 </div>
             </div>
         );
@@ -404,7 +436,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                     </svg>
 
                 </button>
-                <h2>👥 Passenger List & Vacant Positions ({counts ? counts.total : passengers.length} total)</h2>
+                <h2> Passenger List & Vacant Positions ({counts ? counts.total : passengers.length} total)</h2>
             </div>
 
             {counts && (
@@ -463,7 +495,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                         />
                         <input
                             type="text"
-                            placeholder="🛏️ Berth (S1-4, B2-37)..."
+                            placeholder=" Berth (S1-4, B2-37)..."
                             value={searchBerth}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchBerth(e.target.value)}
                             style={{ ...inputStyle, maxWidth: '180px' }}
@@ -511,7 +543,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
             {trainData && trainData.journeyStarted && (
                 <div className="vacant-toggle-section" style={{ marginTop: '30px' }}>
                     <button onClick={() => setShowVacantBerths(!showVacantBerths)} className="vacant-toggle-btn">
-                        {showVacantBerths ? "👥 Show Passengers" : " Show Vacant Berths"}
+                        {showVacantBerths ? " Show Passengers" : " Show Vacant Berths"}
                         {!showVacantBerths && (
                             <span className="toggle-count">
                                 ({vacantBerths.length} vacant at{" "}
@@ -559,7 +591,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                     className="vacant-filter-reset"
                                     title="Clear Filters"
                                 >
-                                    ✕ Clear
+                                    Clear
                                 </button>
                             </div>
                         </div>
@@ -619,7 +651,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
 
                     <div className="add-passenger-button-container">
                         <button onClick={() => onNavigate("add-passenger")} className="btn-add-passenger-bottom" title="Add a new passenger to vacant berths">
-                            ➕ Add New Passenger
+                            Add New Passenger
                         </button>
                         <p className="add-passenger-hint">Check vacant berths above and add passengers to available berths</p>
                     </div>
@@ -676,7 +708,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                                     >
                                                         <td className="td-no">{++rowIndex}</td>
                                                         <td className="td-pnr" colSpan={2}>
-                                                            <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▶</span>
+                                                            <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>{">"}</span>
                                                             <strong>{pnr}</strong>
                                                             <span className="passenger-count-badge">
                                                                 {passengerGroup.length} passengers

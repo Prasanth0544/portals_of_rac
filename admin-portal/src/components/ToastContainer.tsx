@@ -81,7 +81,7 @@ function ToastContainer(): React.ReactElement {
                         onClick={() => handleClose(toast.id)}
                         aria-label="Close notification"
                     >
-                        ✕
+                        
                     </button>
                     {(toast.duration) && (
                         <div

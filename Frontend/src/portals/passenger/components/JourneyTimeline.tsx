@@ -52,7 +52,7 @@ function JourneyTimeline({ stations, currentStationIndex }: JourneyTimelineProps
             {/* Header */}
             <Box className="timeline-header">
                 <Typography variant="h6" sx={{ fontWeight: 600, color: '#f1f5f9' }}>
-                    🚉 Train Simulation - Journey Progress
+                     Train Simulation - Journey Progress
                 </Typography>
                 <Chip
                     label={`${currentStationIndex + 1}/${stations.length} Stations`}
@@ -94,7 +94,7 @@ function JourneyTimeline({ stations, currentStationIndex }: JourneyTimelineProps
 
                                 {/* Station Circle */}
                                 <Box className={`timeline-circle ${status}`}>
-                                    {status === 'completed' ? '✓' :
+                                    {status === 'completed' ? '' :
                                         status === 'current' ? <TrainIcon sx={{ fontSize: 24 }} /> :
                                             station.sno || idx + 1}
                                 </Box>

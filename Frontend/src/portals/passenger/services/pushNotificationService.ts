@@ -109,7 +109,7 @@ export const subscribeToPushNotifications = async (): Promise<SubscriptionResult
             return { success: false, error: 'User not authenticated' };
         }
 
-        console.log('📤 Subscribing to push notifications for:', irctcId);
+        console.log('[OUT] Subscribing to push notifications for:', irctcId);
         const response = await fetch(`${API_BASE_URL}/passenger/push-subscribe`, {
             method: 'POST',
             headers: {
@@ -141,7 +141,7 @@ export const setupRefreshListener = (refreshCallback?: RefreshCallback): void =>
     if (!('serviceWorker' in navigator)) return;
 
     navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
-        console.log('📨 Message from SW:', event.data);
+        console.log('✉️ Message from SW:', event.data);
 
         if (event.data?.type === 'REFRESH_PAGE') {
             console.log('🔄 Auto-refreshing page...');

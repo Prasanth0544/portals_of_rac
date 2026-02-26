@@ -24,7 +24,7 @@ function RACQueue({ racQueue = [] }: RACQueueProps): React.ReactElement {
     if (!racQueue.length) {
         return (
             <div className="rac-queue-panel">
-                <h3 className="panel-header">🎫 RAC Queue (0 passengers)</h3>
+                <h3 className="panel-header"> RAC Queue (0 passengers)</h3>
                 <div className="empty-queue">
                     <p>✅ No RAC passengers in queue - All confirmed!</p>
                 </div>
@@ -35,7 +35,7 @@ function RACQueue({ racQueue = [] }: RACQueueProps): React.ReactElement {
     return (
         <div className="rac-queue-panel">
             <h3 className="panel-header">
-                🎫 RAC Queue ({racQueue.length} passengers)
+                 RAC Queue ({racQueue.length} passengers)
             </h3>
 
             <div className="rac-table-container">

@@ -9,6 +9,8 @@ import {
 } from "../services/apiWithErrorHandling";
 import { errorToast, successToast } from "../services/toastNotification";
 import TrainApp from "../TrainApp";
+import { addTrainTab } from "../components/TrainTabBar";
+import TrainTabBar from "../components/TrainTabBar";
 import "../styles/pages/ConfigPage.css";
 import "../styles/pages/TrainDashboard.css";
 
@@ -111,8 +113,8 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
         try {
           const { getTrainState } = await import("../services/apiWithErrorHandling");
           const stateRes = await getTrainState(trainNo);
-          if (stateRes?.success && stateRes.data?.trainNo) {
-            console.log("[TrainDashboard] Train already initialized — skipping config");
+          if (stateRes?.success && stateRes.data?.trainNo && stateRes.data?.initialized !== false) {
+            console.log("[TrainDashboard] Train already initialized in memory — skipping config");
             setConfigured(true);
             setLoadingConfig(false);
             return;
@@ -270,6 +272,8 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
       await new Promise((resolve) => setTimeout(resolve, 400));
       // Clear config page state — user is now on home, refresh should stay on home
       localStorage.removeItem(`trainPage_${trainNo}`);
+      // Auto-add this train to the tab bar
+      addTrainTab(targetTrainNo, editTrainName);
       setConfigured(true);
     } catch (error: any) {
       setConfigError(error.message || "Configuration failed");
@@ -294,6 +298,7 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
             <h2>Loading Train {trainNo}…</h2>
           </div>
         </div>
+        <TrainTabBar />
         <div className="app-content">
           <div className="initialization-screen">
             <div className="init-card">
@@ -316,6 +321,7 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
 
         </div>
       </div>
+      <TrainTabBar />
 
       <div className="app-content">
         <div className="config-page">
@@ -374,7 +380,7 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
                       className="btn-cancel-edit"
                       onClick={cancelEdit}
                     >
-                      ✕ Cancel
+                       Cancel
                     </button>
                   </div>
                 )}
@@ -501,7 +507,7 @@ const TrainDashboard: React.FC<{ initialPage?: string }> = ({
               {/* ── Journey Date — always editable, shown last ── */}
               <div className="train-info-grid" style={{ marginTop: "10px" }}>
                 <div className="info-row info-row-date">
-                  <span className="info-label">📅 Journey Date</span>
+                  <span className="info-label"> Journey Date</span>
                   <input
                     className="info-input"
                     type="date"

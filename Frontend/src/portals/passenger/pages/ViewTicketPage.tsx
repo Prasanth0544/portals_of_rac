@@ -236,7 +236,7 @@ function ViewTicketPage(): React.ReactElement {
         return (
             <div className="view-ticket-page">
                 <div className="page-header">
-                    <h2>🎫 View Your Tickets</h2>
+                    <h2> View Your Tickets</h2>
                 </div>
                 <div className="loading-container">
                     <p>Loading ticket details...</p>
@@ -249,7 +249,7 @@ function ViewTicketPage(): React.ReactElement {
         return (
             <div className="view-ticket-page">
                 <div className="page-header">
-                    <h2>🎫 View Your Tickets</h2>
+                    <h2> View Your Tickets</h2>
                 </div>
                 <div className="error-message">
                     ❌ {error}
@@ -261,7 +261,7 @@ function ViewTicketPage(): React.ReactElement {
     return (
         <div className="view-ticket-page">
             <div className="page-header">
-                <h2>🎫 View Your Tickets</h2>
+                <h2> View Your Tickets</h2>
             </div>
 
             {successMessage && (
@@ -280,7 +280,7 @@ function ViewTicketPage(): React.ReactElement {
             {/* Action Buttons Section */}
             <div className="change-station-section">
                 <div className="section-title">
-                    🎫 Ticket Actions
+                     Ticket Actions
                 </div>
 
                 {isCancelled ? (
@@ -291,7 +291,7 @@ function ViewTicketPage(): React.ReactElement {
                     <div className="action-buttons-row">
                         {/* Change Boarding Station */}
                         <div className="action-card">
-                            <h4>📍 Change Boarding Station</h4>
+                            <h4>📌 Change Boarding Station</h4>
                             {alreadyChanged ? (
                                 <p className="notice-text">⚠️ Already changed once (limit reached)</p>
                             ) : (

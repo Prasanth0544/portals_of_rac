@@ -1,10 +1,16 @@
 // admin-portal/src/App.tsx
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import TrainDashboard from './pages/TrainDashboard';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
+
+/** Forces TrainDashboard to remount when trainNo changes (fixes stale data on tab switch) */
+function TrainDashboardWithKey({ initialPage }: { initialPage?: string }) {
+    const { trainNo } = useParams();
+    return <TrainDashboard key={trainNo} initialPage={initialPage} />;
+}
 
 function App(): React.ReactElement {
     // Read token synchronously so the correct route renders immediately on refresh
@@ -29,10 +35,10 @@ function App(): React.ReactElement {
                 <Route path="/" element={<LandingPage />} />
 
                 {/* Train Dashboard - Auto-configured from URL param */}
-                <Route path="/train/:trainNo" element={<TrainDashboard />} />
+                <Route path="/train/:trainNo" element={<TrainDashboardWithKey />} />
 
                 {/* Manual Config Page */}
-                <Route path="/config" element={<TrainDashboard initialPage="config" />} />
+                <Route path="/config" element={<TrainDashboardWithKey initialPage="config" />} />
 
                 {/* Redirect unknown routes to landing */}
                 <Route path="*" element={<Navigate to="/" replace />} />
@@ -42,3 +48,4 @@ function App(): React.ReactElement {
 }
 
 export default App;
+

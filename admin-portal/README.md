@@ -153,7 +153,7 @@ The Admin Portal uses **IndexedDB** (`StateStore.ts`) to persist session state:
 ## 🔗 Related
 
 - [Root Documentation](../README.md)
-- [QUICKSTART.md](../QUICKSTART.md)
+- [README.md](../README.md)
 - [Backend API](../backend/README.md)
 - [TTE Portal](../tte-portal/README.md)
 - [Passenger Portal](../passenger-portal/README.md)

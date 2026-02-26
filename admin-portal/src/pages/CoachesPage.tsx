@@ -134,13 +134,13 @@ function CoachesPage({ trainData, onClose }: CoachesPageProps): React.ReactEleme
                     className={`coach-type-btn ${selectedCoachType === "sleeper" ? "active" : ""}`}
                     onClick={() => handleCoachTypeChange("sleeper")}
                 >
-                    🛏️ Sleeper Coaches
+                     Sleeper Coaches
                 </button>
                 <button
                     className={`coach-type-btn ${selectedCoachType === "3ac" ? "active" : ""}`}
                     onClick={() => handleCoachTypeChange("3ac")}
                 >
-                    ❄️ 3-Tier AC
+                     3-Tier AC
                 </button>
             </div>
 
@@ -212,7 +212,7 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations, journe
             <div className="modal-overlay" onClick={onClose}>
                 <div className="modal-content" onClick={(e: MouseEvent) => e.stopPropagation()}>
                     <div className="modal-header">
-                        <h3>🛏️ Berth Details: {berth.fullBerthNo}</h3>
+                        <h3> Berth Details: {berth.fullBerthNo}</h3>
                         <button className="back-btn" onClick={onClose}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
                                 <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -228,7 +228,7 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations, journe
                             <span className="status-tag vacant">VACANT</span>
                         </div>
                         <div className="vacant-message">
-                            <div className="vacant-icon">💺</div>
+                            <div className="vacant-icon"></div>
                             <h4>This berth is currently vacant</h4>
                             <p>Journey has not started yet. Passenger details will be available once the journey begins.</p>
                         </div>
@@ -242,7 +242,7 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations, journe
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={(e: MouseEvent) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h3>🛏️ Berth Details: {berth.fullBerthNo}</h3>
+                    <h3> Berth Details: {berth.fullBerthNo}</h3>
                     <button className="back-btn" onClick={onClose}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
                             <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -273,7 +273,7 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations, journe
                                             {p.pnrStatus}
                                         </span>
                                     </div>
-                                    <div className="journey-info">🚉 {p.Boarding_Station} → {p.Deboarding_Station}</div>
+                                    <div className="journey-info"> {p.Boarding_Station} → {p.Deboarding_Station}</div>
                                     <div className="passenger-status">
                                         {p.noShow ? (
                                             <span className="status-icon no-show">❌ No-Show</span>
@@ -310,7 +310,7 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations, journe
 
                     {berth.status === "VACANT" && (
                         <div className="vacant-message">
-                            <div className="vacant-icon">💺</div>
+                            <div className="vacant-icon"></div>
                             <h4>This berth is currently vacant</h4>
                             <p>Available for allocation to RAC passengers</p>
                         </div>

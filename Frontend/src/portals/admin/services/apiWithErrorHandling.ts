@@ -163,7 +163,14 @@ api.interceptors.response.use(
 
     if (status === 400) {
       console.error("[API] Validation error:", data);
-      validationErrorToast(data.message || "Validation failed");
+      // Suppress toast for "journey not started" errors — these are expected
+      // state mismatches (e.g. page loaded before journey init), not user errors.
+      const isJourneyNotStarted =
+        data.message?.toLowerCase().includes("journey has not started") ||
+        data.message?.toLowerCase().includes("train is not initialized");
+      if (!isJourneyNotStarted) {
+        validationErrorToast(data.message || "Validation failed");
+      }
       return Promise.reject({
         type: "VALIDATION_ERROR",
         message: data.message || "Validation failed",

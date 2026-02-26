@@ -254,7 +254,7 @@ See `.env.example` for full configuration options.
 ## 🔗 Related
 
 - [Root Documentation](../README.md)
-- [QUICKSTART.md](../QUICKSTART.md)
+- [README.md](../README.md)
 - [Frontend (Admin Portal)](../admin-portal/)
 - [TTE Portal](../tte-portal/)
 - [Passenger Portal](../passenger-portal/)

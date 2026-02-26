@@ -208,7 +208,7 @@ function DashboardPage(): React.ReactElement {
 
             if (response.data.success && response.data.data?.upgrades) {
                 setPendingUpgrades(response.data.data.upgrades);
-                console.log(`📋 Found ${response.data.data.upgrades.length} pending upgrades`);
+                console.log(`📝 Found ${response.data.data.upgrades.length} pending upgrades`);
             }
         } catch (err) {
             console.error('Error fetching pending upgrades:', err);
@@ -237,7 +237,7 @@ function DashboardPage(): React.ReactElement {
                 console.log('✅ Found active group upgrade offer on reconnection!', response.data);
 
                 // Show notification and navigate to selection page
-                alert(`🎉 You have an active upgrade offer!\\n\\nSeats available: ${response.data.vacantSeatsCount}\\nYour group size: ${response.data.passengerCount}\\n\\nSelect passengers now!`);
+                alert(`✅ You have an active upgrade offer!\\n\\nSeats available: ${response.data.vacantSeatsCount}\\nYour group size: ${response.data.passengerCount}\\n\\nSelect passengers now!`);
 
                 window.location.href = `/#/family-upgrade?pnr=${pnr}`;
             } else {
@@ -280,12 +280,12 @@ function DashboardPage(): React.ReactElement {
                 }
 
                 if (data.type === 'upgradeOffer' && data.irctcId === userData.irctcId) {
-                    console.log('🎉 Upgrade offer received:', data);
+                    console.log('✅ Upgrade offer received:', data);
                     setUpgradeOffer(data.offer || null);
                 }
 
                 if (data.type === 'UPGRADE_OFFER_AVAILABLE' && data.irctcId === userData.irctcId) {
-                    console.log('🎉 Dual-approval upgrade offer received:', data);
+                    console.log('✅ Dual-approval upgrade offer received:', data);
                     fetchPendingUpgrades();
                 }
 
@@ -300,7 +300,7 @@ function DashboardPage(): React.ReactElement {
                     alert(`❌ Your upgrade offer was rejected.\nReason: ${data.data.reason}`);
                 }
 
-                // ✨ NEW: Group upgrade offer received - navigate to selection page
+                // ✅ NEW: Group upgrade offer received - navigate to selection page
                 if (data.type === 'GROUP_UPGRADE_AVAILABLE') {
                     // Match PNR - check both pnr and PNR_Number fields
                     const passengerPNR = userData.pnr || userData.PNR_Number;
@@ -308,7 +308,7 @@ function DashboardPage(): React.ReactElement {
 
                     if (passengerPNR && groupData.pnr === passengerPNR) {
                         console.log('🎯 Group upgrade offer received!', data);
-                        alert(`🎉 Great news! Your group is eligible for an upgrade!\n\nYou have 10 minutes to select passengers.\n\nSeats available: ${groupData.vacantSeatsCount}\nYour group size: ${groupData.passengerCount}`);
+                        alert(`✅ Great news! Your group is eligible for an upgrade!\n\nYou have 10 minutes to select passengers.\n\nSeats available: ${groupData.vacantSeatsCount}\nYour group size: ${groupData.passengerCount}`);
 
                         // Navigate to family upgrade selection page
                         window.location.href = `/#/family-upgrade?pnr=${groupData.pnr}`;
@@ -372,7 +372,7 @@ function DashboardPage(): React.ReactElement {
             );
 
             if (response.data.success) {
-                alert(`🎉 Upgrade approved! Your new berth: ${response.data.data.newBerth}`);
+                alert(`✅ Upgrade approved! Your new berth: ${response.data.data.newBerth}`);
                 setPendingUpgrades(prev => prev.filter(u => u.id !== upgrade.id));
                 fetchData();
             }
@@ -400,7 +400,7 @@ function DashboardPage(): React.ReactElement {
             );
 
             if (response.data.success) {
-                alert('🎉 Upgrade confirmed! Your new berth is ' + upgradeOffer.offeredBerth);
+                alert('✅ Upgrade confirmed! Your new berth is ' + upgradeOffer.offeredBerth);
                 setUpgradeOffer(null);
                 fetchData();
             }
@@ -783,7 +783,7 @@ function DashboardPage(): React.ReactElement {
                 >
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                            🚫 Upgrade Not Available
+                             Upgrade Not Available
                         </Typography>
                         <Typography variant="body2">
                             You previously declined an upgrade offer. Passengers who decline upgrades are not eligible for further upgrade offers during this journey.
@@ -848,7 +848,7 @@ function DashboardPage(): React.ReactElement {
                         <Card sx={{ bgcolor: '#fff3e0', border: '1px solid #f57c00', height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <CardContent sx={{ flexGrow: 1 }}>
                                 <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    🚉 Leaving Early?
+                                     Leaving Early?
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                                     If you've left the train before your destination, report it here. Your berth will be made available for other passengers to upgrade.
@@ -949,7 +949,7 @@ function DashboardPage(): React.ReactElement {
                     {changeStep === 2 && (
                         <Box>
                             <Alert severity="info" sx={{ mb: 2 }}>
-                                📧 OTP has been sent to your registered email address.
+                                ✉️ OTP has been sent to your registered email address.
                             </Alert>
                             <TextField
                                 fullWidth
@@ -1085,7 +1085,7 @@ function DashboardPage(): React.ReactElement {
                     {cancelStep === 2 && (
                         <Box>
                             <Alert severity="info" sx={{ mb: 2 }}>
-                                📧 OTP has been sent to your registered email.
+                                ✉️ OTP has been sent to your registered email.
                             </Alert>
                             <TextField
                                 fullWidth

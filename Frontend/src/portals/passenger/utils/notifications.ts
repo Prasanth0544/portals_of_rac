@@ -122,7 +122,7 @@ class NotificationManager {
      * Test notification
      */
     testNotification(): void {
-        this.showNotification('🎉 Test Notification', {
+        this.showNotification('✅ Test Notification', {
             body: 'Push notifications are working!',
             tag: 'test'
         });

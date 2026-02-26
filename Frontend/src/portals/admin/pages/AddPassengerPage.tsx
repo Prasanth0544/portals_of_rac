@@ -284,7 +284,7 @@ const AddPassengerPage = ({ trainData, onClose }: AddPassengerPageProps): React.
                     {/* Primary Passenger Section */}
                     <div className="form-section">
                         <h3 className="section-title">
-                            <span className="section-icon">👤</span>
+                            <span className="section-icon"></span>
                             Primary Passenger (Booking Holder)
                         </h3>
                         <div className="form-grid">
@@ -382,7 +382,7 @@ const AddPassengerPage = ({ trainData, onClose }: AddPassengerPageProps): React.
 
                     <div className="form-section">
                         <h3 className="section-title">
-                            <span className="section-icon">🎫</span>
+                            <span className="section-icon"></span>
                             Primary Passenger Booking Details
                         </h3>
                         <div className="form-grid">
@@ -460,7 +460,7 @@ const AddPassengerPage = ({ trainData, onClose }: AddPassengerPageProps): React.
                         <div key={index} className="form-section" style={{ background: '#f0f9ff', border: '2px dashed #3498db' }}>
                             <h3 className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span>
-                                    <span className="section-icon">👥</span>
+                                    <span className="section-icon"></span>
                                     Co-Passenger {index + 1}
                                 </span>
                                 <button
@@ -591,7 +591,7 @@ const AddPassengerPage = ({ trainData, onClose }: AddPassengerPageProps): React.
                                 gap: '8px'
                             }}
                         >
-                            ➕ Add Co-Passenger ({coPassengers.length}/5)
+                             Add Co-Passenger ({coPassengers.length}/5)
                         </button>
                         <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
                             Co-passengers share the same PNR, Train & Journey details

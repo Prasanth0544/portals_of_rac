@@ -111,7 +111,7 @@ function PassengerStatusButton({ passenger, onStatusUpdate }: PassengerStatusBut
                     Offline
                 </button>
                 <button onClick={() => setShowButtons(false)} className="status-btn cancel-btn">
-                    ✕
+                    
                 </button>
             </div>
         );
@@ -385,7 +385,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                         </svg>
 
                     </button>
-                    <h2>👥 Passenger List</h2>
+                    <h2> Passenger List</h2>
                 </div>
                 <div className="loading-container">
                     <div className="spinner-large"></div>
@@ -404,7 +404,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                     </svg>
 
                 </button>
-                <h2>👥 Passenger List & Vacant Positions ({counts ? counts.total : passengers.length} total)</h2>
+                <h2> Passenger List & Vacant Positions ({counts ? counts.total : passengers.length} total)</h2>
             </div>
 
             {counts && (
@@ -463,7 +463,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                         />
                         <input
                             type="text"
-                            placeholder="🛏️ Berth (S1-4, B2-37)..."
+                            placeholder=" Berth (S1-4, B2-37)..."
                             value={searchBerth}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchBerth(e.target.value)}
                             style={{ ...inputStyle, maxWidth: '180px' }}
@@ -511,7 +511,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
             {trainData && trainData.journeyStarted && (
                 <div className="vacant-toggle-section" style={{ marginTop: '30px' }}>
                     <button onClick={() => setShowVacantBerths(!showVacantBerths)} className="vacant-toggle-btn">
-                        {showVacantBerths ? "👥 Show Passengers" : " Show Vacant Berths"}
+                        {showVacantBerths ? " Show Passengers" : " Show Vacant Berths"}
                         {!showVacantBerths && (
                             <span className="toggle-count">
                                 ({vacantBerths.length} vacant at{" "}
@@ -559,7 +559,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                     className="vacant-filter-reset"
                                     title="Clear Filters"
                                 >
-                                    ✕ Clear
+                                     Clear
                                 </button>
                             </div>
                         </div>
@@ -619,7 +619,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
 
                     <div className="add-passenger-button-container">
                         <button onClick={() => onNavigate("add-passenger")} className="btn-add-passenger-bottom" title="Add a new passenger to vacant berths">
-                            ➕ Add New Passenger
+                             Add New Passenger
                         </button>
                         <p className="add-passenger-hint">Check vacant berths above and add passengers to available berths</p>
                     </div>

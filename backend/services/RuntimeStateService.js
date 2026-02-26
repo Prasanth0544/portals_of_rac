@@ -30,6 +30,8 @@ class RuntimeStateService {
                 journeyDate: state.journeyDate,
                 journeyStarted: state.journeyStarted || false,
                 currentStationIdx: state.currentStationIdx || 0,
+                engineRunning: state.engineRunning || false,
+                lastTickAt: state.lastTickAt || null,
                 updatedAt: new Date()
             };
 
@@ -73,7 +75,9 @@ class RuntimeStateService {
                 console.log(`[RuntimeState] Loaded: journeyStarted=${stateDoc.journeyStarted}, currentStationIdx=${stateDoc.currentStationIdx}`);
                 return {
                     journeyStarted: stateDoc.journeyStarted || false,
-                    currentStationIdx: stateDoc.currentStationIdx || 0
+                    currentStationIdx: stateDoc.currentStationIdx || 0,
+                    engineRunning: stateDoc.engineRunning || false,
+                    lastTickAt: stateDoc.lastTickAt || null
                 };
             }
 

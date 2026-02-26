@@ -115,7 +115,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ irctcId }) => {
     const getNotificationIcon = (type: string): string => {
         switch (type) {
             case 'NO_SHOW_MARKED': return '⚠️';
-            case 'UPGRADE_OFFER': return '🎉';
+            case 'UPGRADE_OFFER': return '✅';
             case 'NO_SHOW_REVERTED': return '✅';
             default: return '🔔';
         }

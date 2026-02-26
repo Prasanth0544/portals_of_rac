@@ -10,6 +10,7 @@ import {
 import "../styles/pages/LandingPage.css";
 import "../UserMenu.css";
 import { successToast, errorToast } from "../services/toastNotification";
+import TrainTabBar from "../components/TrainTabBar";
 
 interface Train {
   trainNo: string;
@@ -180,7 +181,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
       },
       COMPLETE: {
         label: "Complete",
-        icon: "✔",
+        icon: "✅",
         badgeClass: "status-complete",
         cardClass: "status-complete-card",
       },
@@ -253,12 +254,13 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                 </div>
                 <hr />
                 <button onClick={handleLogout} className="menu-item logout">
-                  🚪 Logout
+                   Logout
                 </button>
               </div>
             )}
           </div>
         </div>
+        <TrainTabBar />
 
         {/* Actions Section */}
         <div className="actions-section">
@@ -274,7 +276,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
               className="action-btn signup-tte-btn"
               onClick={() => setShowSignUpTTEModal(true)}
             >
-              <span className="btn-icon">👤</span> Sign Up TTE
+              <span className="btn-icon"></span> Sign Up TTE
             </button>
             <button
               className="action-btn stats-btn"
@@ -311,7 +313,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                   className="train-search-clear-btn"
                   onClick={() => setSearchQuery("")}
                 >
-                  ✕ Clear
+                   Clear
                 </button>
               )}
             </div>
@@ -373,7 +375,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                         {train.totalCoaches ? (
                           <>
                             <span className="coach-total">
-                              🚃 {train.totalCoaches} coaches
+                               {train.totalCoaches} coaches
                             </span>
                             <div className="coach-breakdown">
                               {getCoachBreakdown(train)}
@@ -431,7 +433,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                       {overview[train.trainNo] && (
                         <div className="train-overview-stats" onClick={(e) => e.stopPropagation()}>
                           <span className="overview-stat" title="TTEs assigned">
-                            👤 {overview[train.trainNo]?.ttes?.count ?? 0} TTE{(overview[train.trainNo]?.ttes?.count ?? 0) !== 1 ? 's' : ''}
+                             {overview[train.trainNo]?.ttes?.count ?? 0} TTE{(overview[train.trainNo]?.ttes?.count ?? 0) !== 1 ? 's' : ''}
                             {(overview[train.trainNo]?.ttes?.list?.length ?? 0) > 0 && (
                               <span className="overview-detail">
                                 ({overview[train.trainNo].ttes.list.map((t: any) => t.name || t.employeeId).join(', ')})
@@ -439,7 +441,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                             )}
                           </span>
                           <span className="overview-stat" title="Total passengers">
-                            🎫 {overview[train.trainNo]?.passengers?.total ?? 0} passengers
+                             {overview[train.trainNo]?.passengers?.total ?? 0} passengers
                           </span>
                         </div>
                       )

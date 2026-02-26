@@ -41,7 +41,7 @@ const TOAST_ICONS: Record<ToastType, string> = {
     'error': '❌',
     'warning': '⚠️',
     'info': 'ℹ️',
-    'upgrade-offer': '🎉',
+    'upgrade-offer': '✅',
     'no-show': '❌'
 };
 

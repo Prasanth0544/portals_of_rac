@@ -94,7 +94,7 @@ const useTteSocket = (): UseTteSocketReturn => {
                 break;
 
             case 'NO_SHOW':
-                console.log('📋 No-show event:', data);
+                console.log('📝 No-show event:', data);
                 break;
 
             case 'RAC_UPGRADE_ACCEPTED':
@@ -112,7 +112,7 @@ const useTteSocket = (): UseTteSocketReturn => {
                 break;
 
             case 'PASSENGER_BOARDED':
-                console.log('🎫 Passenger boarded:', data);
+                console.log(' Passenger boarded:', data);
                 break;
 
             case 'PASSENGER_DEBOARDED':

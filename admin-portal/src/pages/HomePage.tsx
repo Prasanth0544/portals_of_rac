@@ -108,7 +108,7 @@ function HomePage({
             </div>
 
             <div className="journey-section">
-                <h2>🚉 Train Simulation - Journey Progress</h2>
+                <h2> Train Simulation - Journey Progress</h2>
 
                 <div className="timeline-container">
                     <div className="timeline-scroll">
@@ -122,7 +122,7 @@ function HomePage({
                                 <div className={`timeline-circle ${idx < currentStationIdx ? 'completed' :
                                     idx === currentStationIdx ? 'current' : 'upcoming'
                                     }`}>
-                                    {idx < currentStationIdx ? '✓' : station.sno}
+                                    {idx < currentStationIdx ? '' : station.sno}
                                 </div>
 
                                 <div className="timeline-info">
@@ -177,7 +177,7 @@ function HomePage({
                 {/* Timer Card */}
                 <div className="action-card-compact timer-card">
                     <div className="card-header">
-                        <h4>⏱️ Auto Timer</h4>
+                        <h4>⏱ Auto Timer</h4>
                     </div>
                     {!journeyStarted && (
                         <div className="timer-display paused">
@@ -193,7 +193,7 @@ function HomePage({
                     )}
                     {journeyStarted && isLastStation && (
                         <div className="timer-display complete">
-                            <span className="timer-label">🎉 Journey Complete!</span>
+                            <span className="timer-label">✅ Journey Complete!</span>
                         </div>
                     )}
                 </div>
@@ -271,7 +271,7 @@ function HomePage({
                     </div>
 
                     <div className="nav-card add-passenger-nav-card" onClick={() => onNavigate('add-passenger')}>
-                        <span className="nav-icon">👤➕</span>
+                        <span className="nav-icon"></span>
                         <span className="nav-text">Add Passenger</span>
                     </div>
 
@@ -287,7 +287,7 @@ function HomePage({
                         className="nav-card"
                         onClick={() => onNavigate('passengers')}
                     >
-                        <span className="nav-icon">👥</span>
+                        <span className="nav-icon"></span>
                         <span className="nav-text">Passenger List & Vacant Positions </span>
                     </div>
 

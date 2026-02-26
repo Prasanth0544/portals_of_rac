@@ -125,7 +125,7 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations }: Bert
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h3>🛏️ Berth Details: {berth.fullBerthNo}</h3>
+                    <h3> Berth Details: {berth.fullBerthNo}</h3>
                     <button className="close-btn" onClick={onClose}>×</button>
                 </div>
 
@@ -146,7 +146,7 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations }: Bert
                                         </span>
                                     </div>
                                     <div className="journey-info">
-                                        🚉 {p.from || '-'} → {p.to || '-'}
+                                         {p.from || '-'} → {p.to || '-'}
                                     </div>
                                     <div className="passenger-status">
                                         {p.noShow ? (
@@ -169,7 +169,7 @@ function BerthDetailsModal({ berth, onClose, currentStationIdx, stations }: Bert
 
                     {berth.status === 'VACANT' && (
                         <div className="vacant-message">
-                            <p>💺 This berth is currently vacant and available for allocation</p>
+                            <p> This berth is currently vacant and available for allocation</p>
                         </div>
                     )}
                 </div>

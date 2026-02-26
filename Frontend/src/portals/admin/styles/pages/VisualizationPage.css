@@ -451,7 +451,7 @@
 }
 
 .modal-body li::before {
-  content: '✓';
+  content: '';
   position: absolute;
   left: 0;
   color: #27ae60;

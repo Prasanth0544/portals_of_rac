@@ -18,7 +18,7 @@ function APIDocumentationLink(): React.ReactElement {
                 onMouseLeave={() => setShowTooltip(false)}
                 title="Open API Documentation"
             >
-                <span className="docs-icon">📚</span>
+                <span className="docs-icon">[BOOKS]</span>
                 <span className="docs-label">API Docs</span>
             </button>
             {showTooltip && (

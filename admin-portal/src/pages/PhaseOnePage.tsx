@@ -256,14 +256,14 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                     className={`tab-btn ${activeTab === 'rac' ? 'active' : ''}`}
                     onClick={() => setActiveTab('rac')}
                 >
-                    👥 RAC Passengers
+                     RAC Passengers
                     <span className="tab-badge">{racPassengers?.length || 0}</span>
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'vacant' ? 'active' : ''}`}
                     onClick={() => setActiveTab('vacant')}
                 >
-                    🛏️ Vacant Berths
+                     Vacant Berths
                     <span className="tab-badge">{vacantBerths?.length || 0}</span>
                 </button>
                 <button
@@ -288,7 +288,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
             {activeTab === 'rac' && (
                 <div className="tab-content">
                     <div className="section-header">
-                        <h3>👥 RAC Passengers</h3>
+                        <h3> RAC Passengers</h3>
                         <span className="count-badge">{racPassengers?.length || 0}</span>
                     </div>
                     <div className="table-container">
@@ -335,7 +335,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
             {activeTab === 'vacant' && (
                 <div className="tab-content">
                     <div className="section-header">
-                        <h3>🛏️ Vacant Berths</h3>
+                        <h3> Vacant Berths</h3>
                         <span className="count-badge">{vacantBerths?.length || 0}</span>
                     </div>
                     <div className="table-container">
@@ -383,7 +383,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                             onClick={handleCreatePendingReallocations}
                             disabled={creating || !matches || matches.length === 0}
                         >
-                            {creating ? '⏳ Processing...' : '📤 Send to TTE for Approval'}
+                            {creating ? '⏳ Processing...' : ' Send to TTE for Approval'}
                         </button>
                     </div>
 
@@ -418,7 +418,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                                             <td className="td-type">{match.berth?.type}</td>
                                             <td className="td-match">
                                                 <span className={`badge ${match.topMatch?.isPerfectMatch ? 'perfect' : 'good'}`}>
-                                                    {match.topMatch?.isPerfectMatch ? '✓ Perfect' : '○ Good'}
+                                                    {match.topMatch?.isPerfectMatch ? ' Perfect' : '○ Good'}
                                                 </span>
                                             </td>
                                         </tr>
@@ -446,7 +446,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                     <div className="table-container">
                         {upgradedPassengers.length === 0 ? (
                             <div className="empty-state">
-                                <div className="empty-icon">📋</div>
+                                <div className="empty-icon">📝</div>
                                 <h3>No Upgrades Yet</h3>
                                 <p>Passengers appear here after TTE approval.</p>
                             </div>
@@ -477,7 +477,7 @@ const PhaseOnePage = ({ onClose }: PhaseOnePageProps): React.ReactElement => {
                                             </td>
                                             <td className="td-journey">{p.from} → {p.to}</td>
                                             <td className="td-status">
-                                                <span className="badge cnf">✓ CNF</span>
+                                                <span className="badge cnf"> CNF</span>
                                             </td>
                                         </tr>
                                     ))}

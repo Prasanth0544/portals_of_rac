@@ -42,8 +42,8 @@ function LoginPage({ onLoginSuccess }: LoginPageProps): React.ReactElement {
     const getRoleTitle = (): string => {
         switch (role) {
             case 'admin': return '🛡️ Admin Portal';
-            case 'tte': return '📋 TTE Portal';
-            case 'passenger': return '🎫 Passenger Portal';
+            case 'tte': return '📝 TTE Portal';
+            case 'passenger': return ' Passenger Portal';
         }
     };
 

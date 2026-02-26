@@ -154,6 +154,14 @@ class TrainController {
         }
       }
 
+      // ═══════════════════════════════════════════════════════════
+      // AUTO-RESUME ENGINE if journey was in progress before restart
+      // ═══════════════════════════════════════════════════════════
+      if (trainState.journeyStarted && !TrainEngineService.isRunning(train)) {
+        TrainEngineService.startEngine(train, { intervalMs: 2 * 60 * 1000 });
+        console.log(`   🚂 Engine auto-resumed for train ${train} (journey was in progress)`);
+      }
+
       const responseData = {
         trainNo: trainState.trainNo,
         trainName: trainState.trainName,
@@ -168,7 +176,9 @@ class TrainController {
       };
 
       // Update status in MongoDB for landing page
-      await updateTrainStatus(train, 'READY', {
+      // Use RUNNING if journey was already in progress (engine resumed)
+      const trainStatus = trainState.journeyStarted ? 'RUNNING' : 'READY';
+      await updateTrainStatus(train, trainStatus, {
         currentStation: trainState.getCurrentStation()?.name || null,
         totalStations: trainState.stations.length
       });
@@ -228,7 +238,9 @@ class TrainController {
         trainNo: trainState.trainNo,
         journeyDate: trainState.journeyDate,
         journeyStarted: true,
-        currentStationIdx: trainState.currentStationIdx
+        currentStationIdx: trainState.currentStationIdx,
+        engineRunning: true,
+        lastTickAt: new Date()
       });
 
       // Broadcast journey started

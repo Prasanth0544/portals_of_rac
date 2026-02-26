@@ -16,6 +16,7 @@ const { authMiddleware, requireRole, requirePermission } = require('../middlewar
 const { authLimiter, otpLimiter } = require('../middleware/rateLimiter'); // ✅ Rate limiting
 const CurrentStationService = require('../services/CurrentStationReallocationService');
 const AllocationService = require('../services/reallocation/AllocationService');
+const dbReady = require('../middleware/dbReady'); // ✅ Connection-ready gate
 
 // ========== AUTHENTICATION ROUTES ========== ✅ NEW
 // Staff Login (Admin + TTE)
@@ -214,6 +215,10 @@ router.get('/config/current', (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// ── All routes below wait for DB connection to be ready ──
+// Prevents "Invalid Topology is closed" errors during train switching.
+router.use(dbReady);
 
 router.post('/train/initialize',
   validationMiddleware.sanitizeBody,

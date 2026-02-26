@@ -279,7 +279,7 @@ const ReportDeboardingPage: React.FC = () => {
             }
 
             if (successCount > 0) {
-                toast.success(`🚉 ${successCount} passenger(s) deboarding reported successfully!`);
+                toast.success(` ${successCount} passenger(s) deboarding reported successfully!`);
                 if (failCount > 0) {
                     toast.error(`${failCount} passenger(s) failed to report`);
                 }
@@ -304,7 +304,7 @@ const ReportDeboardingPage: React.FC = () => {
                         </svg>
                     </button>
                     <div>
-                        <h1>🚉 Report Deboarding</h1>
+                        <h1> Report Deboarding</h1>
                         <p className="subtitle">Report that you have left the train before your destination</p>
                     </div>
                 </div>
@@ -422,7 +422,7 @@ const ReportDeboardingPage: React.FC = () => {
                             onClick={sendOTP}
                             disabled={selectedPassengers.length === 0 || processing}
                         >
-                            {processing ? 'Sending OTP...' : `📧 Send OTP (${selectedPassengers.length} passenger${selectedPassengers.length !== 1 ? 's' : ''})`}
+                            {processing ? 'Sending OTP...' : `✉️ Send OTP (${selectedPassengers.length} passenger${selectedPassengers.length !== 1 ? 's' : ''})`}
                         </button>
                         <button className="btn-secondary" onClick={() => setStep(1)}>
                             ← Back
@@ -450,7 +450,7 @@ const ReportDeboardingPage: React.FC = () => {
                             onClick={verifyOTP}
                             disabled={otp.length !== 6 || processing}
                         >
-                            {processing ? 'Verifying...' : '✓ Verify OTP'}
+                            {processing ? 'Verifying...' : ' Verify OTP'}
                         </button>
                         <button className="btn-secondary" onClick={() => setStep(2)}>
                             ← Back
@@ -506,7 +506,7 @@ const ReportDeboardingPage: React.FC = () => {
                             onClick={confirmDeboarding}
                             disabled={!selectedStation || processing}
                         >
-                            {processing ? 'Processing...' : '🚉 Confirm Deboarding'}
+                            {processing ? 'Processing...' : ' Confirm Deboarding'}
                         </button>
                         <button className="btn-secondary" onClick={() => setStep(3)}>
                             ← Back

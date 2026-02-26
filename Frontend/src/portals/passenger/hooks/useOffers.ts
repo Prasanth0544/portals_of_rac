@@ -320,7 +320,7 @@ const useOffers = (pnr: string | null | undefined, socket: SocketConnection | nu
                 setActiveOffers(offerService.getActiveOffers(pnr));
 
                 // Show success notification
-                showNotification('Upgrade Confirmed! 🎉', {
+                showNotification('Upgrade Confirmed! ✅', {
                     body: `Your upgrade to ${offerPayload.toBerth} has been confirmed by TTE!`,
                     icon: '/icon-success.png',
                     requireInteraction: true

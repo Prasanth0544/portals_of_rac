@@ -73,7 +73,7 @@ export async function requestPushPermission(irctcId: string): Promise<boolean> {
         }
 
         // ALWAYS send subscription to backend (it uses upsert in MongoDB)
-        console.log('📤 Sending subscription to backend for:', irctcId);
+        console.log('[OUT] Sending subscription to backend for:', irctcId);
         const response = await fetch(`${API_URL}/passenger/push-subscribe`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

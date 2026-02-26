@@ -60,7 +60,7 @@ function JourneyVisualizationPage(): React.ReactElement {
         return (
             <div className="visualization-page">
                 <div className="page-header">
-                    <h2>🗺️ Journey Visualization</h2>
+                    <h2> Journey Visualization</h2>
                 </div>
                 <div className="loading-container">
                     <div className="spinner"></div>
@@ -73,17 +73,17 @@ function JourneyVisualizationPage(): React.ReactElement {
     return (
         <div className="visualization-page">
             <div className="page-header">
-                <h2>🗺️ Journey Visualization</h2>
+                <h2> Journey Visualization</h2>
             </div>
 
             {/* Station Schedule Table */}
             <div className="station-schedule-section">
                 <div className="section-header">
-                    <h3>📍 Train Station Schedule</h3>
+                    <h3>📌 Train Station Schedule</h3>
                     <div className="schedule-stats">
-                        <span className="stat-badge">🚉 {stations.length} Stations</span>
-                        <span className="stat-badge">📏 {getTotalDistance()} km</span>
-                        <span className="stat-badge">⏱️ {calculateJourneyTime()} hrs</span>
+                        <span className="stat-badge"> {stations.length} Stations</span>
+                        <span className="stat-badge"> {getTotalDistance()} km</span>
+                        <span className="stat-badge">⏱ {calculateJourneyTime()} hrs</span>
                     </div>
                 </div>
 

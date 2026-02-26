@@ -265,7 +265,7 @@ function PassengerList({ currentStationIdx, stations }: PassengerListProps): Rea
         <div className="passenger-list-panel">
             <div className="panel-header">
                 <h3>
-                    👥 Passenger List ({filteredAndSortedPassengers.length} of{" "}
+                    Passenger List ({filteredAndSortedPassengers.length} of{" "}
                     {passengers.length})
                 </h3>
             </div>
@@ -314,13 +314,13 @@ function PassengerList({ currentStationIdx, stations }: PassengerListProps): Rea
                         <option value="no-show">❌ No-Show</option>
                         <option value="not-boarded">⚠️ Missed</option>
                         <option value="upcoming">⏳ Upcoming</option>
-                        <option value="cnf">🎫 CNF</option>
-                        <option value="rac">🎟️ RAC</option>
+                        <option value="cnf"> CNF</option>
+                        <option value="rac"> RAC</option>
                     </select>
                 </div>
 
                 <div className="filter-group">
-                    <label>🎫 Class:</label>
+                    <label> Class:</label>
                     <select
                         value={filterClass}
                         onChange={(e: ChangeEvent<HTMLSelectElement>) => {
@@ -424,14 +424,14 @@ function PassengerList({ currentStationIdx, stations }: PassengerListProps): Rea
                                     disabled={currentPage === 1}
                                     onClick={() => setCurrentPage(1)}
                                 >
-                                    ⏮️
+                                    ⏮
                                 </button>
                                 <button
                                     className="page-btn"
                                     disabled={currentPage === 1}
                                     onClick={() => setCurrentPage((p) => p - 1)}
                                 >
-                                    ◀️
+                                    {"<"}
                                 </button>
                                 <span className="page-info">
                                     Page {currentPage} of {totalPages}
@@ -441,14 +441,14 @@ function PassengerList({ currentStationIdx, stations }: PassengerListProps): Rea
                                     disabled={currentPage === totalPages}
                                     onClick={() => setCurrentPage((p) => p + 1)}
                                 >
-                                    ▶️
+                                    {">"}
                                 </button>
                                 <button
                                     className="page-btn"
                                     disabled={currentPage === totalPages}
                                     onClick={() => setCurrentPage(totalPages)}
                                 >
-                                    ⏭️
+                                    ⏭
                                 </button>
                             </div>
                         )}

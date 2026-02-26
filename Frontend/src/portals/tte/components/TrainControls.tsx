@@ -174,7 +174,7 @@ const TrainControls: React.FC = () => {
                         </Box>
                     ) : (
                         <Alert severity="success">
-                            🎉 Journey Complete! Train has reached the final station.
+                            ✅ Journey Complete! Train has reached the final station.
                         </Alert>
                     )}
 

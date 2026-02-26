@@ -111,7 +111,7 @@
 }
 
 .form-validation-message::before {
-  content: '✓';
+  content: '';
   color: #48bb78;
   font-weight: bold;
 }

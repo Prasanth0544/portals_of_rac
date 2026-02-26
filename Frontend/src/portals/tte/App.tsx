@@ -270,7 +270,7 @@ function App(): React.ReactElement {
                                     </div>
                                     <hr />
                                     <button onClick={handleLogout} className="menu-item logout">
-                                        🚪 Logout
+                                         Logout
                                     </button>
                                 </div>
                             )}

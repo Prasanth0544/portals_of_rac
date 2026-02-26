@@ -117,7 +117,7 @@ function PNRSearchPage(): React.ReactElement {
                 <>
                     <div className="passenger-details-card">
                         <div className="card-header">
-                            <h3>🎫 Passenger Details</h3>
+                            <h3> Passenger Details</h3>
                         </div>
                         <div className="card-body">
                             <div className="detail-grid">
@@ -172,7 +172,7 @@ function PNRSearchPage(): React.ReactElement {
 
             {!passenger && !loading && !error && (
                 <div className="empty-state">
-                    <div className="icon">🎫</div>
+                    <div className="icon"></div>
                     <h3>Enter PNR to Check Status</h3>
                     <p>Get complete passenger and journey details</p>
                 </div>

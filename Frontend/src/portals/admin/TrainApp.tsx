@@ -29,6 +29,7 @@ import {
 } from "./services/toastNotification";
 import "./App.css";
 import "./UserMenu.css";
+import TrainTabBar from "./components/TrainTabBar";
 
 // Types
 interface User {
@@ -137,7 +138,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
       if (saved) {
         console.log("[App] Restoring persisted state...");
         restoredPage = (saved.currentPage as PageType) || "home";
-        // Never restore to 'config' from IndexedDB � config should only show via explicit navigation
+        // Never restore to 'config' from IndexedDB  config should only show via explicit navigation
         if (restoredPage === "config") {
           console.log("[App] Overriding saved 'config' page to 'home' (config only via landing page)");
           restoredPage = "home";
@@ -255,7 +256,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
     setupWebSocket();
 
     return () => {
-      // Don't disconnect � just remove THIS component's listeners
+      // Don't disconnect  just remove THIS component's listeners
       // so the WebSocket stays alive for other trains / landing page.
       cleanupWebSocketListeners();
     };
@@ -348,7 +349,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
     try {
       console.log('🔧 Attempting auto-initialization from backend config...');
 
-      // Check if backend is configured
+      // Check if backend is configured via global.RAC_CONFIG
       const configResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/config/current`);
       const config = await configResponse.json();
 
@@ -363,18 +364,69 @@ function App({ initialPage }: AppProps): React.ReactElement {
         if (response.success) {
           console.log('✅ Train auto-initialized successfully!');
           await loadTrainState();
-          // Only go to home if currently on config — don't override other pages
           setCurrentPage(prev => prev === 'config' ? 'home' : prev);
+          // Resume timer if journey was in progress
+          if (response.data?.journeyStarted) {
+            startTimerPolling();
+          }
         } else {
           console.warn('⚠️ Auto-initialization failed:', response.error);
-          // Stay on current page — don't redirect to config
         }
       } else {
-        console.log('ℹ️ Backend not configured — user will need to use config page');
+        // ═══════════════════════════════════════════════════════════
+        // FALLBACK: Backend not configured (e.g., after restart).
+        // Use the train's saved config from MongoDB to re-setup + re-init.
+        // ═══════════════════════════════════════════════════════════
+        const trainNo = urlTrainNo || trainData?.trainNo;
+        if (trainNo) {
+          console.log(`🔄 Backend not configured — trying saved config for train ${trainNo}...`);
+          try {
+            const { getTrainConfig, setupConfig, initializeTrain } = await import('./services/apiWithErrorHandling');
+            const configResult = await getTrainConfig(trainNo);
+            if (configResult.success && configResult.data) {
+              const cfg = configResult.data;
+              console.log('✅ Found saved config, re-configuring backend...');
+
+              // Step 1: Re-setup the backend (sets global.RAC_CONFIG)
+              await setupConfig({
+                stationsDb: cfg.stationsDb,
+                stationsCollection: cfg.stationsCollection,
+                passengersDb: cfg.passengersDb,
+                passengersCollection: cfg.passengersCollection,
+                trainNo: cfg.trainNo || trainNo,
+                trainName: cfg.trainName || '',
+                journeyDate: cfg.journeyDate || new Date().toISOString().split('T')[0],
+              });
+
+              // Step 2: Initialize train (restores state + auto-resumes engine)
+              const initResult = await initializeTrain(
+                cfg.trainNo || trainNo,
+                cfg.journeyDate || new Date().toISOString().split('T')[0],
+              );
+
+              if (initResult.success) {
+                console.log('✅ Train re-initialized from saved config!');
+                await loadTrainState();
+                setCurrentPage(prev => prev === 'config' ? 'home' : prev);
+                // Resume timer if journey was in progress
+                if (initResult.data?.journeyStarted) {
+                  startTimerPolling();
+                }
+              } else {
+                console.warn('⚠️ Re-initialization failed:', initResult.error);
+              }
+            } else {
+              console.log('ℹ️ No saved config found — user will need to use config page');
+            }
+          } catch (fallbackErr: any) {
+            console.warn('⚠️ Fallback auto-init error:', fallbackErr.message);
+          }
+        } else {
+          console.log('ℹ️ Backend not configured and no trainNo — user will need to use config page');
+        }
       }
     } catch (error: any) {
       console.warn('⚠️ Auto-initialization error:', error.message);
-      // Stay on current page — don't redirect to config
     }
   };
 
@@ -419,7 +471,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
     });
 
     addListener('station_arrival', (data: StationArrivalData) => {
-      console.log('🚉 Station arrival:', data.data.station);
+      console.log(' Station arrival:', data.data.station);
       // Reset the countdown timer for the next station interval
       setTimerSeconds(TIMER_DURATION);
       loadTrainState();
@@ -463,7 +515,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
         loadTrainState();
         break;
       case 'JOURNEY_COMPLETE':
-        alert('🎉 Journey Complete!\n\n' +
+        alert('✅ Journey Complete!\n\n' +
           `Final Station: ${data.data.finalStation}\n` +
           `Total Deboarded: ${data.data.totalDeboarded}\n` +
           `RAC Upgraded: ${data.data.totalRACUpgraded}`);
@@ -483,7 +535,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
         await loadTrainState();
       } else {
         setError(response.error || 'Failed to initialize');
-        // Don't redirect to config � user can navigate there via menu if needed
+        // Don't redirect to config  user can navigate there via menu if needed
       }
     } catch (err: any) {
       const msg = err.message || 'Failed to initialize train';
@@ -726,7 +778,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
                 </div>
                 <hr />
                 <button onClick={handleLogout} className="menu-item logout">
-                  🚪 Logout
+                   Logout
                 </button>
                 <hr />
                 <button
@@ -736,7 +788,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
                   }}
                   className="menu-item"
                 >
-                  🔙 Exit to Landing
+                   Exit to Landing
                 </button>
               </div>
             )}
@@ -852,7 +904,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
                 ⚙️ Configuration
               </button>
               <button onClick={handleLogout} className="menu-item logout">
-                🚪 Logout
+                 Logout
               </button>
               <hr />
               <button
@@ -862,17 +914,18 @@ function App({ initialPage }: AppProps): React.ReactElement {
                 }}
                 className="menu-item"
               >
-                🔙 Exit to Landing
+                 Exit to Landing
               </button>
             </div>
           )}
         </div>
       </div>
+      <TrainTabBar />
 
       {error && (
         <div className="error-banner">
           <span>{error}</span>
-          <button onClick={() => setError(null)}>✕</button>
+          <button onClick={() => setError(null)}></button>
         </div>
       )}
       <div className="app-content">

@@ -89,7 +89,7 @@ function QRTicketViewPage(): React.ReactElement {
 
         {/* Passenger Info */}
         <div className="ticket-section">
-          <h3>👤 Passenger Details</h3>
+          <h3> Passenger Details</h3>
           <div className="ticket-grid">
             <div className="ticket-field ticket-field--full">
               <span className="field-label">Name</span>
@@ -117,7 +117,7 @@ function QRTicketViewPage(): React.ReactElement {
         {/* Account / Signup Info */}
         {(ticket.irctcId || ticket.email || ticket.phone) && (
           <div className="ticket-section ticket-section--account">
-            <h3>🪪 Account Details</h3>
+            <h3> Account Details</h3>
             <div className="ticket-grid">
               {ticket.irctcId && (
                 <div className="ticket-field">
@@ -145,7 +145,7 @@ function QRTicketViewPage(): React.ReactElement {
 
         {/* Train Info */}
         <div className="ticket-section">
-          <h3>🚆 Train Details</h3>
+          <h3> Train Details</h3>
           <div className="ticket-grid">
             <div className="ticket-field ticket-field--full">
               <span className="field-label">Train</span>
@@ -166,7 +166,7 @@ function QRTicketViewPage(): React.ReactElement {
 
         {/* Journey */}
         <div className="ticket-section">
-          <h3>📍 Journey</h3>
+          <h3>📌 Journey</h3>
           <div className="journey-route">
             <div className="route-point">
               <span className="route-dot from-dot"></span>
@@ -188,7 +188,7 @@ function QRTicketViewPage(): React.ReactElement {
 
         {/* Seat Info */}
         <div className="ticket-section seat-section">
-          <h3>💺 Seat Allocation</h3>
+          <h3> Seat Allocation</h3>
           <div className="seat-info">
             <div className="seat-block">
               <span className="seat-label">Coach</span>

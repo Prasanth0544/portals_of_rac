@@ -101,7 +101,7 @@ const GroupUpgradeSelectionModal: React.FC<GroupUpgradeSelectionModalProps> = ({
             <div className="selection-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>🎯 Select Passengers for Upgrade</h2>
-                    <button className="close-btn" onClick={onClose}>✕</button>
+                    <button className="close-btn" onClick={onClose}></button>
                 </div>
 
                 <div className="modal-info">

@@ -88,7 +88,7 @@ function RACQueuePage({ trainData, onClose }: RACQueuePageProps): React.ReactEle
                         </svg>
 
                     </button>
-                    <h2>🎫 RAC Queue</h2>
+                    <h2> RAC Queue</h2>
                 </div>
                 <div className="loading-container">
                     <div className="spinner-large"></div>
@@ -112,7 +112,7 @@ function RACQueuePage({ trainData, onClose }: RACQueuePageProps): React.ReactEle
                     </svg>
 
                 </button>
-                <h2>🎫 RAC Queue ({racQueue.length} passengers)</h2>
+                <h2> RAC Queue ({racQueue.length} passengers)</h2>
             </div>
 
             {racQueue.length === 0 ? (

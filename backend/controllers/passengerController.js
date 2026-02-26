@@ -646,13 +646,13 @@ class PassengerController {
   /**
    * Get pending upgrade notifications for a passenger
    */
-  getUpgradeNotifications(req, res) {
+  async getUpgradeNotifications(req, res) {
     try {
       const { pnr } = req.params;
       const UpgradeNotificationService = require("../services/UpgradeNotificationService");
 
       const notifications =
-        UpgradeNotificationService.getPendingNotifications(pnr);
+        await UpgradeNotificationService.getPendingNotifications(pnr);
 
       res.json({
         success: true,

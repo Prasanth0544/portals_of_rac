@@ -26,7 +26,7 @@ class WebSocketService {
             return;
         }
 
-        console.log(`🔌 Connecting to WebSocket: ${url}`);
+        console.log(` Connecting to WebSocket: ${url}`);
 
         this.ws = new WebSocket(url);
 
@@ -43,7 +43,7 @@ class WebSocketService {
         this.ws.onmessage = (event: MessageEvent): void => {
             try {
                 const data: WebSocketMessage = JSON.parse(event.data);
-                console.log('📨 WebSocket message:', data.type);
+                console.log(' WebSocket message:', data.type);
                 this.handleMessage(data);
             } catch (error) {
                 console.error('Error parsing WebSocket message:', error);
@@ -56,7 +56,7 @@ class WebSocketService {
         };
 
         this.ws.onclose = (): void => {
-            console.log('🔌 WebSocket disconnected');
+            console.log(' WebSocket disconnected');
             this.connected = false;
             this.emit('disconnected');
 

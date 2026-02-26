@@ -212,7 +212,7 @@ Tokens are automatically refreshed on 401 errors.
 ## 🔗 Related
 
 - [Root Documentation](../README.md)
-- [QUICKSTART.md](../QUICKSTART.md)
+- [README.md](../README.md)
 - [Backend API](../backend/README.md)
 - [Frontend (Admin)](../admin-portal/README.md)
 - [TTE Portal](../tte-portal/README.md)
