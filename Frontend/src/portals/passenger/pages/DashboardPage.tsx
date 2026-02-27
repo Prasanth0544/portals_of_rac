@@ -167,9 +167,11 @@ function DashboardPage(): React.ReactElement {
 
                 if (passengerRes.data.success && passengerRes.data.data) {
                     setPassenger(passengerRes.data.data);
-                    // ✅ Check if passenger rejected an upgrade offer
+                    // ✅ Re-evaluate rejection status on EVERY fetch (not just mount)
                     if (passengerRes.data.data.Upgrade_Status === 'REJECTED') {
                         setIsRejected(true);
+                    } else {
+                        setIsRejected(false); // ✅ Clear rejection if status changed at new station
                     }
                 } else {
                     setError('No booking found for your IRCTC ID');
@@ -298,6 +300,13 @@ function DashboardPage(): React.ReactElement {
                     console.log('❌ Upgrade rejected:', data);
                     setPendingUpgrades(prev => prev.filter(u => u.pnr !== data.data?.pnr));
                     alert(`❌ Your upgrade offer was rejected.\nReason: ${data.data.reason}`);
+                }
+
+                // ✅ NEW: Station advanced — refresh all data
+                if (data.type === 'STATION_ARRIVAL') {
+                    console.log('🚉 Station advanced — refreshing dashboard data');
+                    fetchData();
+                    fetchPendingUpgrades();
                 }
 
                 // ✅ NEW: Group upgrade offer received - navigate to selection page
@@ -783,7 +792,7 @@ function DashboardPage(): React.ReactElement {
                 >
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                             Upgrade Not Available
+                            Upgrade Not Available
                         </Typography>
                         <Typography variant="body2">
                             You previously declined an upgrade offer. Passengers who decline upgrades are not eligible for further upgrade offers during this journey.
@@ -848,7 +857,7 @@ function DashboardPage(): React.ReactElement {
                         <Card sx={{ bgcolor: '#fff3e0', border: '1px solid #f57c00', height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <CardContent sx={{ flexGrow: 1 }}>
                                 <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                     Leaving Early?
+                                    Leaving Early?
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                                     If you've left the train before your destination, report it here. Your berth will be made available for other passengers to upgrade.

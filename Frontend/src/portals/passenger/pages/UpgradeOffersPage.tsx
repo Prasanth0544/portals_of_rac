@@ -115,6 +115,21 @@ const UpgradeOffersPage: React.FC = () => {
                 if (data.type === 'RAC_REALLOCATION_APPROVED' || data.type === 'RAC_REALLOCATION') {
                     fetchUpgradeOffers(pnr);
                 }
+
+                // ✅ NEW: Station advanced — old offers are cleared, new ones may be created
+                // Re-fetch offers AND re-check passenger eligibility (isRejected may change)
+                if (data.type === 'STATION_ARRIVAL') {
+                    console.log('🚉 Station advanced — refreshing upgrade offers');
+                    if (irctcId) fetchPassengerPNR(irctcId);
+                    fetchUpgradeOffers(pnr);
+                }
+
+                // ✅ NEW: Direct upgrade offer available for this passenger
+                if (data.type === 'UPGRADE_OFFER_AVAILABLE') {
+                    console.log('🔔 New upgrade offer available:', data);
+                    if (irctcId) fetchPassengerPNR(irctcId);
+                    fetchUpgradeOffers(pnr);
+                }
             } catch (err) {
                 console.error('WebSocket parse error:', err);
             }
@@ -124,8 +139,9 @@ const UpgradeOffersPage: React.FC = () => {
             console.error('UpgradeOffersPage WebSocket error:', error);
         };
 
-        // Polling fallback every 30 seconds
+        // Polling fallback every 30 seconds — also re-check passenger eligibility
         const pollInterval = setInterval(() => {
+            if (irctcId) fetchPassengerPNR(irctcId);
             fetchUpgradeOffers(pnr);
         }, 30000);
 
@@ -143,19 +159,29 @@ const UpgradeOffersPage: React.FC = () => {
             const now = Date.now();
             let hasValid = false;
 
-            setOffers(prevOffers => prevOffers.map(offer => {
-                if (offer.expiresAt) {
-                    const remaining = new Date(offer.expiresAt).getTime() - now;
-                    if (remaining > 0) {
-                        hasValid = true;
-                        return { ...offer, expiresIn: remaining };
+            setOffers(prevOffers => {
+                const updated = prevOffers.map(offer => {
+                    if (offer.expiresAt) {
+                        const remaining = new Date(offer.expiresAt).getTime() - now;
+                        if (remaining > 0) {
+                            hasValid = true;
+                            return { ...offer, expiresIn: remaining };
+                        } else {
+                            // ✅ Mark as expired client-side
+                            return { ...offer, expiresIn: 0, status: 'expired' };
+                        }
                     }
-                }
-                return offer;
-            }).filter(o => !o.expiresIn || o.expiresIn > 0));
+                    return offer;
+                });
 
-            // Refresh from server if all offers expired
+                // ✅ Remove expired offers from the list after a short delay
+                // so the user briefly sees "Expired" before it disappears
+                return updated.filter(o => o.expiresIn === undefined || o.expiresIn > 0);
+            });
+
+            // Refresh from server if all offers expired — check for NEW offers from current station
             if (!hasValid && pnr) {
+                console.log('⏰ All offers expired — re-fetching for new offers');
                 fetchUpgradeOffers(pnr);
             }
         }, 1000);
@@ -177,11 +203,13 @@ const UpgradeOffersPage: React.FC = () => {
             if (data.success && data.data) {
                 const passengerPNR = data.data.PNR_Number;
                 setPnr(passengerPNR);
-                // ✅ Check if passenger has rejected an upgrade
+                // ✅ Re-evaluate rejection status on EVERY fetch (not just mount)
+                // At a new station, backend may have cleared old rejections or created new offers
                 if (data.data.Upgrade_Status === 'REJECTED') {
                     setIsRejected(true);
                     setLoading(false);
                 } else {
+                    setIsRejected(false); // ✅ Clear rejection if status changed
                     fetchUpgradeOffers(passengerPNR);
                 }
             } else {
@@ -201,7 +229,12 @@ const UpgradeOffersPage: React.FC = () => {
             if (data.success) {
                 // API returns { data: { pnr, count, notifications: [...] } }
                 const notifications = data.data?.notifications || data.data || [];
-                setOffers(Array.isArray(notifications) ? notifications : []);
+                // ✅ Normalize status to lowercase (backend sends 'PENDING', frontend expects 'pending')
+                const normalized = (Array.isArray(notifications) ? notifications : []).map((n: any) => ({
+                    ...n,
+                    status: (n.status || 'pending').toLowerCase(),
+                }));
+                setOffers(normalized);
             }
         } catch (error) {
             console.error('Error fetching upgrade offers:', error);

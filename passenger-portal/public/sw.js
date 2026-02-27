@@ -30,7 +30,7 @@ self.addEventListener('push', (event) => {
         tag: data.tag || 'passenger-notification',
         requireInteraction: true,
         data: {
-            url: data.url || 'http://localhost:5175',
+            url: data.url || self.location.origin,
             type: data.data?.type || 'GENERAL',
             ...data.data
         },
@@ -77,7 +77,7 @@ self.addEventListener('notificationclick', (event) => {
             .then((clientList) => {
                 // Check if Passenger portal window is already open
                 for (const client of clientList) {
-                    if (client.url.includes('5175') && 'focus' in client) {
+                    if (client.url.includes(self.location.origin) && 'focus' in client) {
                         // Send refresh message before focusing
                         client.postMessage({ type: 'REFRESH_PAGE' });
                         return client.focus();
@@ -85,7 +85,7 @@ self.addEventListener('notificationclick', (event) => {
                 }
                 // Open Passenger portal if not open
                 if (clients.openWindow) {
-                    return clients.openWindow(urlToOpen || 'http://localhost:5175');
+                    return clients.openWindow(urlToOpen || self.location.origin);
                 }
             })
     );

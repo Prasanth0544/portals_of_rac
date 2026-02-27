@@ -243,6 +243,28 @@ async function startServer() {
       console.log(`  curl http://localhost:${PORT}/`);
       console.log(`  curl http://localhost:${PORT}/api/health`);
       console.log('');
+
+      // ═══════════════════════════════════════════════════════════
+      // KEEP-ALIVE SELF-PING (prevents Render free tier from sleeping)
+      // Pings /api/health every 14 minutes so the server stays awake
+      // ═══════════════════════════════════════════════════════════
+      if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
+        const KEEP_ALIVE_INTERVAL = 14 * 60 * 1000; // 14 minutes
+        const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
+
+        setInterval(async () => {
+          try {
+            const res = await fetch(keepAliveUrl);
+            const data = await res.json();
+            console.log(`💓 Keep-alive ping OK (uptime: ${Math.round(data.uptime)}s, clients: ${data.websocket?.connectedClients || 0})`);
+          } catch (err) {
+            console.error('💔 Keep-alive ping failed:', err.message);
+          }
+        }, KEEP_ALIVE_INTERVAL);
+
+        console.log(`💓 Keep-alive enabled: pinging ${keepAliveUrl} every 14 minutes`);
+        console.log('');
+      }
     });
 
   } catch (error) {

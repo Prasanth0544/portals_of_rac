@@ -45,6 +45,9 @@ const api: AxiosInstance = axios.create({
 });
 
 // CSRF Token management - read from cookies
+// Fallback storage for when cross-origin cookies are blocked by the browser
+let csrfTokenFallback: string | null = null;
+
 const getCookie = (name: string): string | null => {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
@@ -52,16 +55,23 @@ const getCookie = (name: string): string | null => {
   return null;
 };
 
+// Get CSRF token from cookie OR fallback variable
+const getCsrfToken = (): string | null => {
+  return getCookie("csrfToken") || csrfTokenFallback;
+};
+
 // Fetch CSRF token from server
 const fetchCsrfToken = async (): Promise<boolean> => {
   try {
     console.log("[TTE API] Fetching CSRF token...");
-    await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
-    console.log(
-      "[TTE API] CSRF token fetched successfully:",
-      !!getCookie("csrfToken"),
-    );
-    return !!getCookie("csrfToken");
+    const response = await axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true });
+    if (response.data?.csrfToken) {
+      csrfTokenFallback = response.data.csrfToken;
+      console.log("[TTE API] CSRF token stored from response body");
+    }
+    const hasToken = !!getCsrfToken();
+    console.log("[TTE API] CSRF token fetched successfully:", hasToken);
+    return hasToken;
   } catch (error) {
     console.error("[TTE API] Failed to fetch CSRF token:", error);
     return false;
@@ -70,7 +80,7 @@ const fetchCsrfToken = async (): Promise<boolean> => {
 
 // Ensure CSRF token exists, fetch if missing
 const ensureCsrfToken = async (): Promise<boolean> => {
-  const existingToken = getCookie("csrfToken");
+  const existingToken = getCsrfToken();
   if (existingToken) {
     console.log("[TTE API] CSRF token already present");
     return true;
@@ -114,13 +124,13 @@ api.interceptors.request.use(
       config.method &&
       !["get", "head", "options"].includes(config.method.toLowerCase())
     ) {
-      let csrfToken = getCookie("csrfToken");
+      let csrfToken = getCsrfToken();
 
       // If CSRF token is missing, try to fetch it
       if (!csrfToken) {
         console.warn("[TTE API] CSRF token missing, fetching now...");
         await ensureCsrfToken();
-        csrfToken = getCookie("csrfToken");
+        csrfToken = getCsrfToken();
       }
 
       if (csrfToken) {
@@ -209,7 +219,7 @@ api.interceptors.response.use(
 
         try {
           await fetchCsrfToken();
-          const newCsrfToken = getCookie("csrfToken");
+          const newCsrfToken = getCsrfToken();
           if (newCsrfToken) {
             error.config.headers["X-CSRF-Token"] = newCsrfToken;
             return api.request(error.config);

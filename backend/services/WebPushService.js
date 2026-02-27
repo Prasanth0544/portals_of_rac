@@ -26,10 +26,14 @@ webPush.setVapidDetails(
     VAPID_PRIVATE_KEY
 );
 
+// Frontend URL for deep-links in push notifications
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5175';
+
 class WebPushService {
     constructor() {
         console.log('📨 WebPushService initialized');
         console.log('   VAPID configured ✓');
+        console.log('   Frontend URL:', FRONTEND_URL);
     }
 
     /**
@@ -100,7 +104,7 @@ class WebPushService {
             body: `You have been marked as NO-SHOW for PNR ${data.pnr}. Contact TTE if present.`,
             icon: '/logo192.png',
             badge: '/badge.png',
-            url: 'http://localhost:5175/#/',
+            url: `${FRONTEND_URL}/passenger`,
             data: {
                 type: 'NO_SHOW_MARKED',
                 pnr: data.pnr,
@@ -118,7 +122,7 @@ class WebPushService {
             body: `Berth ${data.berth} is now available for upgrade. Check your offers!`,
             icon: '/logo192.png',
             badge: '/badge.png',
-            url: 'http://localhost:5175/#/upgrades',
+            url: `${FRONTEND_URL}/passenger/upgrade-offers`,
             data: {
                 type: 'UPGRADE_OFFER',
                 pnr: data.pnr,
@@ -137,7 +141,7 @@ class WebPushService {
             body: `Your NO-SHOW status has been cleared for PNR ${data.pnr}. Welcome back!`,
             icon: '/logo192.png',
             badge: '/badge.png',
-            url: 'http://localhost:5175/#/',
+            url: `${FRONTEND_URL}/passenger`,
             data: {
                 type: 'NO_SHOW_REVERTED',
                 pnr: data.pnr
@@ -221,7 +225,7 @@ class WebPushService {
             body: `${data.count} RAC passenger(s) need your approval at ${data.station}`,
             icon: '/logo192.png',
             badge: '/badge.png',
-            url: 'http://localhost:5174/#/station-approval',
+            url: `${FRONTEND_URL}/tte`,
             data: {
                 type: 'RAC_APPROVAL_REQUIRED',
                 count: data.count,
@@ -240,7 +244,7 @@ class WebPushService {
             body: `${data.passengerName} (${data.pnr}) upgraded to ${data.berth}`,
             icon: '/logo192.png',
             badge: '/badge.png',
-            url: 'http://localhost:3000/#/phase-one',
+            url: `${FRONTEND_URL}/admin`,
             data: {
                 type: 'RAC_UPGRADE_APPROVED',
                 pnr: data.pnr,
@@ -261,7 +265,7 @@ class WebPushService {
             body: `You can upgrade from ${data.currentBerth} to ${data.offeredBerth}. Tap to approve!`,
             icon: '/logo192.png',
             badge: '/badge.png',
-            url: 'http://localhost:5175/#/dashboard',
+            url: `${FRONTEND_URL}/passenger/upgrade-offers`,
             data: {
                 type: 'DUAL_APPROVAL_UPGRADE_OFFER',
                 pnr: data.pnr,

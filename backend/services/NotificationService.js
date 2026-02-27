@@ -25,11 +25,23 @@ class NotificationService {
         this.emailTransporter = nodemailer.createTransport(transportConfig);
 
         // Configurable frontend URL for email links
-        this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5175';
 
         console.log('📧 NotificationService initialized');
-        console.log('   Email:', process.env.EMAIL_USER ? '✓ Configured' : '✗ Not configured');
+        console.log('   Email User:', process.env.EMAIL_USER || '✗ NOT SET');
+        console.log('   Email Pass:', process.env.EMAIL_PASSWORD ? `✓ Set (${process.env.EMAIL_PASSWORD.length} chars)` : '✗ NOT SET');
         console.log('   SMTP:', process.env.EMAIL_HOST || 'gmail (default)');
+
+        // ✅ Verify SMTP credentials on startup
+        this.emailTransporter.verify((error, success) => {
+            if (error) {
+                console.error('❌ SMTP credential verification FAILED:', error.message);
+                console.error('   → Check EMAIL_USER and EMAIL_PASSWORD in .env');
+                console.error('   → Generate a new App Password: https://myaccount.google.com/apppasswords');
+            } else {
+                console.log('✅ SMTP credentials verified — email is ready to send');
+            }
+        });
     }
 
     /**
@@ -215,7 +227,7 @@ class NotificationService {
                                     </ul>
                                     
                                     <center>
-                                        <a href="${this.frontendUrl}" class="action-button">Open Passenger Portal</a>
+                                        <a href="${this.frontendUrl}/passenger" class="action-button">Open Passenger Portal</a>
                                     </center>
                                     
                                     <p style="margin-top: 20px; font-size: 13px; color: #666;">
@@ -402,7 +414,7 @@ class NotificationService {
                                 </div>
                                 
                                 <p style="text-align: center;">
-                                    <a href="${this.frontendUrl}" class="btn">✓ View & Approve Upgrade</a>
+                                    <a href="${this.frontendUrl}/passenger/upgrade-offers" class="btn">✓ View & Approve Upgrade</a>
                                 </p>
                                 
                                 <p style="color: #e74c3c; font-weight: bold;">
