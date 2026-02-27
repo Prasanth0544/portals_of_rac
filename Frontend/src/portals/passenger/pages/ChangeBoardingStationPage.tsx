@@ -38,6 +38,7 @@ const ChangeBoardingStationPage: React.FC = () => {
     // Step 3: OTP verification
     const [otp, setOtp] = useState<string>('');
     const [maskedEmail, setMaskedEmail] = useState<string>('');
+    const [devOtp, setDevOtp] = useState<string>(''); // OTP shown on screen when email fails
 
     // Step 4: Station selection
     const [availableStations, setAvailableStations] = useState<Station[]>([]);
@@ -110,13 +111,19 @@ const ChangeBoardingStationPage: React.FC = () => {
 
             if (data.success) {
                 setMaskedEmail(data.maskedEmail || passenger.Email || 'your registered email');
-                setStep(3);
-                // Show OTP in toast if email failed (dev mode)
+                // Always store devOtp - backend now always returns it
                 if (data.devOtp) {
-                    toast.success(`OTP: ${data.devOtp} (email delivery failed)`, { duration: 10000 });
+                    setDevOtp(data.devOtp);
+                    if (!data.emailSent) {
+                        toast.success(`📋 OTP: ${data.devOtp} (email failed — use this!)`, { duration: 15000 });
+                    } else {
+                        toast.success(`OTP sent to ${data.maskedEmail || 'your email'}. Also shown on screen.`, { duration: 6000 });
+                    }
                 } else {
+                    setDevOtp('');
                     toast.success(`OTP sent to ${data.maskedEmail || 'your email'}`);
                 }
+                setStep(3);
             } else {
                 toast.error(data.message || 'Failed to send OTP');
             }
@@ -318,6 +325,36 @@ const ChangeBoardingStationPage: React.FC = () => {
                         <p className="hint">
                             ✉️ OTP has been sent to {maskedEmail}
                         </p>
+
+                        {/* Always show OTP on screen */}
+                        {devOtp && (
+                            <div style={{
+                                background: '#fff3cd',
+                                border: '2px solid #ffc107',
+                                borderRadius: '8px',
+                                padding: '16px',
+                                marginBottom: '16px',
+                                textAlign: 'center'
+                            }}>
+                                <p style={{ margin: '0 0 8px', fontWeight: 600, color: '#856404' }}>
+                                    🔐 Your OTP (also sent to email):
+                                </p>
+                                <div style={{
+                                    fontSize: '32px',
+                                    fontWeight: 'bold',
+                                    letterSpacing: '8px',
+                                    color: '#2c3e50',
+                                    fontFamily: 'monospace',
+                                    background: '#fff',
+                                    padding: '10px 20px',
+                                    borderRadius: '6px',
+                                    display: 'inline-block',
+                                    border: '1px solid #ffc107'
+                                }}>{devOtp}</div>
+                                <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#856404' }}>Enter this 6-digit OTP in the field below</p>
+                            </div>
+                        )}
+
                         <div className="input-group">
                             <label>Enter 6-digit OTP</label>
                             <input

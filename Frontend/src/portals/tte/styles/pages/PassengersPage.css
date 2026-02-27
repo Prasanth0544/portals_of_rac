@@ -802,3 +802,42 @@
 .passenger-detail-row:hover {
   background: #f1f5f9 !important;
 }
+
+/* ============================================
+   RAC UPGRADE CHANCE BADGE
+   ============================================ */
+
+.upgrade-chance-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: default;
+}
+
+.upgrade-chance-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+}
+
+.upgrade-chance-badge.high {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(22, 163, 74, 0.35);
+}
+
+.upgrade-chance-badge.medium {
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(234, 88, 12, 0.35);
+}
+
+.upgrade-chance-badge.low {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(220, 38, 38, 0.3);
+}

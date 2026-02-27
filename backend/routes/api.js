@@ -64,6 +64,63 @@ router.post('/auth/staff/register',
   (req, res) => authController.staffRegister(req, res)
 );
 
+// TTE Registration for a specific train (Admin Landing Page) ✅ FIXED - was missing
+router.post('/auth/tte/register',
+  authLimiter,
+  validationMiddleware.sanitizeBody,
+  (req, res) => authController.registerTTE(req, res)
+);
+
+// Register / Add a new train to Trains_Details ✅ NEW - was missing
+router.post('/trains/register',
+  validationMiddleware.sanitizeBody,
+  async (req, res) => {
+    try {
+      const db = require('../config/db');
+      const { TRAIN_FIELDS } = require('../config/fields');
+      const { COLLECTIONS } = require('../config/collections');
+      const racDb = await db.getDb();
+      const col = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
+
+      const {
+        trainNo, trainName,
+        totalCoaches, sleeperCoachesCount, threeTierACCoachesCount, twoTierACCoachesCount
+      } = req.body;
+
+      if (!trainNo || !trainName) {
+        return res.status(400).json({ success: false, message: 'trainNo and trainName are required' });
+      }
+
+      // Check for duplicate
+      const existing = await col.findOne({ [TRAIN_FIELDS.TRAIN_NO]: Number(trainNo) });
+      if (existing) {
+        return res.status(409).json({ success: false, message: `Train ${trainNo} is already registered` });
+      }
+
+      const doc = {
+        [TRAIN_FIELDS.TRAIN_NO]: Number(trainNo),
+        [TRAIN_FIELDS.TRAIN_NAME]: trainName.trim(),
+        Total_Coaches: totalCoaches ? Number(totalCoaches) : null,
+        [TRAIN_FIELDS.SLEEPER_COACHES_COUNT]: sleeperCoachesCount ? Number(sleeperCoachesCount) : null,
+        [TRAIN_FIELDS.THREE_TIER_AC_COACHES_COUNT]: threeTierACCoachesCount ? Number(threeTierACCoachesCount) : null,
+        Two_TierAC_Coaches_Count: twoTierACCoachesCount ? Number(twoTierACCoachesCount) : null,
+        status: 'REGISTERED',
+        createdAt: new Date(),
+      };
+
+
+      await col.insertOne(doc);
+      console.log(`✅ Train ${trainNo} (${trainName}) registered`);
+
+      res.status(201).json({ success: true, message: `Train ${trainNo} registered successfully`, data: doc });
+    } catch (error) {
+      console.error('Error registering train:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
+
 // Mark passenger as NO_SHOW
 router.post('/tte/mark-no-show',
   authMiddleware,
@@ -1204,6 +1261,76 @@ router.post('/test-email', async (req, res) => {
       message: error.message,
       error: error.toString()
     });
+  }
+});
+
+// ========== CROSS-CLASS UPGRADE ROUTES ==========
+const CrossClassUpgradeService = require('../services/CrossClassUpgradeService');
+
+// GET /reallocation/cross-class-upgrades  — admin: view all eligible SL RAC → 3A/2A
+router.get('/reallocation/cross-class-upgrades', dbReady, async (req, res) => {
+  try {
+    const trainState = trainController.getGlobalTrainState(req.query.trainNo);
+    if (!trainState) return res.status(400).json({ success: false, message: 'Train not initialized' });
+    const upgrades = CrossClassUpgradeService.getEligibleUpgrades(trainState);
+    res.json({ success: true, data: { total: upgrades.length, upgrades } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /passenger/upgrade-options/:irctcId  — passenger portal: my upgrade options with costs
+router.get('/passenger/upgrade-options/:irctcId', authMiddleware, dbReady, async (req, res) => {
+  try {
+    const { irctcId } = req.params;
+    const trainState = trainController.getGlobalTrainState(req.query.trainNo);
+    if (!trainState) return res.status(400).json({ success: false, message: 'Train not initialized' });
+    const result = CrossClassUpgradeService.getUpgradeOptionsForPassenger(trainState, irctcId);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /reallocation/apply-cross-class-upgrade  — admin applies upgrade
+router.post('/reallocation/apply-cross-class-upgrade', dbReady, async (req, res) => {
+  try {
+    const { pnr, targetCoach, targetBerthNo } = req.body;
+    if (!pnr || !targetCoach || !targetBerthNo) {
+      return res.status(400).json({ success: false, message: 'pnr, targetCoach, targetBerthNo required' });
+    }
+    const trainState = trainController.getGlobalTrainState(req.body.trainNo || req.query.trainNo);
+    if (!trainState) return res.status(400).json({ success: false, message: 'Train not initialized' });
+    const db = require('../config/db');
+    const result = await CrossClassUpgradeService.applyUpgrade(trainState, pnr, targetCoach, Number(targetBerthNo), db);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /passenger/request-cross-class-upgrade  — passenger self-requests upgrade
+router.post('/passenger/request-cross-class-upgrade', authMiddleware, dbReady, async (req, res) => {
+  try {
+    const { pnr, targetCoach, targetBerthNo } = req.body;
+    if (!pnr || !targetCoach || !targetBerthNo) {
+      return res.status(400).json({ success: false, message: 'pnr, targetCoach, targetBerthNo required' });
+    }
+    const trainState = trainController.getGlobalTrainState(req.body.trainNo || req.query.trainNo);
+    if (!trainState) return res.status(400).json({ success: false, message: 'Train not initialized' });
+
+    // Security: only allow passenger to upgrade their own PNR
+    const passenger = trainState.racQueue.find(p => p.pnr === pnr);
+    if (!passenger) return res.status(404).json({ success: false, message: 'Passenger not found in RAC queue' });
+    if (passenger.irctcId !== req.user?.irctcId && passenger.IRCTC_ID !== req.user?.irctcId) {
+      return res.status(403).json({ success: false, message: 'You can only upgrade your own booking' });
+    }
+
+    const db = require('../config/db');
+    const result = await CrossClassUpgradeService.applyUpgrade(trainState, pnr, targetCoach, Number(targetBerthNo), db);
+    res.json({ success: true, message: 'Upgrade applied successfully', data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

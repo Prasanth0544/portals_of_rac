@@ -52,9 +52,9 @@ class OTPController {
             }
 
             if (!passenger) {
-                return res.status(404).json({
+                return res.status(400).json({
                     success: false,
-                    message: 'Passenger not found'
+                    message: `Passenger with PNR ${pnr} not found. Make sure the train journey is started and the PNR is correct.`
                 });
             }
 
@@ -106,15 +106,14 @@ class OTPController {
                 success: true,
                 message: result.emailSent
                     ? `OTP sent to ${maskedEmail}`
-                    : `OTP generated — email delivery failed. Check console or use: ${result.otp}`,
+                    : `OTP generated — email delivery failed. Use the OTP shown on screen.`,
                 maskedEmail,
-                expiresIn: result.expiresIn
+                expiresIn: result.expiresIn,
+                // Always include OTP in response for reliable demo/hackathon use.
+                // Gmail may silently drop emails (spam filters, daily limits, etc.)
+                devOtp: result.otp,
+                emailSent: result.emailSent
             };
-
-            // In non-production, include OTP in response for easy testing
-            if (process.env.NODE_ENV !== 'production' || !result.emailSent) {
-                response.devOtp = result.otp;
-            }
 
             res.json(response);
 

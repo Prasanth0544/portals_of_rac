@@ -1,7 +1,8 @@
 // tte-portal/src/pages/PassengersPage.tsx
 // Updated to fix export issue
 
-import React, { useState, useEffect, FocusEvent, ChangeEvent } from "react";
+import React, { useState, useEffect, useMemo, FocusEvent, ChangeEvent } from "react";
+import { calculateUpgradeProbability, getUpgradeChanceClass } from "../../../utils/racUpgradeProbability";
 import { tteAPI } from "../api";
 import "../styles/pages/PassengersPage.css";
 
@@ -12,6 +13,7 @@ interface Passenger {
     gender?: string;
     pnrStatus: string;
     racStatus?: string;
+    racNumber?: number;
     class?: string;
     coach?: string;
     berth?: string;
@@ -152,6 +154,47 @@ function PassengersPage(): React.ReactElement {
 
     // ✅ NEW: Multi-Passenger Grouping State
     const [expandedPNRs, setExpandedPNRs] = useState<Set<string>>(new Set());
+
+    // ✅ RAC Upgrade Probability helpers
+    const currentlyVacantCount = useMemo(
+        () => vacantBerths.filter((b) => b.isCurrentlyVacant).length,
+        [vacantBerths]
+    );
+    const totalRACCount = useMemo(
+        () => passengers.filter((p) => p.pnrStatus === 'RAC').length,
+        [passengers]
+    );
+    const stationsRemaining = useMemo(
+        () => Math.max(0, (trainData?.stations?.length ?? 1) - 1 - (trainData?.currentStationIdx ?? 0)),
+        [trainData]
+    );
+    const totalStations = trainData?.stations?.length ?? 1;
+
+    const renderUpgradeChance = (racNumber: number | undefined, pnrStatus: string, racStatus?: string, p?: Passenger): React.ReactElement => {
+        if (pnrStatus !== 'RAC') return <td className="td-rac">-</td>;
+        // racNumber may not be in the API response — fall back to parsing from racStatus ('RAC 1' → 1)
+        const position = racNumber ?? parseInt((racStatus || '').replace(/[^\d]/g, '') || '9999', 10);
+        if (!position || position >= 9999) return <td className="td-rac">-</td>;
+        const pct = calculateUpgradeProbability(
+            position,
+            totalRACCount,
+            currentlyVacantCount,
+            stationsRemaining,
+            p?.boarded ?? true,
+            p?.passengerStatus?.toLowerCase() === 'online',
+            p?.fromIdx ?? 0,
+            p?.toIdx ?? 0,
+            totalStations
+        );
+        const cls = getUpgradeChanceClass(pct);
+        return (
+            <td className="td-rac">
+                <span className={`upgrade-chance-badge ${cls}`} title={`RAC${position} · ${currentlyVacantCount} vacant · ${stationsRemaining} stn left · ${p?.boarded ? 'Boarded' : 'Not boarded'} · ${p?.passengerStatus || 'Offline'}`}>
+                    🎯 {pct}%
+                </span>
+            </td>
+        );
+    };
 
     // ✅ NEW: Group passengers by PNR
     const groupPassengersByPNR = (passengerList: Passenger[]): Map<string, Passenger[]> => {
@@ -712,6 +755,7 @@ function PassengersPage(): React.ReactElement {
                                         <th className="th-gender">Gender</th>
                                         <th className="th-status">Status</th>
                                         <th className="th-rac">RAC Que_no</th>
+                                        <th>Upgrade Chance</th>
                                         <th>Coach</th>
                                         <th>Class</th>
                                         <th>From</th>
@@ -758,6 +802,7 @@ function PassengersPage(): React.ReactElement {
                                                             </span>
                                                         </td>
                                                         <td className="td-rac">{firstPassenger.racStatus || '-'}</td>
+                                                        {renderUpgradeChance(firstPassenger.racNumber, firstPassenger.pnrStatus, firstPassenger.racStatus, firstPassenger)}
                                                         <td className="td-coach">{firstPassenger.coach}</td>
                                                         <td className="td-class">{firstPassenger.class}</td>
                                                         <td className="td-from">{firstPassenger.from}</td>
@@ -793,6 +838,7 @@ function PassengersPage(): React.ReactElement {
                                                                     </span>
                                                                 </td>
                                                                 <td className="td-rac">{p.racStatus || '-'}</td>
+                                                                {renderUpgradeChance(p.racNumber, p.pnrStatus, p.racStatus, p)}
                                                                 <td className="td-coach">{p.coach}</td>
                                                                 <td className="td-class">{p.class}</td>
                                                                 <td className="td-from">{p.from}</td>
@@ -824,6 +870,7 @@ function PassengersPage(): React.ReactElement {
                                                             </span>
                                                         </td>
                                                         <td className="td-rac">{p.racStatus || '-'}</td>
+                                                        {renderUpgradeChance(p.racNumber, p.pnrStatus, p.racStatus, p)}
                                                         <td className="td-coach">{p.coach}</td>
                                                         <td className="td-class">{p.class}</td>
                                                         <td className="td-from">{p.from}</td>

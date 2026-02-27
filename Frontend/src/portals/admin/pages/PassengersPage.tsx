@@ -1,12 +1,14 @@
 // admin-portal/src/pages/PassengersPage.tsx
 
-import React, { useState, useEffect, ChangeEvent, CSSProperties, FocusEvent } from "react";
+import React, { useState, useEffect, useMemo, ChangeEvent, CSSProperties, FocusEvent } from "react";
+import { calculateUpgradeProbability, getUpgradeChanceClass } from "../../../utils/racUpgradeProbability";
 import {
     getAllPassengers,
     getPassengerCounts,
     setPassengerStatus,
     getVacantBerths,
 } from "../services/apiWithErrorHandling";
+import CrossClassUpgradePanel from "../components/CrossClassUpgradePanel";
 import "../styles/pages/PassengersPage.css";
 
 interface Station {
@@ -26,6 +28,7 @@ interface Passenger {
     class: string;
     pnrStatus: string;
     racStatus?: string;
+    racNumber?: number;
     coach: string;
     berth: string;
     boarded?: boolean;
@@ -67,6 +70,8 @@ interface TrainData {
     journeyStarted?: boolean;
     currentStationIdx?: number;
     stations?: Station[];
+    trainNumber?: string;
+    trainNo?: string;
 }
 
 type PageType = 'config' | 'home' | 'rac-queue' | 'coaches' | 'passengers' | 'reallocation' | 'visualization' | 'add-passenger' | 'phase1';
@@ -118,7 +123,7 @@ function PassengerStatusButton({ passenger, onStatusUpdate }: PassengerStatusBut
     }
 
     return (
-        <button onClick={() => setShowButtons(true)} disabled={isUpdating} className={`current-status-btn ${currentStatus.toLowerCase()}`}>
+        <button onClick={() => setShowButtons(true)} disabled={isUpdating} className={`current - status - btn ${currentStatus.toLowerCase()} `}>
             {currentStatus}
         </button>
     );
@@ -141,9 +146,51 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
     const [vacantFromStation, setVacantFromStation] = useState<string>("");
     const [vacantToStation, setVacantToStation] = useState<string>("");
     const [vacantBerthSearch, setVacantBerthSearch] = useState<string>("");
+    const [vacantClassFilter, setVacantClassFilter] = useState<string>("all");
 
     // ✅ NEW: Multi-Passenger Grouping State
     const [expandedPNRs, setExpandedPNRs] = useState<Set<string>>(new Set());
+
+    // ✅ RAC Upgrade Probability helpers
+    const currentlyVacantCount = useMemo(
+        () => vacantBerths.filter((b) => b.isCurrentlyVacant).length,
+        [vacantBerths]
+    );
+    const totalRACCount = useMemo(
+        () => passengers.filter((p) => p.pnrStatus === 'RAC').length,
+        [passengers]
+    );
+    const stationsRemaining = useMemo(
+        () => Math.max(0, (trainData?.stations?.length ?? 1) - 1 - (trainData?.currentStationIdx ?? 0)),
+        [trainData]
+    );
+    const totalStations = trainData?.stations?.length ?? 1;
+
+    const renderUpgradeChance = (racNumber: number | undefined, pnrStatus: string, racStatus?: string, p?: Passenger): React.ReactElement => {
+        if (pnrStatus !== 'RAC') return <td className="td-rac">-</td>;
+        // racNumber may not be in the API response — fall back to parsing from racStatus ('RAC 1' → 1)
+        const position = racNumber ?? parseInt((racStatus || '').replace(/[^\d]/g, '') || '9999', 10);
+        if (!position || position >= 9999) return <td className="td-rac">-</td>;
+        const pct = calculateUpgradeProbability(
+            position,
+            totalRACCount,
+            currentlyVacantCount,
+            stationsRemaining,
+            p?.boarded ?? true,
+            p?.passengerStatus?.toLowerCase() === 'online',
+            p?.fromIdx ?? 0,
+            p?.toIdx ?? 0,
+            totalStations
+        );
+        const cls = getUpgradeChanceClass(pct);
+        return (
+            <td className="td-rac">
+                <span className={`upgrade - chance - badge ${cls} `} title={`RAC${position} · ${currentlyVacantCount} vacant · ${stationsRemaining} stn left · ${p?.boarded ? 'Boarded' : 'Not boarded'} · ${p?.passengerStatus || 'Offline'} `}>
+                    🎯 {pct}%
+                </span>
+            </td>
+        );
+    };
 
     // ✅ NEW: Group passengers by PNR
     const groupPassengersByPNR = (passengerList: Passenger[]): Map<string, Passenger[]> => {
@@ -207,7 +254,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
     useEffect(() => {
         filterVacantBerths();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [vacantBerths, vacantFromStation, vacantToStation, vacantBerthSearch]);
+    }, [vacantBerths, vacantFromStation, vacantToStation, vacantBerthSearch, vacantClassFilter]);
 
     const calculateVacantBerths = async (): Promise<void> => {
         if (!trainData || !trainData.coaches || !trainData.journeyStarted) {
@@ -270,6 +317,11 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                 berth.vacantToStation?.toLowerCase().includes(searchTerm) ||
                 berth.vacantToStationName?.toLowerCase().includes(searchTerm)
             );
+        }
+
+        // Filter by coach class
+        if (vacantClassFilter !== 'all') {
+            filtered = filtered.filter((berth) => berth.class === vacantClassFilter);
         }
 
         setFilteredVacantBerths(filtered);
@@ -562,8 +614,41 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                     </div>
 
                     <div className="vacant-filters">
+                        {/* ── Class Selector ── */}
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                            {([
+                                { key: 'all', label: 'All Classes', emoji: '🚂' },
+                                { key: 'SL', label: 'Sleeper', emoji: '🛏️' },
+                                { key: 'AC_3_Tier', label: '3-Tier AC', emoji: '❄️' },
+                                { key: 'AC_2_Tier', label: '2nd AC', emoji: '✨' },
+                            ] as { key: string; label: string; emoji: string }[]).map(({ key, label, emoji }) => {
+                                const count = key === 'all' ? vacantBerths.length : vacantBerths.filter(b => b.class === key).length;
+                                const isActive = vacantClassFilter === key;
+                                const colors: Record<string, string> = { all: '#3b82f6', SL: '#f59e0b', AC_3_Tier: '#06b6d4', AC_2_Tier: '#8b5cf6' };
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => setVacantClassFilter(key)}
+                                        style={{
+                                            padding: '6px 14px',
+                                            borderRadius: '20px',
+                                            border: `2px solid ${colors[key]} `,
+                                            background: isActive ? colors[key] : 'transparent',
+                                            color: isActive ? 'white' : colors[key],
+                                            fontWeight: 600,
+                                            fontSize: '13px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        {emoji} {label} <span style={{ opacity: 0.8 }}>({count})</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         <div className="vacant-filter-group">
-                            <label className="filter-label">🔍 Filter by Berth & Stations</label>
+                            <label className="filter-label">🔍 Filter by Berth &amp; Stations</label>
                             <div className="vacant-filter-inputs">
                                 <input
                                     type="text"
@@ -587,7 +672,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                     className="vacant-filter-input"
                                 />
                                 <button
-                                    onClick={() => { setVacantBerthSearch(""); setVacantFromStation(""); setVacantToStation(""); }}
+                                    onClick={() => { setVacantBerthSearch(""); setVacantFromStation(""); setVacantToStation(""); setVacantClassFilter("all"); }}
                                     className="vacant-filter-reset"
                                     title="Clear Filters"
                                 >
@@ -626,7 +711,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                 </thead>
                                 <tbody>
                                     {filteredVacantBerths.map((berth, idx) => (
-                                        <tr key={`${berth.fullBerthNo}-${idx}`} style={{ backgroundColor: berth.isCurrentlyVacant ? '#f0f9ff' : '#fff' }}>
+                                        <tr key={`${berth.fullBerthNo} -${idx} `} style={{ backgroundColor: berth.isCurrentlyVacant ? '#f0f9ff' : '#fff' }}>
                                             <td className="td-no">{idx + 1}</td>
                                             <td className="td-berth">{berth.fullBerthNo}</td>
                                             <td className="td-type">{berth.type}</td>
@@ -655,6 +740,9 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                         </button>
                         <p className="add-passenger-hint">Check vacant berths above and add passengers to available berths</p>
                     </div>
+
+                    {/* Cross-class upgrade panel */}
+                    <CrossClassUpgradePanel trainNo={trainData?.trainNo || trainData?.trainNumber || localStorage.getItem('trainNo') || undefined} />
                 </div>
             )}
 
@@ -676,6 +764,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                         <th className="th-gender">Gender</th>
                                         <th className="th-status">Status</th>
                                         <th className="th-rac">RAC Que_no</th>
+                                        <th>Upgrade Chance</th>
                                         <th>Coach</th>
                                         <th>Class</th>
                                         <th>From</th>
@@ -702,13 +791,13 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
 
                                                 rows.push(
                                                     <tr
-                                                        key={`group-${pnr}`}
+                                                        key={`group - ${pnr} `}
                                                         className="group-header-row"
                                                         onClick={() => togglePNRExpansion(pnr)}
                                                     >
                                                         <td className="td-no">{++rowIndex}</td>
                                                         <td className="td-pnr" colSpan={2}>
-                                                            <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>{">"}</span>
+                                                            <span className={`expand - icon ${isExpanded ? 'expanded' : ''} `}>{">"}</span>
                                                             <strong>{pnr}</strong>
                                                             <span className="passenger-count-badge">
                                                                 {passengerGroup.length} passengers
@@ -717,11 +806,12 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                                         <td className="td-age">-</td>
                                                         <td className="td-gender">-</td>
                                                         <td className="td-status">
-                                                            <span className={`badge ${firstPassenger.pnrStatus.toLowerCase().replace(" ", "-")}`}>
+                                                            <span className={`badge ${firstPassenger.pnrStatus.toLowerCase().replace(" ", "-")} `}>
                                                                 {firstPassenger.pnrStatus}
                                                             </span>
                                                         </td>
                                                         <td className="td-rac">{firstPassenger.racStatus || '-'}</td>
+                                                        {renderUpgradeChance(firstPassenger.racNumber, firstPassenger.pnrStatus, firstPassenger.racStatus, firstPassenger)}
                                                         <td className="td-coach">{firstPassenger.coach}</td>
                                                         <td className="td-class">{firstPassenger.class}</td>
                                                         <td className="td-from">{firstPassenger.from}</td>
@@ -732,7 +822,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                                                 passengerGroup.some(p => p.boarded) ? "⏳" : "⏳"}
                                                         </td>
                                                         <td className="td-passenger-status">
-                                                            <span className={`current-status-btn ${groupStatus.toLowerCase()}`}>
+                                                            <span className={`current - status - btn ${groupStatus.toLowerCase()} `}>
                                                                 {groupStatus}
                                                             </span>
                                                         </td>
@@ -743,7 +833,7 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                                 if (isExpanded) {
                                                     passengerGroup.forEach((p, idx) => {
                                                         rows.push(
-                                                            <tr key={`${pnr}-${idx}`} className={`passenger-detail-row ${p.noShow ? "no-show-row" : ""}`}>
+                                                            <tr key={`${pnr} -${idx} `} className={`passenger - detail - row ${p.noShow ? "no-show-row" : ""} `}>
                                                                 <td className="td-no"></td>
                                                                 <td className="td-pnr" style={{ paddingLeft: '40px', fontSize: '0.9em', color: '#6b7280' }}>
                                                                     #{idx + 1}
@@ -752,11 +842,12 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                                                 <td className="td-age">{p.age}</td>
                                                                 <td className="td-gender">{p.gender}</td>
                                                                 <td className="td-status">
-                                                                    <span className={`badge ${p.pnrStatus.toLowerCase().replace(" ", "-")}`}>
+                                                                    <span className={`badge ${p.pnrStatus.toLowerCase().replace(" ", "-")} `}>
                                                                         {p.pnrStatus}
                                                                     </span>
                                                                 </td>
                                                                 <td className="td-rac">{p.racStatus || '-'}</td>
+                                                                {renderUpgradeChance(p.racNumber, p.pnrStatus, p.racStatus, p)}
                                                                 <td className="td-coach">{p.coach}</td>
                                                                 <td className="td-class">{p.class}</td>
                                                                 <td className="td-from">{p.from}</td>
@@ -783,11 +874,12 @@ function PassengersPage({ trainData, onClose, onNavigate }: PassengersPageProps)
                                                         <td className="td-age">{p.age}</td>
                                                         <td className="td-gender">{p.gender}</td>
                                                         <td className="td-status">
-                                                            <span className={`badge ${p.pnrStatus.toLowerCase().replace(" ", "-")}`}>
+                                                            <span className={`badge ${p.pnrStatus.toLowerCase().replace(" ", "-")} `}>
                                                                 {p.pnrStatus}
                                                             </span>
                                                         </td>
                                                         <td className="td-rac">{p.racStatus || '-'}</td>
+                                                        {renderUpgradeChance(p.racNumber, p.pnrStatus, p.racStatus, p)}
                                                         <td className="td-coach">{p.coach}</td>
                                                         <td className="td-class">{p.class}</td>
                                                         <td className="td-from">{p.from}</td>

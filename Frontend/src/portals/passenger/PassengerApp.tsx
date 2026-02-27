@@ -13,10 +13,12 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import UpgradeIcon from '@mui/icons-material/TrendingUp';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import DashboardPage from './pages/DashboardPage';
 import PNRSearchPage from './pages/PNRSearchPage';
 import JourneyVisualizationPage from './pages/JourneyVisualizationPage';
 import UpgradeOffersPage from './pages/UpgradeOffersPage';
+import ClassUpgradePage from './pages/ClassUpgradePage';
 import ReportDeboardingPage from './pages/ReportDeboardingPage';
 import CancelTicketPage from './pages/CancelTicketPage';
 import ChangeBoardingStationPage from './pages/ChangeBoardingStationPage';
@@ -73,6 +75,7 @@ function Navigation({ user, onLogout, upgradeCount }: NavigationProps): React.Re
             case '/pnr-search': return 1;
             case '/journey': return 2;
             case '/upgrades': return 3;
+            case '/class-upgrade': return 4;
             default: return 0;
         }
     };
@@ -129,6 +132,11 @@ function Navigation({ user, onLogout, upgradeCount }: NavigationProps): React.Re
                         label={upgradeCount > 0 ? `Upgrades (${upgradeCount})` : 'Upgrades'}
                         component={Link} to="/passenger/upgrades" iconPosition="start"
                     />
+                    <Tab
+                        icon={<ArrowUpwardIcon />}
+                        label="Class Upgrade"
+                        component={Link} to="/passenger/class-upgrade" iconPosition="start"
+                    />
                 </Tabs>
 
                 <NotificationBell irctcId={user?.IRCTC_ID} />
@@ -181,24 +189,43 @@ function PassengerApp({ onLogout }: PassengerAppProps): React.ReactElement {
         }
     }, []);
 
-    // Fetch upgrade count periodically
+    // Fetch upgrade count periodically + stop on logout
     useEffect(() => {
         if (!user?.IRCTC_ID) return;
 
+        let stopped = false;
+
         const fetchUpgradeCount = async (): Promise<void> => {
+            if (stopped || !localStorage.getItem('token')) return;
             try {
-                const response = await axios.get(`${API_URL}/passenger/pending-upgrades/${user.IRCTC_ID}`);
+                const token = localStorage.getItem('token');
+                const response = await axios.get(
+                    `${API_URL}/passenger/pending-upgrades/${user.IRCTC_ID}`,
+                    { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+                );
                 if (response.data.success) {
                     setUpgradeCount(response.data.pendingUpgrades?.length || 0);
                 }
-            } catch (err) {
-                console.log('Could not fetch upgrade count');
+            } catch {
+                // silently ignore
             }
         };
 
         fetchUpgradeCount();
-        const interval = setInterval(fetchUpgradeCount, 30000);
-        return () => clearInterval(interval);
+        const pollInterval = setInterval(fetchUpgradeCount, 30000);
+
+        const handleLogoutEvent = () => {
+            stopped = true;
+            clearInterval(pollInterval);
+            setUpgradeCount(0);
+        };
+        window.addEventListener('app:logout', handleLogoutEvent);
+
+        return () => {
+            stopped = true;
+            clearInterval(pollInterval);
+            window.removeEventListener('app:logout', handleLogoutEvent);
+        };
     }, [user?.IRCTC_ID]);
 
     const handleLogout = (): void => {
@@ -218,6 +245,7 @@ function PassengerApp({ onLogout }: PassengerAppProps): React.ReactElement {
                         <Route path="/pnr-search" element={<PNRSearchPage />} />
                         <Route path="/journey" element={<JourneyVisualizationPage />} />
                         <Route path="/upgrades" element={<UpgradeOffersPage />} />
+                        <Route path="/class-upgrade" element={<ClassUpgradePage />} />
                         <Route path="/family-upgrade" element={<FamilyUpgradeSelectionPage />} />
                         <Route path="/report-deboarding" element={<ReportDeboardingPage />} />
                         <Route path="/cancel-ticket" element={<CancelTicketPage />} />

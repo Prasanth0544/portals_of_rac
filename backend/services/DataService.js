@@ -68,15 +68,58 @@ class DataService {
       console.log(`\n🚃 Initializing coaches...`);
       const sleeperCount = Number(details?.Sleeper_Coaches_Count) || 9;
       const threeAcCount = Number(details?.Three_TierAC_Coaches_Count) || 0;
-      trainState.initializeCoaches(sleeperCount, threeAcCount);
+      const twoAcCount = Number(details?.Two_TierAC_Coaches_Count) || 0;
+      trainState.initializeCoaches(sleeperCount, threeAcCount, twoAcCount);
       console.log(
-        `   ✅ Created ${trainState.coaches.length} coaches (SL=${sleeperCount}, 3A=${threeAcCount})`,
+        `   ✅ Created ${trainState.coaches.length} coaches (SL=${sleeperCount}, 3A=${threeAcCount}, 2A=${twoAcCount})`,
       );
 
       // Load passengers
       console.log(`\n👥 Loading passengers...`);
       const passengers = await this.loadPassengers(trainNo, journeyDate);
       console.log(`   ✅ Loaded ${passengers.length} passengers`);
+
+      // ── Auto-detect coaches missing from Trains_Details ──────────────────
+      // Some trains may have coaches not listed in Trains_Details
+      // (e.g. Two_TierAC_Coaches_Count not set but 2A passengers exist).
+      // Scan passenger Assigned_Coach and create any missing coaches.
+      if (passengers.length > 0) {
+        const existingCoachNos = new Set(trainState.coaches.map(c => c.coachNo));
+        const missingCoaches = new Set();
+        for (const p of passengers) {
+          const coach = p.Assigned_Coach;
+          if (coach && !existingCoachNos.has(coach)) {
+            missingCoaches.add(coach);
+          }
+        }
+        if (missingCoaches.size > 0) {
+          const totalSegments = trainState.stations.length - 1;
+          console.log(`   ⚠️  Auto-creating ${missingCoaches.size} coaches not in Trains_Details: ${[...missingCoaches].join(', ')}`);
+          for (const coachNo of [...missingCoaches].sort()) {
+            let coachClass, capacity, berthCount;
+            if (/^A\d+$/i.test(coachNo)) {
+              coachClass = 'AC_2_Tier'; capacity = 54; berthCount = 54;
+            } else if (/^B\d+$/i.test(coachNo)) {
+              coachClass = 'AC_3_Tier'; capacity = 64; berthCount = 64;
+            } else {
+              coachClass = 'SL'; capacity = 72; berthCount = 72;
+            }
+            const coach = { coachNo, class: coachClass, capacity, berths: [] };
+            for (let j = 1; j <= berthCount; j++) {
+              const berthType = coachClass === 'AC_2_Tier'
+                ? trainState.getBerthType2A(j)
+                : coachClass === 'AC_3_Tier'
+                  ? trainState.getBerthType(j, 'AC_3_Tier')
+                  : trainState.getBerthType(j, 'SL');
+              const Berth = require('../models/Berth');
+              coach.berths.push(new Berth(coachNo, j, berthType, totalSegments));
+            }
+            trainState.coaches.push(coach);
+          }
+          console.log(`   ✅ Total coaches now: ${trainState.coaches.length}`);
+        }
+      }
+
 
       // Allocate passengers
       console.log(`\n🎫 Allocating passengers...`);

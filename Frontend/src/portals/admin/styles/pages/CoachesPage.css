@@ -269,6 +269,22 @@
   grid-template-columns: repeat(8, 1fr) !important;
 }
 
+/* 2-Tier AC coaches use 6 columns (54 berths → 6×9 grid) */
+.coach-card.ac-2tier .berths-grid {
+  grid-template-columns: repeat(6, 1fr) !important;
+}
+
+/* 2-Tier AC coach card — purple/violet header accent */
+.coach-card.ac-2tier {
+  border-top: 3px solid #8b5cf6;
+}
+
+.coach-card.ac-2tier .coach-class {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+}
+
+
 .berth {
   width: 100%;
   max-width: 32px;
@@ -784,6 +800,386 @@
   }
 
   .legend-item {
+    font-size: 11px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   2A (Second AC) Coach Styles
+   ══════════════════════════════════════════════════════ */
+
+/* Coach count badge on tab buttons */
+.coach-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.25);
+  color: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 7px;
+  margin-left: 6px;
+  min-width: 20px;
+}
+
+.coach-type-btn.active .coach-count-badge {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.coach-count-badge-2ac {
+  background: rgba(155, 89, 182, 0.2);
+  color: #9b59b6;
+}
+
+.coach-type-btn-2ac {
+  border-color: #d7bde2;
+}
+
+.coach-type-btn-2ac:hover {
+  border-color: #9b59b6;
+  color: #9b59b6;
+}
+
+.coach-type-btn-2ac.active {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  border-color: #9b59b6;
+  color: white;
+  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.35);
+}
+
+.coach-type-btn-2ac.active .coach-count-badge {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+/* Legend info note */
+.legend-info {
+  color: #7f8c8d;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* ── No 2A coaches empty state ── */
+.coaches-2a-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 10px 0;
+}
+
+.no-coaches-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 30px;
+  background: linear-gradient(135deg, #f9f4fd 0%, #ede1f7 100%);
+  border: 2px dashed #d7bde2;
+  border-radius: 14px;
+  text-align: center;
+  color: #6c3483;
+  margin-top: 20px;
+}
+
+.no-coaches-icon {
+  font-size: 52px;
+  margin-bottom: 16px;
+}
+
+.no-coaches-msg h3 {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #6c3483;
+}
+
+.no-coaches-msg p {
+  margin: 0;
+  font-size: 14px;
+  color: #8e44ad;
+  opacity: 0.8;
+}
+
+/* ── 2A coaches grid (vertical scroll, one coach per row) ── */
+.coaches-2a-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── Outer wrapper card per 2A coach ── */
+.coach-card-2a {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #d7bde2;
+  box-shadow: 0 3px 14px rgba(155, 89, 182, 0.1);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  overflow: hidden;
+}
+
+.coach-card-2a:hover {
+  box-shadow: 0 8px 24px rgba(155, 89, 182, 0.18);
+  transform: translateY(-2px);
+}
+
+/* ── Inner 2A layout ── */
+.coach-2a-layout {
+  padding: 18px 20px 12px;
+}
+
+/* Header label row */
+.coach-2a-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.coach-2a-badge {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(155, 89, 182, 0.3);
+}
+
+/* Shell = train body rectangle */
+.coach-2a-shell {
+  display: flex;
+  gap: 16px;
+  background: linear-gradient(180deg, #f4eeff 0%, #ede1f7 100%);
+  border-radius: 10px;
+  border: 2px solid #d7bde2;
+  padding: 14px 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d7bde2 #f4eeff;
+}
+
+.coach-2a-shell::-webkit-scrollbar {
+  height: 6px;
+}
+
+.coach-2a-shell::-webkit-scrollbar-track {
+  background: #f4eeff;
+  border-radius: 3px;
+}
+
+.coach-2a-shell::-webkit-scrollbar-thumb {
+  background: #d7bde2;
+  border-radius: 3px;
+}
+
+/* ── Main section (bays) ── */
+.coach-2a-main {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex: 1;
+}
+
+/* Each bay = 2 bunk pairs facing each other */
+.coach-2a-bay {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 8px;
+  border: 1px solid #d7bde2;
+  padding: 8px 10px;
+  min-width: 120px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.bay-number {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9b59b6;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/* Upper and Lower rows inside each bay */
+.bay-row {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
+
+.bay-upper {
+  border-bottom: 1px dashed #d7bde2;
+  padding-bottom: 5px;
+  margin-bottom: 2px;
+}
+
+/* ── Individual berth cell ── */
+.berth-2a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 1.5px solid transparent;
+  position: relative;
+  font-weight: 700;
+  gap: 2px;
+}
+
+.berth-2a:hover {
+  transform: scale(1.12);
+  z-index: 20;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.berth-2a-num {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.berth-2a-type {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  opacity: 0.85;
+}
+
+/* Berth status colours — 2A uses same green/blue (no orange/shared) */
+.berth-2a.vacant {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  color: #2e7d32;
+  border-color: #81c784;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.berth-2a.vacant:hover {
+  background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+  border-color: #66bb6a;
+}
+
+.berth-2a.occupied {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: #fff;
+  border-color: #7d3c98;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.berth-2a.occupied:hover {
+  background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%);
+}
+
+/* Upper berth slight visual distinction */
+.berth-2a-upper.vacant {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  color: #1565c0;
+  border-color: #90caf9;
+}
+
+.berth-2a-upper.occupied {
+  background: linear-gradient(135deg, #6c3483 0%, #7d3c98 100%);
+  color: #fff;
+  border-color: #5b2c6f;
+}
+
+/* ── Side section ── */
+.coach-2a-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 8px;
+  border: 1px dashed #9b59b6;
+  padding: 8px 10px;
+  min-width: 80px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.side-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #8e44ad;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.berth-2a-side {
+  width: 52px;
+  height: 52px;
+}
+
+/* ── Coach summary with "No RAC" note ── */
+.coach-summary-2a {
+  border-top: 1px solid #ede1f7;
+  background: linear-gradient(135deg, #f9f4fd 0%, #ede1f7 100%);
+  color: #6c3483;
+}
+
+.summary-no-rac {
+  color: #9b59b6;
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* ── Responsive overrides for 2A ── */
+@media (max-width: 768px) {
+  .coach-2a-shell {
+    padding: 10px 12px;
+  }
+
+  .coach-2a-bay {
+    min-width: 100px;
+    padding: 6px 8px;
+  }
+
+  .berth-2a {
+    width: 44px;
+    height: 44px;
+  }
+
+  .berth-2a-num {
+    font-size: 12px;
+  }
+
+  .berth-2a-type {
+    font-size: 8px;
+  }
+
+  .berth-2a-side {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .coach-2a-bay {
+    min-width: 88px;
+    padding: 5px 6px;
+  }
+
+  .berth-2a,
+  .berth-2a-side {
+    width: 38px;
+    height: 38px;
+  }
+
+  .berth-2a-num {
     font-size: 11px;
   }
 }

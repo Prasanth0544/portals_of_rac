@@ -31,6 +31,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import BoardingPass from '../components/BoardingPass';
 import JourneyTimeline from '../components/JourneyTimeline';
 import NotificationSettings from '../components/NotificationSettings';
+import UpgradeOptionsCard from '../components/UpgradeOptionsCard';
 import { requestPushPermission } from '../utils/pushManager';
 import axios from 'axios';
 
@@ -111,6 +112,8 @@ function DashboardPage(): React.ReactElement {
     const [isRejected, setIsRejected] = useState<boolean>(false);  // ✅ Track if upgrade was rejected
 
     // DUAL-APPROVAL: Pending upgrades for Online passengers
+    const [vacantBerthCount, setVacantBerthCount] = useState<number>(0);
+    const [upgradeTab, setUpgradeTab] = useState<'offer' | 'class'>('offer');
     const [pendingUpgrades, setPendingUpgrades] = useState<PendingUpgrade[]>([]);
     const [approvingUpgrade, setApprovingUpgrade] = useState<string | null>(null);
 
@@ -146,8 +149,9 @@ function DashboardPage(): React.ReactElement {
     };
 
     const handleLogout = (): void => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        window.dispatchEvent(new Event('app:logout'));
+        localStorage.clear();
+        sessionStorage.clear();
         window.location.href = '/';
     };
 
@@ -156,8 +160,23 @@ function DashboardPage(): React.ReactElement {
             setLoading(true);
             setError(null);
 
+            // Guard: ensure we are actually in the passenger portal
+            const activePortal = localStorage.getItem('activePortal');
+            if (activePortal && activePortal !== 'passenger') {
+                setError('Portal mismatch — please log in as a passenger.');
+                setLoading(false);
+                return;
+            }
+
             const userData = JSON.parse(localStorage.getItem('user') || '{}');
-            const irctcId = userData.irctcId || 'IR_8001';
+            const irctcId: string = userData.irctcId || userData.IRCTC_ID || '';
+            if (!irctcId) {
+                setError('Not logged in. Please log in as a passenger.');
+                setLoading(false);
+                return;
+            }
+            // Hoisted so the vacant berths block can filter by class
+            let passengerClass = '';
 
             // Fetch passenger booking — this should work even without train initialization
             try {
@@ -166,9 +185,18 @@ function DashboardPage(): React.ReactElement {
                 });
 
                 if (passengerRes.data.success && passengerRes.data.data) {
-                    setPassenger(passengerRes.data.data);
+                    const passData = passengerRes.data.data;
+                    passengerClass = passData?.Class || passData?.class || '';
+                    setPassenger(passData);
+
+                    // ✅ Extract and store trainNo so subsequent calls (like /train/state) work for multi-train
+                    const trainNo = passData.Train_No || passData.trainNo;
+                    if (trainNo) {
+                        localStorage.setItem('trainNo', String(trainNo));
+                    }
+
                     // ✅ Re-evaluate rejection status on EVERY fetch (not just mount)
-                    if (passengerRes.data.data.Upgrade_Status === 'REJECTED') {
+                    if (passData.Upgrade_Status === 'REJECTED') {
                         setIsRejected(true);
                     } else {
                         setIsRejected(false); // ✅ Clear rejection if status changed at new station
@@ -185,7 +213,9 @@ function DashboardPage(): React.ReactElement {
             // Fetch train state separately — this may fail if train isn't initialized yet
             // Don't block passenger details if it fails
             try {
-                const trainRes = await axios.get(`${API_URL}/train/state`);
+                const currentTrainNo = localStorage.getItem('trainNo');
+                const url = currentTrainNo ? `${API_URL}/train/state?trainNo=${currentTrainNo}` : `${API_URL}/train/state`;
+                const trainRes = await axios.get(url);
                 if (trainRes.data.success && trainRes.data.data) {
                     setTrainState(trainRes.data.data);
                 }
@@ -193,6 +223,45 @@ function DashboardPage(): React.ReactElement {
                 // Train not initialized yet — that's OK, passenger details still show
                 console.log('[Dashboard] Train state not available (train may not be initialized yet)');
             }
+
+            // Fetch vacant berths count for RAC upgrade probability display
+            // Filtered to passenger's own class only (SL/3AC/2AC separately)
+            try {
+                const currentTrainNo = localStorage.getItem('trainNo');
+                const vacantUrl = currentTrainNo
+                    ? `${API_URL}/train/vacant-berths?trainNo=${currentTrainNo}`
+                    : `${API_URL}/train/vacant-berths`;
+                const vacantRes = await axios.get(vacantUrl);
+                if (vacantRes.data.success && vacantRes.data.data) {
+                    const vacancies = vacantRes.data.data.vacancies || vacantRes.data.data.vacantBerths || [];
+                    const currentIdx = vacantRes.data.data.currentStationIdx || 0;
+
+                    // Map MongoDB Class field → backend coach class identifier
+                    const classMap: Record<string, string> = {
+                        'Sleeper': 'SL',
+                        'SL': 'SL',
+                        'AC_2_Tier': 'AC_2_Tier',
+                        '2A': 'AC_2_Tier',
+                        'AC_3_Tier': 'AC_3_Tier',
+                        '3A': 'AC_3_Tier',
+                    };
+                    const coachClass = classMap[passengerClass] || null;
+
+                    // Count vacant berths at current station, filtered to passenger's class
+                    const currentlyVacant = vacancies.filter((b: { fromIdx?: number; toIdx?: number; isCurrentlyVacant?: boolean; class?: string }) => {
+                        const isCurrentStation =
+                            b.isCurrentlyVacant === true ||
+                            (b.fromIdx !== undefined && b.toIdx !== undefined && b.fromIdx <= currentIdx && currentIdx < b.toIdx);
+                        const matchesClass = !coachClass || b.class === coachClass;
+                        return isCurrentStation && matchesClass;
+                    }).length;
+                    setVacantBerthCount(currentlyVacant);
+                }
+            } catch {
+                setVacantBerthCount(0);
+            }
+
+
         } finally {
             setLoading(false);
         }
@@ -328,13 +397,8 @@ function DashboardPage(): React.ReactElement {
             }
         };
 
-        const refreshInterval = setInterval(() => {
-            fetchData();
-        }, 120000);
-
         return () => {
             ws.close();
-            clearInterval(refreshInterval);
         };
     }, []);
 
@@ -346,23 +410,8 @@ function DashboardPage(): React.ReactElement {
             }
         }, 500);
 
-        const upgradeInterval = setInterval(() => {
-            const userData = JSON.parse(localStorage.getItem('user') || '{}');
-            if (userData.irctcId) {
-                axios.get(
-                    `${API_URL}/passenger/pending-upgrades/${userData.irctcId}`,
-                    { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } }
-                ).then(res => {
-                    if (res.data.success && res.data.data?.upgrades) {
-                        setPendingUpgrades(res.data.data.upgrades);
-                    }
-                }).catch(() => { });
-            }
-        }, 30000);
-
         return () => {
             clearTimeout(timer);
-            clearInterval(upgradeInterval);
         };
     }, []);
 
@@ -844,7 +893,115 @@ function DashboardPage(): React.ReactElement {
                         trainState?.currentStationIdx ?? trainState?.currentStationIndex ?? 0
                     ]?.name || 'Unknown'
                 }
+                vacantBerthCount={vacantBerthCount}
+                stationsRemaining={Math.max(
+                    0,
+                    (trainState?.stations?.length ?? 1) - 1 - (trainState?.currentStationIdx ?? trainState?.currentStationIndex ?? 0)
+                )}
+                totalRACCount={(trainState as unknown as { racQueueSize?: number })?.racQueueSize ?? (trainState as unknown as { racQueue?: unknown[] })?.racQueue?.length ?? 0}
+                isBoarded={!!(passenger as unknown as { Boarded?: boolean; boarded?: boolean })?.Boarded || !!(passenger as unknown as { Boarded?: boolean; boarded?: boolean })?.boarded}
+                isOnline={(passenger as unknown as { Online_Status?: string })?.Online_Status === 'online'}
+                fromIdx={(() => { const code = (passenger as unknown as { Boarding_Station?: string })?.Boarding_Station; return trainState?.stations?.findIndex((s: { code?: string }) => s.code === code) ?? 0; })()}
+                toIdx={(() => { const code = (passenger as unknown as { Deboarding_Station?: string })?.Deboarding_Station; return trainState?.stations?.findIndex((s: { code?: string }) => s.code === code) ?? 0; })()}
+                totalStations={trainState?.stations?.length ?? 28}
             />
+
+            {/* ===== Upgrades Tabbed Section ===== */}
+            {passenger && (
+                <Paper elevation={0} sx={{ mt: 3, mb: 3, borderRadius: 2, border: '1px solid #e0e0e0', overflow: 'hidden' }}>
+                    {/* Tab Bar */}
+                    <Box sx={{ display: 'flex', borderBottom: '2px solid #e0e0e0', background: '#f8fafc' }}>
+                        {(['offer', 'class'] as const).map((tab) => {
+                            const isActive = upgradeTab === tab;
+                            const label = tab === 'offer' ? '🎯 Upgrade Offer' : '🚀 Class Upgrade';
+                            const color = tab === 'offer' ? '#f59e0b' : '#8b5cf6';
+                            return (
+                                <button
+                                    key={tab}
+                                    onClick={() => setUpgradeTab(tab)}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px 16px',
+                                        border: 'none',
+                                        borderBottom: isActive ? `3px solid ${color}` : '3px solid transparent',
+                                        background: isActive ? 'white' : 'transparent',
+                                        color: isActive ? color : '#64748b',
+                                        fontWeight: isActive ? 700 : 500,
+                                        fontSize: '14px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                    }}
+                                >
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </Box>
+
+                    {/* Tab Content */}
+                    <Box sx={{ p: 2 }}>
+                        {upgradeTab === 'offer' && (
+                            <Box>
+                                {/* Active TTE/RAC upgrade offer */}
+                                {upgradeOffer ? (
+                                    <Box sx={{ border: '2px solid #f59e0b', borderRadius: 2, p: 2, mb: 2, background: '#fffbeb' }}>
+                                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: '#b45309' }}>
+                                            🎯 Upgrade Offer Available!
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ mb: 2 }}>
+                                            Berth: <strong>{upgradeOffer.offeredBerth}</strong> · Type: <strong>{upgradeOffer.berthType}</strong>
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', gap: 2 }}>
+                                            <Button variant="contained" color="success" onClick={handleAcceptUpgrade} sx={{ fontWeight: 700 }}>
+                                                ✅ Accept
+                                            </Button>
+                                            <Button variant="outlined" color="error" onClick={handleRejectUpgrade}>
+                                                ❌ Decline
+                                            </Button>
+                                        </Box>
+                                    </Box>
+                                ) : pendingUpgrades.length > 0 ? (
+                                    <Box>
+                                        {pendingUpgrades.map((upgrade) => (
+                                            <Box key={upgrade.id} sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 2, mb: 2 }}>
+                                                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                                    Proposed Berth: {upgrade.proposedBerthFull} ({upgrade.proposedBerthType})
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                                                    <Button size="small" variant="contained" color="success"
+                                                        disabled={approvingUpgrade === upgrade.id}
+                                                        onClick={() => handleApproveUpgrade(upgrade)}
+                                                    >
+                                                        {approvingUpgrade === upgrade.id ? 'Approving…' : '✅ Approve'}
+                                                    </Button>
+                                                </Box>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ textAlign: 'center', py: 3, color: '#94a3b8' }}>
+                                        <Typography variant="body2">
+                                            No active upgrade offer at this time.
+                                        </Typography>
+                                        <Typography variant="caption">
+                                            The TTE will notify you if a berth becomes available in your class.
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </Box>
+                        )}
+                        {upgradeTab === 'class' && (
+                            <UpgradeOptionsCard
+                                irctcId={(JSON.parse(localStorage.getItem('user') || '{}') as { irctcId?: string }).irctcId || ''}
+                                pnr={passenger.PNR_Number || ''}
+                                passengerClass={passenger.Class as string}
+                                pnrStatus={passenger.PNR_Status as string}
+                                journeyStarted={!!(trainState as unknown as { journeyStarted?: boolean })?.journeyStarted}
+                            />
+                        )}
+                    </Box>
+                </Paper>
+            )}
 
             {/* Ticket Actions */}
             <Paper elevation={0} sx={{ mt: 4, mb: 4, p: 3, borderRadius: 2, border: '1px solid #e0e0e0' }}>

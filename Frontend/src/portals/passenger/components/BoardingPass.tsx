@@ -15,6 +15,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import DownloadIcon from "@mui/icons-material/Download";
 import TrainIcon from "@mui/icons-material/Train";
 import "../styles/components/BoardingPass.css";
+import { calculateUpgradeProbability, getUpgradeChanceClass } from "../../../utils/racUpgradeProbability";
 
 interface PassengerData {
   PNR_Number?: string;
@@ -23,6 +24,7 @@ interface PassengerData {
   Train_Name?: string;
   Journey_Date?: string;
   PNR_Status?: string;
+  Rac_status?: string;
   Assigned_Coach?: string;
   Assigned_berth?: string;
   Berth_Type?: string;
@@ -34,16 +36,33 @@ interface PassengerData {
   Gender?: string;
 }
 
+
 interface BoardingPassProps {
   passenger?: PassengerData;
   journeyStarted?: boolean;
   currentStation?: string;
+  vacantBerthCount?: number;      // currently vacant berths (station-wise, class-filtered)
+  stationsRemaining?: number;
+  totalRACCount?: number;         // total RAC passengers in queue
+  isBoarded?: boolean;
+  isOnline?: boolean;
+  fromIdx?: number;
+  toIdx?: number;
+  totalStations?: number;
 }
 
 function BoardingPass({
   passenger,
   journeyStarted,
   currentStation,
+  vacantBerthCount = 0,
+  stationsRemaining = 0,
+  totalRACCount,
+  isBoarded = true,
+  isOnline = false,
+  fromIdx = 0,
+  toIdx = 0,
+  totalStations = 28,
 }: BoardingPassProps): React.ReactElement {
   const [showQR] = useState<boolean>(true);
 
@@ -222,6 +241,56 @@ function BoardingPass({
               />
             </Box>
           </Grid>
+
+          {/* RAC Upgrade Chance Card */}
+          {passenger?.PNR_Status === 'RAC' && vacantBerthCount !== undefined && stationsRemaining !== undefined && (() => {
+            const racPos = parseInt(passenger?.Rac_status?.replace(/[^\d]/g, '') || '9999', 10);
+            // totalRACCount falls back to twice the RAC position if unknown (conservative estimate)
+            const totalRAC = totalRACCount ?? Math.max(racPos * 2, 1);
+            const pct = calculateUpgradeProbability(
+              racPos,
+              totalRAC,
+              vacantBerthCount,   // currently vacant (station-wise, class-filtered)
+              stationsRemaining,
+              isBoarded,
+              isOnline,
+              fromIdx,
+              toIdx,
+              totalStations,
+            );
+            const cls = getUpgradeChanceClass(pct);
+            const bgColor = cls === 'high' ? '#dcfce7' : cls === 'medium' ? '#ffedd5' : '#fee2e2';
+            const borderColor = cls === 'high' ? '#16a34a' : cls === 'medium' ? '#ea580c' : '#dc2626';
+            const textColor = cls === 'high' ? '#15803d' : cls === 'medium' ? '#c2410c' : '#b91c1c';
+            return (
+              <Grid size={12}>
+                <Box
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2,
+                    border: `2px solid ${borderColor}`,
+                    bgcolor: bgColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5
+                  }}
+                >
+                  <Typography variant="h5">🎯</Typography>
+                  <Box>
+                    <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.2, display: 'block' }}>
+                      Upgrade Chance
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: textColor, lineHeight: 1 }}>
+                      {pct}%
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      RAC{racPos} of {totalRACCount || '?'} · {vacantBerthCount} vacant (class) · {stationsRemaining} stn left{isOnline ? ' · Online' : ''}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            );
+          })()}
 
           <Grid size={12}>
             <Typography variant="overline" color="text.secondary">

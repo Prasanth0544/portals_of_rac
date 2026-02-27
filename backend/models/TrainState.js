@@ -59,7 +59,7 @@ class TrainState {
   /**
    * Initialize coaches with berths
    */
-  initializeCoaches(sleeperCount = 9, threeAcCount = 0) {
+  initializeCoaches(sleeperCount = 9, threeAcCount = 0, twoAcCount = 0) {
     this.coaches = [];
     const totalSegments = this.stations.length - 1;
 
@@ -80,6 +80,19 @@ class TrainState {
       const coach = { coachNo, class: 'AC_3_Tier', capacity: 64, berths: [] };
       for (let j = 1; j <= 64; j++) {
         const berthType = this.getBerthType(j, 'AC_3_Tier');
+        coach.berths.push(new Berth(coachNo, j, berthType, totalSegments));
+      }
+      this.coaches.push(coach);
+    }
+
+    // 2-Tier AC coaches (A1..An) - 54 berths (LHB layout)
+    // Layout: 8 bays × 4 main berths (LB/UB) + 8 side berths (SL/SU) = 40 + 8 = 48...
+    // Standard LHB 2A: 46 main berths (1-46) + 8 side berths (47-54) = 54 total
+    for (let i = 1; i <= twoAcCount; i++) {
+      const coachNo = `A${i}`;
+      const coach = { coachNo, class: 'AC_2_Tier', capacity: 54, berths: [] };
+      for (let j = 1; j <= 54; j++) {
+        const berthType = this.getBerthType2A(j);
         coach.berths.push(new Berth(coachNo, j, berthType, totalSegments));
       }
       this.coaches.push(coach);
@@ -136,6 +149,21 @@ class TrainState {
     if (berthMapping3A.sideUpper.includes(seatNo)) return "Side Upper";
 
     return "Lower Berth";
+  }
+
+  /**
+   * Get berth type for Two_Tier_AC (2A) coaches - 54 berths (LHB layout)
+   * Pattern per bay: LB (odd), UB (even) repeating, side berths at the end.
+   * Berths 1-46: alternating LB/UB in bays of 2
+   * Berths 47-50: Side Lower (SL)
+   * Berths 51-54: Side Upper (SU)
+   */
+  getBerthType2A(seatNo) {
+    // Side berths (last 8 berths in LHB 2A)
+    if (seatNo >= 47 && seatNo <= 50) return "Side Lower";
+    if (seatNo >= 51 && seatNo <= 54) return "Side Upper";
+    // Main berths 1-46: odd = Lower Berth, even = Upper Berth
+    return seatNo % 2 !== 0 ? "Lower Berth" : "Upper Berth";
   }
 
   /**

@@ -4,18 +4,27 @@ const nodemailer = require('nodemailer');
 class NotificationService {
     constructor() {
         // Email transporter — uses EMAIL_HOST/PORT if set, falls back to Gmail service
+        const emailPort = parseInt(process.env.EMAIL_PORT || '587');
+        const isSecurePort = emailPort === 465 || process.env.EMAIL_SECURE === 'true';
+
         const transportConfig = process.env.EMAIL_HOST
             ? {
                 host: process.env.EMAIL_HOST,
-                port: parseInt(process.env.EMAIL_PORT || '587'),
-                secure: process.env.EMAIL_PORT === '465',
+                port: emailPort,
+                secure: isSecurePort,           // true only for port 465 (SSL)
+                requireTLS: !isSecurePort,      // force STARTTLS on port 587
+                pool: true,                     // reuse connections — avoids Gmail rate limits from repeated auth
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASSWORD
+                },
+                tls: {
+                    rejectUnauthorized: false   // allow self-signed certs in dev
                 }
             }
             : {
                 service: 'gmail',
+                pool: true,
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASSWORD

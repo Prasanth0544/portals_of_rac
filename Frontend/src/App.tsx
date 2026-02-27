@@ -51,14 +51,21 @@ function App(): React.ReactElement {
     };
 
     const handleLogout = (): void => {
-        // Clear all auth data
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        localStorage.removeItem('activePortal');
-        localStorage.removeItem('trainAssigned');
-        localStorage.removeItem('trainNo');
-        localStorage.removeItem('tickets');
+        // Fire event FIRST so any open WebSocket/interval listeners can close cleanly
+        window.dispatchEvent(new Event('app:logout'));
+
+        // Nuclear clear — wipes ALL portal keys: configuredTrainTabs, trainPage_*,
+        // idempotency_* (passenger), token, refreshToken, user, activePortal, tickets, trainNo …
+        localStorage.clear();
+        sessionStorage.clear();
+
+        // Unregister service worker to stop stale push notifications after logout
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(r => r.unregister());
+            }).catch(() => { });
+        }
+
         setAuthenticated(false);
         setActivePortal(null);
     };
