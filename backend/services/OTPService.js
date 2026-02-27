@@ -73,7 +73,7 @@ class OTPService {
             const otp = this.generateOTP();
             const key = `${irctcId}_${pnr}`;
 
-            // Store OTP in MongoDB (replaces existing if any)
+            // Store OTP in MongoDB FIRST (before attempting email)
             await collection.updateOne(
                 { key },
                 {
@@ -90,78 +90,93 @@ class OTPService {
                 { upsert: true }
             );
 
-            // Send OTP email
-            await NotificationService.emailTransporter.sendMail({
-                from: `"Indian Railways OTP" <${process.env.EMAIL_USER}>`,
-                to: email,
-                subject: '🔐 Your OTP for Indian Railways',
-                html: `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <style>
-                            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                            .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #fff; }
-                            .header { background: #2c3e50; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                            .otp-box { background: #ffffff; border: 3px dashed #3498db; padding: 20px; margin: 20px 0; text-align: center; border-radius: 8px; }
-                            .otp-code { font-size: 36px; font-weight: bold; color: #2c3e50; letter-spacing: 8px; }
-                            .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 15px 0; font-size: 14px; }
-                            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="container">
-                            <div class="header">
-                                <h1 style="margin: 0;">🔐 OTP Verification</h1>
-                                <p style="margin: 10px 0 0 0;">Indian Railways - RAC System</p>
-                            </div>
-                            <div class="content">
-                                <p>Your One-Time Password (OTP) for ${purpose} is:</p>
-                                
-                                <div class="otp-box">
-                                    <div class="otp-code">${otp}</div>
-                                </div>
-                                
-                                <div class="warning">
-                                    <strong>⚠️ Important:</strong>
-                                    <ul style="margin: 5px 0; padding-left: 20px;">
-                                        <li>This OTP is valid for <strong>5 minutes</strong></li>
-                                        <li>Do not share this OTP with anyone</li>
-                                        <li>Indian Railways will never ask for your OTP via phone or SMS</li>
-                                    </ul>
-                                </div>
-                                
-                                <p style="margin-top: 20px; font-size: 14px; color: #666;">
-                                    <strong>PNR:</strong> ${pnr}<br>
-                                    <strong>IRCTC ID:</strong> ${irctcId}
-                                </p>
-                                
-                                <p style="font-size: 13px; color: #999; margin-top: 15px;">
-                                    If you didn't request this OTP, please ignore this email.
-                                </p>
-                            </div>
-                            <div class="footer">
-                                <p>This is an automated email from Indian Railways</p>
-                                <p>Please do not reply to this email</p>
-                            </div>
-                        </div>
-                    </body>
-                    </html>
-                `
-            });
+            console.log(`🔐 OTP stored in MongoDB for ${irctcId}/${pnr}`);
 
-            console.log(`📧 OTP sent to ${email} for ${irctcId}/${pnr} (stored in MongoDB)`);
+            // Try sending OTP email (best-effort — don't fail if email doesn't work)
+            let emailSent = false;
+            try {
+                await NotificationService.emailTransporter.sendMail({
+                    from: `"Indian Railways OTP" <${process.env.EMAIL_USER}>`,
+                    to: email,
+                    subject: '🔐 Your OTP for Indian Railways',
+                    html: `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <style>
+                                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                                .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #fff; }
+                                .header { background: #2c3e50; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                                .otp-box { background: #ffffff; border: 3px dashed #3498db; padding: 20px; margin: 20px 0; text-align: center; border-radius: 8px; }
+                                .otp-code { font-size: 36px; font-weight: bold; color: #2c3e50; letter-spacing: 8px; }
+                                .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 15px 0; font-size: 14px; }
+                                .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="container">
+                                <div class="header">
+                                    <h1 style="margin: 0;">🔐 OTP Verification</h1>
+                                    <p style="margin: 10px 0 0 0;">Indian Railways - RAC System</p>
+                                </div>
+                                <div class="content">
+                                    <p>Your One-Time Password (OTP) for ${purpose} is:</p>
+                                    
+                                    <div class="otp-box">
+                                        <div class="otp-code">${otp}</div>
+                                    </div>
+                                    
+                                    <div class="warning">
+                                        <strong>⚠️ Important:</strong>
+                                        <ul style="margin: 5px 0; padding-left: 20px;">
+                                            <li>This OTP is valid for <strong>5 minutes</strong></li>
+                                            <li>Do not share this OTP with anyone</li>
+                                            <li>Indian Railways will never ask for your OTP via phone or SMS</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <p style="margin-top: 20px; font-size: 14px; color: #666;">
+                                        <strong>PNR:</strong> ${pnr}<br>
+                                        <strong>IRCTC ID:</strong> ${irctcId}
+                                    </p>
+                                    
+                                    <p style="font-size: 13px; color: #999; margin-top: 15px;">
+                                        If you didn't request this OTP, please ignore this email.
+                                    </p>
+                                </div>
+                                <div class="footer">
+                                    <p>This is an automated email from Indian Railways</p>
+                                    <p>Please do not reply to this email</p>
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                    `
+                });
+                emailSent = true;
+                console.log(`📧 OTP sent to ${email} for ${irctcId}/${pnr}`);
+            } catch (emailErr) {
+                console.error(`⚠️ Email sending failed (OTP still stored):`, emailErr.message);
+                console.log(`🔑 ========================================`);
+                console.log(`🔑 OTP for ${irctcId}/${pnr}: ${otp}`);
+                console.log(`🔑 (Email failed - use this OTP from console)`);
+                console.log(`🔑 ========================================`);
+            }
 
             return {
                 success: true,
-                message: 'OTP sent successfully',
-                expiresIn: this.OTP_EXPIRY_MS / 1000 // in seconds
+                message: emailSent
+                    ? 'OTP sent successfully'
+                    : 'OTP generated (check backend console for OTP)',
+                expiresIn: this.OTP_EXPIRY_MS / 1000, // in seconds
+                otp, // Return OTP so controller can include it in dev mode
+                emailSent
             };
 
         } catch (error) {
-            console.error('❌ Error sending OTP:', error);
-            throw new Error('Failed to send OTP: ' + error.message);
+            console.error('❌ Error in OTP flow:', error);
+            throw new Error('Failed to generate OTP: ' + error.message);
         }
     }
 

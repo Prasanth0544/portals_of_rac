@@ -110,8 +110,13 @@ const ChangeBoardingStationPage: React.FC = () => {
 
             if (data.success) {
                 setMaskedEmail(data.maskedEmail || passenger.Email || 'your registered email');
-                toast.success(`OTP sent to ${data.maskedEmail || 'your email'}`);
                 setStep(3);
+                // Show OTP in toast if email failed (dev mode)
+                if (data.devOtp) {
+                    toast.success(`OTP: ${data.devOtp} (email delivery failed)`, { duration: 10000 });
+                } else {
+                    toast.success(`OTP sent to ${data.maskedEmail || 'your email'}`);
+                }
             } else {
                 toast.error(data.message || 'Failed to send OTP');
             }

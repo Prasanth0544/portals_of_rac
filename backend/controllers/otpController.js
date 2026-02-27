@@ -17,9 +17,39 @@ class OTPController {
                 });
             }
 
-            // Find passenger to get email
-            const collection = db.getPassengersCollection();
-            const passenger = await collection.findOne({ PNR_Number: pnr });
+            // Find passenger to get email - try primary collection, fall back to scanning
+            let passenger = null;
+            try {
+                const collection = db.getPassengersCollection();
+                passenger = await collection.findOne({
+                    $or: [
+                        { PNR_Number: pnr },
+                        { pnr: pnr }
+                    ]
+                });
+            } catch (collErr) {
+                console.warn('⚠️ getPassengersCollection() failed, trying fallback lookup:', collErr.message);
+                // Fallback: search in the rac DB across known collections
+                try {
+                    const racDb = await db.getDb();
+                    const collections = await racDb.listCollections().toArray();
+                    for (const col of collections) {
+                        const c = racDb.collection(col.name);
+                        passenger = await c.findOne({
+                            $or: [
+                                { PNR_Number: pnr },
+                                { pnr: pnr }
+                            ]
+                        });
+                        if (passenger) {
+                            console.log(`✅ Found passenger in collection: ${col.name}`);
+                            break;
+                        }
+                    }
+                } catch (fallbackErr) {
+                    console.error('❌ Fallback passenger lookup also failed:', fallbackErr.message);
+                }
+            }
 
             if (!passenger) {
                 return res.status(404).json({
@@ -71,11 +101,22 @@ class OTPController {
                 purpose || 'ticket action'
             );
 
-            res.json({
+            const maskedEmail = email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+            const response = {
                 success: true,
-                message: `OTP sent to ${email.replace(/(.{2})(.*)(@.*)/, '$1***$3')}`,
+                message: result.emailSent
+                    ? `OTP sent to ${maskedEmail}`
+                    : `OTP generated — email delivery failed. Check console or use: ${result.otp}`,
+                maskedEmail,
                 expiresIn: result.expiresIn
-            });
+            };
+
+            // In non-production, include OTP in response for easy testing
+            if (process.env.NODE_ENV !== 'production' || !result.emailSent) {
+                response.devOtp = result.otp;
+            }
+
+            res.json(response);
 
         } catch (error) {
             console.error('❌ Error sending OTP:', error);

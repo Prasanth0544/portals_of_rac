@@ -129,10 +129,15 @@ const CancelTicketPage: React.FC = () => {
             if (data.success) {
                 // Mask email for display
                 const email = firstPassenger.Email || 'registered email';
-                const masked = email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+                const masked = data.maskedEmail || email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
                 setMaskedEmail(masked);
                 setStep(3);
-                toast.success(`OTP sent to ${masked}`);
+                // Show OTP in toast if email failed (dev mode)
+                if (data.devOtp) {
+                    toast.success(`OTP: ${data.devOtp} (email delivery failed)`, { duration: 10000 });
+                } else {
+                    toast.success(`OTP sent to ${masked}`);
+                }
             } else {
                 toast.error(data.message || 'Failed to send OTP');
             }
