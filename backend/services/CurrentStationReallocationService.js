@@ -544,6 +544,18 @@ class CurrentStationReallocationService {
         // ✅ DUAL-APPROVAL: Notify ALL passengers with IRCTC_ID via targeted WS + background queue
         const pushEligible = pendingReallocations.filter(p => p.passengerIrctcId);
 
+        // 🔍 DIAGNOSTIC: Log why passengers might not get emails
+        console.log(`\n📊 [EMAIL DIAGNOSTIC] ════════════════════════════════════`);
+        console.log(`   Total matches found: ${matches.length}`);
+        console.log(`   Pending reallocations created: ${pendingReallocations.length}`);
+        console.log(`   Passengers with IRCTC_ID (push eligible): ${pushEligible.length}`);
+        const noIrctcId = pendingReallocations.filter(p => !p.passengerIrctcId);
+        if (noIrctcId.length > 0) {
+            console.log(`   ⚠️ ${noIrctcId.length} passengers MISSING IRCTC_ID (won't get email):`);
+            noIrctcId.forEach(p => console.log(`      - ${p.passengerName} (PNR: ${p.passengerPNR})`));
+        }
+        console.log(`════════════════════════════════════════════════════════\n`);
+
         if (pushEligible.length > 0) {
             console.log(`\n📲 Sending upgrade offers to ${pushEligible.length} passengers...`);
 

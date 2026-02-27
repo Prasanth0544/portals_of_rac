@@ -262,7 +262,7 @@ function LoginPage({ onLoginSuccess }: LoginPageProps): React.ReactElement {
                     <p style={{ marginTop: '16px' }}>
                         <Link
                             to="/"
-                            style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: '0.9rem' }}
+                            style={{ color: '#00796b', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 500 }}
                         >
                             ← Back to Portal Selection
                         </Link>

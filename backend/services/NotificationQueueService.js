@@ -100,6 +100,8 @@ class NotificationQueueService {
                 const passengersCollection = db.getPassengersCollection();
                 const dbPassenger = await passengersCollection.findOne({ IRCTC_ID: irctcId });
 
+                console.log(`   🔍 [EMAIL DEBUG] ${irctcId}: DB record found=${!!dbPassenger}, Email=${dbPassenger?.Email || 'NOT SET'}`);
+
                 if (dbPassenger?.Email) {
                     await NotificationService.sendApprovalRequestNotification(
                         { name, email: dbPassenger.Email, pnr },
