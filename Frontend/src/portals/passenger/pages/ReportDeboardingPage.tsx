@@ -3,8 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import '../styles/pages/ReportDeboardingPage.css';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../api';
 
 interface Passenger {
     Name: string;
@@ -72,6 +71,18 @@ const ReportDeboardingPage: React.FC = () => {
     // For backward compatibility - get first selected passenger
     const selectedPassenger = selectedPassengers.length > 0 ? selectedPassengers[0] : null;
 
+    // Normalize API response fields (camelCase) to component fields (PascalCase)
+    const normalizePassenger = (p: any): Passenger => ({
+        Name: p.Name || p.name || '',
+        PNR_Number: p.PNR_Number || p.pnr || '',
+        IRCTC_ID: p.IRCTC_ID || p.irctcId || '',
+        Coach: p.Coach || p.coach || p.Assigned_Coach || '',
+        Berth_Number: p.Berth_Number || p.seatNo || p.Assigned_berth || '',
+        Boarding_Station: p.Boarding_Station || p.boardingStation || p.boardingStationFull || '',
+        Deboarding_Station: p.Deboarding_Station || p.destinationStation || p.destinationStationFull || '',
+        Email: p.Email || p.email || '',
+    });
+
     // Step 1: Fetch passengers by PNR
     const fetchPassengers = async (): Promise<void> => {
         if (!pnr || pnr.length < 10) {
@@ -81,24 +92,20 @@ const ReportDeboardingPage: React.FC = () => {
 
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/passengers/by-pnr/${pnr}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            const data = await response.json();
+            const response = await api.get(`/passenger/pnr/${pnr}`);
+            const data = response.data;
 
             if (data.success && data.data) {
                 // Handle both single and array responses
-                const passengerList = Array.isArray(data.data) ? data.data : [data.data];
+                const rawList = Array.isArray(data.data) ? data.data : [data.data];
+                const passengerList = rawList.map(normalizePassenger);
                 setPassengers(passengerList);
 
                 // Get valid deboarding stations (between boarding and destination)
                 if (passengerList.length > 0) {
                     const first = passengerList[0];
-                    const stationsRes = await fetch(`${API_URL}/train/state`);
-                    const trainData = await stationsRes.json();
+                    const stationsRes = await api.get('/train/state');
+                    const trainData = stationsRes.data;
 
                     // Stations are at data.stations (not data.journey.stations)
                     if (trainData.success && trainData.data?.stations) {
@@ -165,16 +172,12 @@ const ReportDeboardingPage: React.FC = () => {
 
         setProcessing(true);
         try {
-            const response = await fetch(`${API_URL}/otp/send`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    irctcId: selectedPassenger.IRCTC_ID,
-                    pnr: selectedPassenger.PNR_Number,
-                    purpose: 'Report Deboarding'
-                })
+            const response = await api.post('/otp/send', {
+                irctcId: selectedPassenger.IRCTC_ID,
+                pnr: selectedPassenger.PNR_Number,
+                purpose: 'Report Deboarding'
             });
-            const data = await response.json();
+            const data = response.data;
 
             if (data.success) {
                 setOtpSent(true);
@@ -203,16 +206,12 @@ const ReportDeboardingPage: React.FC = () => {
 
         setProcessing(true);
         try {
-            const response = await fetch(`${API_URL}/otp/verify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    irctcId: selectedPassenger?.IRCTC_ID,
-                    pnr: selectedPassenger?.PNR_Number,
-                    otp: otp
-                })
+            const response = await api.post('/otp/verify', {
+                irctcId: selectedPassenger?.IRCTC_ID,
+                pnr: selectedPassenger?.PNR_Number,
+                otp: otp
             });
-            const data = await response.json();
+            const data = response.data;
 
             if (data.success) {
                 setStep(4);
@@ -247,26 +246,18 @@ const ReportDeboardingPage: React.FC = () => {
 
         setProcessing(true);
         try {
-            const token = localStorage.getItem('token');
             let successCount = 0;
             let failCount = 0;
 
             for (const passenger of selectedPassengers) {
                 try {
-                    const response = await fetch(`${API_URL}/passenger/report-deboarding`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({
-                            pnr: passenger.PNR_Number,
-                            irctcId: passenger.IRCTC_ID,
-                            passengerName: passenger.Name,
-                            deboardingStation: selectedStation
-                        })
+                    const response = await api.post('/passenger/report-deboarding', {
+                        pnr: passenger.PNR_Number,
+                        irctcId: passenger.IRCTC_ID,
+                        passengerName: passenger.Name,
+                        deboardingStation: selectedStation
                     });
-                    const data = await response.json();
+                    const data = response.data;
 
                     if (data.success) {
                         successCount++;

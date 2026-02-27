@@ -254,7 +254,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                 </div>
                 <hr />
                 <button onClick={handleLogout} className="menu-item logout">
-                   Logout
+                  Logout
                 </button>
               </div>
             )}
@@ -283,6 +283,12 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
               onClick={() => navigate("/admin/config")}
             >
               <span className="btn-icon">⚙️</span> Manual Config
+            </button>
+            <button
+              className="action-btn eval-btn"
+              onClick={() => navigate("/admin/evaluation")}
+            >
+              <span className="btn-icon">📊</span> Evaluation
             </button>
           </div>
         </div>
@@ -313,7 +319,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                   className="train-search-clear-btn"
                   onClick={() => setSearchQuery("")}
                 >
-                   Clear
+                  Clear
                 </button>
               )}
             </div>
@@ -375,7 +381,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                         {train.totalCoaches ? (
                           <>
                             <span className="coach-total">
-                               {train.totalCoaches} coaches
+                              {train.totalCoaches} coaches
                             </span>
                             <div className="coach-breakdown">
                               {getCoachBreakdown(train)}
@@ -433,7 +439,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                       {overview[train.trainNo] && (
                         <div className="train-overview-stats" onClick={(e) => e.stopPropagation()}>
                           <span className="overview-stat" title="TTEs assigned">
-                             {overview[train.trainNo]?.ttes?.count ?? 0} TTE{(overview[train.trainNo]?.ttes?.count ?? 0) !== 1 ? 's' : ''}
+                            {overview[train.trainNo]?.ttes?.count ?? 0} TTE{(overview[train.trainNo]?.ttes?.count ?? 0) !== 1 ? 's' : ''}
                             {(overview[train.trainNo]?.ttes?.list?.length ?? 0) > 0 && (
                               <span className="overview-detail">
                                 ({overview[train.trainNo].ttes.list.map((t: any) => t.name || t.employeeId).join(', ')})
@@ -441,7 +447,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                             )}
                           </span>
                           <span className="overview-stat" title="Total passengers">
-                             {overview[train.trainNo]?.passengers?.total ?? 0} passengers
+                            {overview[train.trainNo]?.passengers?.total ?? 0} passengers
                           </span>
                         </div>
                       )

@@ -1,8 +1,7 @@
 // Frontend/src/portals/passenger/components/UpgradeOtpModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import '../styles/components/UpgradeOtpModal.css';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../api';
 
 interface UpgradeOtpModalProps {
     isOpen: boolean;
@@ -99,17 +98,13 @@ const UpgradeOtpModal: React.FC<UpgradeOtpModalProps> = ({
 
         setLoading(true);
         try {
-            const response = await fetch(`${API_URL}/passenger/send-upgrade-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    irctcId: irctcId.trim(),
-                    pnr: pnr.trim(),
-                    purpose: `upgrade offer ${action}`
-                })
+            const response = await api.post('/passenger/send-upgrade-otp', {
+                irctcId: irctcId.trim(),
+                pnr: pnr.trim(),
+                purpose: `upgrade offer ${action}`
             });
 
-            const data = await response.json();
+            const data = response.data;
 
             if (data.success) {
                 setMaskedEmail(data.message || '');
@@ -118,8 +113,8 @@ const UpgradeOtpModal: React.FC<UpgradeOtpModalProps> = ({
             } else {
                 setError(data.message || 'Failed to send OTP');
             }
-        } catch (err) {
-            setError('Network error. Please try again.');
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Network error. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -166,20 +161,16 @@ const UpgradeOtpModal: React.FC<UpgradeOtpModalProps> = ({
         setStep('processing');
 
         try {
-            const response = await fetch(`${API_URL}/passenger/verify-upgrade-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    irctcId: irctcId.trim(),
-                    pnr: pnr.trim(),
-                    otp,
-                    action,
-                    offerId,
-                    berth
-                })
+            const response = await api.post('/passenger/verify-upgrade-otp', {
+                irctcId: irctcId.trim(),
+                pnr: pnr.trim(),
+                otp,
+                action,
+                offerId,
+                berth
             });
 
-            const data = await response.json();
+            const data = response.data;
 
             if (data.success) {
                 setResultSuccess(true);
@@ -198,9 +189,9 @@ const UpgradeOtpModal: React.FC<UpgradeOtpModalProps> = ({
                 setResultMessage(data.message || 'Verification failed');
                 setStep('result');
             }
-        } catch (err) {
+        } catch (err: any) {
             setResultSuccess(false);
-            setResultMessage('Network error. Please try again.');
+            setResultMessage(err.response?.data?.message || 'Network error. Please try again.');
             setStep('result');
         }
     };
@@ -212,17 +203,13 @@ const UpgradeOtpModal: React.FC<UpgradeOtpModalProps> = ({
         setLoading(true);
 
         try {
-            const response = await fetch(`${API_URL}/passenger/send-upgrade-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    irctcId: irctcId.trim(),
-                    pnr: pnr.trim(),
-                    purpose: `upgrade offer ${action}`
-                })
+            const response = await api.post('/passenger/send-upgrade-otp', {
+                irctcId: irctcId.trim(),
+                pnr: pnr.trim(),
+                purpose: `upgrade offer ${action}`
             });
 
-            const data = await response.json();
+            const data = response.data;
             if (data.success) {
                 setOtpTimer(300);
                 timerRef.current = setInterval(() => {
@@ -239,8 +226,8 @@ const UpgradeOtpModal: React.FC<UpgradeOtpModalProps> = ({
             } else {
                 setError(data.message || 'Failed to resend OTP');
             }
-        } catch (err) {
-            setError('Failed to resend OTP');
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Failed to resend OTP');
         } finally {
             setLoading(false);
         }

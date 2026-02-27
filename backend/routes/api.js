@@ -102,6 +102,12 @@ router.post('/passenger/self-cancel',
   (req, res) => passengerController.selfCancelTicket(req, res)
 );
 
+// Self-report deboarding (passenger left before destination, requires authentication)
+router.post('/passenger/report-deboarding',
+  authMiddleware,
+  (req, res) => passengerController.selfReportDeboarding(req, res)
+);
+
 // ✅ DUAL-APPROVAL: Passenger can approve their own RAC upgrade
 router.post('/passenger/approve-upgrade',
   authMiddleware,
@@ -116,6 +122,7 @@ router.get('/passenger/pending-upgrades/:irctcId',
 
 // ========== OTP ROUTES ==========
 // Send OTP for verification
+// NOTE: No checkTrainInitialized — OTP controller queries MongoDB directly via db.getPassengersCollection()
 router.post('/otp/send',
   otpLimiter, // Rate limit: 3 requests per hour
   validationMiddleware.sanitizeBody,
@@ -215,6 +222,10 @@ router.get('/config/current', (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// ── Evaluation Dashboard API (independent DB connections) ──
+const evaluationRouter = require('./evaluationApi');
+router.use('/evaluation', evaluationRouter);
 
 // ── All routes below wait for DB connection to be ready ──
 // Prevents "Invalid Topology is closed" errors during train switching.
@@ -703,6 +714,7 @@ router.post('/passenger/deny-upgrade',
 router.post('/passenger/send-upgrade-otp',
   otpLimiter, // Rate limit OTP sending
   validationMiddleware.sanitizeBody,
+  validationMiddleware.checkTrainInitialized,
   (req, res) => otpController.sendOTP(req, res)
 );
 

@@ -865,7 +865,7 @@ function DashboardPage(): React.ReactElement {
                                 <Box sx={{ mt: 'auto' }}>
                                     <Button
                                         component={Link}
-                                        to="/report-deboarding"
+                                        to="/passenger/report-deboarding"
                                         variant="contained"
                                         fullWidth
                                         sx={{ bgcolor: '#f57c00', '&:hover': { bgcolor: '#e65100' } }}
@@ -890,7 +890,7 @@ function DashboardPage(): React.ReactElement {
                                 <Box sx={{ mt: 'auto' }}>
                                     <Button
                                         component={Link}
-                                        to="/cancel-ticket"
+                                        to="/passenger/cancel-ticket"
                                         variant="contained"
                                         fullWidth
                                         sx={{ bgcolor: '#e53935', '&:hover': { bgcolor: '#c62828' } }}
@@ -915,7 +915,7 @@ function DashboardPage(): React.ReactElement {
                                 <Box sx={{ mt: 'auto' }}>
                                     <Button
                                         component={Link}
-                                        to="/change-boarding"
+                                        to="/passenger/change-boarding"
                                         variant="contained"
                                         fullWidth
                                         sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}

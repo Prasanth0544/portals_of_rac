@@ -511,6 +511,20 @@ export const getRACtoCNF = (): Promise<ApiResult> =>
 export const getStationSchedule = (): Promise<ApiResult> =>
   safeRequest(() => api.get("/visualization/station-schedule"));
 
+// ========================== EVALUATION APIs ==========================
+
+export const getEvaluationTrains = (): Promise<ApiResult> =>
+  safeRequest(() => api.get("/evaluation/trains"));
+
+export const runEvaluationScenario = (payload: {
+  trainNo: string;
+  confirmed: number;
+  rac: number;
+  cancel: number;
+  iterations?: number;
+}): Promise<ApiResult> =>
+  safeRequest(() => api.post("/evaluation/run", payload));
+
 // ========================== EXPORT ==========================
 
 export default api;

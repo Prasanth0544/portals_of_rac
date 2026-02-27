@@ -83,7 +83,7 @@ class OTPService {
                         irctcId,
                         pnr,
                         attempts: 0,
-                        maxAttempts: 3,
+                        maxAttempts: 10,
                         createdAt: new Date() // TTL index uses this
                     }
                 },

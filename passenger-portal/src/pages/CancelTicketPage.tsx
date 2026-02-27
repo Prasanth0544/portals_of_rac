@@ -3,8 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import '../styles/pages/ReportDeboardingPage.css'; // Reuse same styles
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../api';
 
 interface Passenger {
     Name: string;
@@ -59,6 +58,18 @@ const CancelTicketPage: React.FC = () => {
         }
     };
 
+    // Normalize API response fields (camelCase) to component fields (PascalCase)
+    const normalizePassenger = (p: any): Passenger => ({
+        Name: p.Name || p.name || '',
+        PNR_Number: p.PNR_Number || p.pnr || '',
+        IRCTC_ID: p.IRCTC_ID || p.irctcId || '',
+        Coach: p.Coach || p.coach || p.Assigned_Coach || '',
+        Berth_Number: p.Berth_Number || p.seatNo || p.Assigned_berth || '',
+        Booking_Status: p.Booking_Status || p.pnrStatus || p.racStatus || '',
+        Email: p.Email || p.email || '',
+        NO_show: p.NO_show || p.noShow || false,
+    });
+
     // Step 1: Fetch passengers by PNR
     const fetchPassengers = async (): Promise<void> => {
         if (!pnr || pnr.length < 10) {
@@ -68,17 +79,13 @@ const CancelTicketPage: React.FC = () => {
 
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/passengers/by-pnr/${pnr}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            const data = await response.json();
+            const response = await api.get(`/passenger/pnr/${pnr}`);
+            const data = response.data;
 
             if (data.success && data.data) {
                 // Handle both single and array responses
-                const passengerList = Array.isArray(data.data) ? data.data : [data.data];
+                const rawList = Array.isArray(data.data) ? data.data : [data.data];
+                const passengerList = rawList.map(normalizePassenger);
                 // Filter out already cancelled passengers
                 const activePassengers = passengerList.filter((p: Passenger) => !p.NO_show);
 
@@ -112,16 +119,12 @@ const CancelTicketPage: React.FC = () => {
         try {
             // Send OTP using first selected passenger's details
             const firstPassenger = selectedPassengers[0];
-            const response = await fetch(`${API_URL}/otp/send`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    irctcId: firstPassenger.IRCTC_ID,
-                    pnr: firstPassenger.PNR_Number,
-                    purpose: 'Cancel Ticket'
-                })
+            const response = await api.post('/otp/send', {
+                irctcId: firstPassenger.IRCTC_ID,
+                pnr: firstPassenger.PNR_Number,
+                purpose: 'Cancel Ticket'
             });
-            const data = await response.json();
+            const data = response.data;
 
             if (data.success) {
                 // Mask email for display
@@ -152,16 +155,12 @@ const CancelTicketPage: React.FC = () => {
             const firstPassenger = selectedPassengers[0];
 
             // Verify OTP first
-            const otpResponse = await fetch(`${API_URL}/otp/verify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    irctcId: firstPassenger.IRCTC_ID,
-                    pnr: firstPassenger.PNR_Number,
-                    otp: otp
-                })
+            const otpResponse = await api.post('/otp/verify', {
+                irctcId: firstPassenger.IRCTC_ID,
+                pnr: firstPassenger.PNR_Number,
+                otp: otp
             });
-            const otpData = await otpResponse.json();
+            const otpData = otpResponse.data;
 
             if (!otpData.success) {
                 toast.error(otpData.message || 'Invalid OTP');
@@ -184,25 +183,17 @@ const CancelTicketPage: React.FC = () => {
             }
 
             // Cancel ALL selected passengers
-            const token = localStorage.getItem('token');
             let successCount = 0;
             let failCount = 0;
 
             for (const passenger of selectedPassengers) {
                 try {
-                    const response = await fetch(`${API_URL}/passenger/self-cancel`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({
-                            pnr: passenger.PNR_Number,
-                            irctcId: passenger.IRCTC_ID,
-                            passengerName: passenger.Name
-                        })
+                    const response = await api.post('/passenger/self-cancel', {
+                        pnr: passenger.PNR_Number,
+                        irctcId: passenger.IRCTC_ID,
+                        passengerName: passenger.Name
                     });
-                    const data = await response.json();
+                    const data = response.data;
 
                     if (data.success) {
                         successCount++;

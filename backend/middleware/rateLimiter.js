@@ -32,11 +32,11 @@ const authLimiter = rateLimit({
  * 3 requests per hour per IP
  */
 const otpLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3, // 3 requests per hour
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 50, // 50 requests per 15 minutes (dev-friendly)
     message: {
         success: false,
-        message: 'OTP request limit exceeded. Please try again after an hour.',
+        message: 'OTP request limit exceeded. Please try again after 15 minutes.',
         code: 'RATE_LIMIT_OTP'
     },
     standardHeaders: true,

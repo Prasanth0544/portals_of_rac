@@ -3,8 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import '../styles/pages/ReportDeboardingPage.css'; // Reuse same styles
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../api';
 
 interface Passenger {
     Name: string;
@@ -48,6 +47,19 @@ const ChangeBoardingStationPage: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [processing, setProcessing] = useState<boolean>(false);
 
+    // Normalize API response fields (camelCase) to component fields (PascalCase)
+    const normalizePassenger = (p: any): Passenger => ({
+        Name: p.Name || p.name || '',
+        PNR_Number: p.PNR_Number || p.pnr || '',
+        IRCTC_ID: p.IRCTC_ID || p.irctcId || '',
+        Coach: p.Coach || p.coach || p.Assigned_Coach || '',
+        Berth_Number: p.Berth_Number || p.seatNo || p.Assigned_berth || '',
+        Boarding_Station: p.Boarding_Station || p.boardingStation || p.boardingStationFull || '',
+        Deboarding_Station: p.Deboarding_Station || p.destinationStation || p.destinationStationFull || '',
+        Email: p.Email || p.email || '',
+        boardingStationChanged: p.boardingStationChanged || false,
+    });
+
     // Step 1: Fetch passengers by PNR
     const fetchPassengers = async (): Promise<void> => {
         if (!pnr || pnr.length < 10) {
@@ -57,16 +69,12 @@ const ChangeBoardingStationPage: React.FC = () => {
 
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/passengers/by-pnr/${pnr}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            const data = await response.json();
+            const response = await api.get(`/passenger/pnr/${pnr}`);
+            const data = response.data;
 
             if (data.success && data.data) {
-                const passengerList = Array.isArray(data.data) ? data.data : [data.data];
+                const rawList = Array.isArray(data.data) ? data.data : [data.data];
+                const passengerList = rawList.map(normalizePassenger);
                 // Filter out passengers who already changed their boarding station
                 const eligiblePassengers = passengerList.filter((p: Passenger) => !p.boardingStationChanged);
 
@@ -93,16 +101,12 @@ const ChangeBoardingStationPage: React.FC = () => {
         setProcessing(true);
 
         try {
-            const response = await fetch(`${API_URL}/otp/send`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    irctcId: passenger.IRCTC_ID,
-                    pnr: passenger.PNR_Number,
-                    purpose: 'Change Boarding Station'
-                })
+            const response = await api.post('/otp/send', {
+                irctcId: passenger.IRCTC_ID,
+                pnr: passenger.PNR_Number,
+                purpose: 'Change Boarding Station'
             });
-            const data = await response.json();
+            const data = response.data;
 
             if (data.success) {
                 setMaskedEmail(data.maskedEmail || passenger.Email || 'your registered email');
@@ -130,16 +134,12 @@ const ChangeBoardingStationPage: React.FC = () => {
         setProcessing(true);
         try {
             // Verify OTP
-            const otpResponse = await fetch(`${API_URL}/otp/verify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    irctcId: selectedPassenger.IRCTC_ID,
-                    pnr: selectedPassenger.PNR_Number,
-                    otp
-                })
+            const otpResponse = await api.post('/otp/verify', {
+                irctcId: selectedPassenger.IRCTC_ID,
+                pnr: selectedPassenger.PNR_Number,
+                otp
             });
-            const otpData = await otpResponse.json();
+            const otpData = otpResponse.data;
 
             if (!otpData.success) {
                 toast.error(otpData.message || 'Invalid OTP');
@@ -148,8 +148,8 @@ const ChangeBoardingStationPage: React.FC = () => {
             }
 
             // Fetch available stations
-            const stationsResponse = await fetch(`${API_URL}/passenger/available-boarding-stations/${selectedPassenger.PNR_Number}`);
-            const stationsData = await stationsResponse.json();
+            const stationsResponse = await api.get(`/passenger/available-boarding-stations/${selectedPassenger.PNR_Number}`);
+            const stationsData = stationsResponse.data;
 
             if (stationsData.success) {
                 if (stationsData.alreadyChanged) {
@@ -197,20 +197,12 @@ const ChangeBoardingStationPage: React.FC = () => {
 
         setProcessing(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/passenger/change-boarding-station`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    pnr: selectedPassenger.PNR_Number,
-                    irctcId: selectedPassenger.IRCTC_ID,
-                    newStationCode: selectedStation
-                })
+            const response = await api.post('/passenger/change-boarding-station', {
+                pnr: selectedPassenger.PNR_Number,
+                irctcId: selectedPassenger.IRCTC_ID,
+                newStationCode: selectedStation
             });
-            const data = await response.json();
+            const data = response.data;
 
             if (data.success) {
                 toast.success(`✅ Boarding station changed to ${station?.name}!`);
@@ -302,7 +294,7 @@ const ChangeBoardingStationPage: React.FC = () => {
                                         <span className="passenger-berth">{p.Coach}-{p.Berth_Number}</span>
                                     </div>
                                     <div className="passenger-route">
-                                         {p.Boarding_Station} → {p.Deboarding_Station}
+                                        {p.Boarding_Station} → {p.Deboarding_Station}
                                     </div>
                                 </div>
                             ))}

@@ -1,0 +1,566 @@
+/* ═══════════════════════════════════════════════════════════════
+   EVALUATION PAGE — Admin Portal
+   Palette matches LandingPage.css tokens exactly:
+     bg card  : #ffffff → #f8f9fa gradient
+     border   : #e1e8ed
+     text-dark: #2c3e50
+     text-mid : #34495e / #5a6c7d
+     text-mute: #7f8c8d
+     blue-pri : #3498db → #2980b9
+     green    : #27ae60 → #229954
+     amber    : #f39c12 → #e67e22
+     red      : #e74c3c → #c0392b
+   ═══════════════════════════════════════════════════════════════ */
+
+.eval-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 15px;
+    min-height: 100vh;
+}
+
+/* ─── HEADER ───────────────────────────────────────────────── */
+.eval-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    padding: 14px 20px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 4px 6px rgba(44, 62, 80, 0.2);
+    border: 1px solid #1a252f;
+}
+
+.eval-header h1 {
+    color: white;
+    font-size: clamp(0.85rem, 0.5rem + 1vw, 1.3rem);
+    font-weight: 600;
+    margin: 0;
+}
+
+.eval-back-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.eval-back-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* ─── CONTROLS ─────────────────────────────────────────────── */
+.eval-controls {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+    border: 1px solid #e1e8ed;
+}
+
+.eval-controls-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #34495e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 14px 0;
+}
+
+.eval-controls-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.eval-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.eval-field label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #5a6c7d;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.eval-field select,
+.eval-field input {
+    padding: 8px 12px;
+    border: 2px solid #d5dbdb;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #2c3e50;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    min-width: 140px;
+}
+
+.eval-field select:focus,
+.eval-field input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.12);
+}
+
+.eval-run-btn {
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.eval-run-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2980b9 0%, #21618c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.eval-run-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.eval-run-btn.run-all {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
+}
+
+.eval-run-btn.run-all:hover:not(:disabled) {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+}
+
+.eval-iter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #5a6c7d;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+
+.eval-iter-toggle input {
+    width: auto;
+    min-width: auto;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* ─── LOADING ──────────────────────────────────────────────── */
+.eval-loading {
+    text-align: center;
+    padding: 40px;
+    color: #5a6c7d;
+    font-size: 14px;
+}
+
+.eval-spinner {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border: 3px solid #e1e8ed;
+    border-top-color: #3498db;
+    border-radius: 50%;
+    animation: evalSpin 0.7s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes evalSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ─── VALIDATION BADGE ─────────────────────────────────────── */
+.eval-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    animation: evalBadgePop 0.4s ease;
+}
+
+@keyframes evalBadgePop {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.eval-badge.pass {
+    background: linear-gradient(135deg, #d4efdf 0%, #abebc6 100%);
+    color: #1e8449;
+    border: 1px solid #82e0aa;
+}
+
+.eval-badge.fail {
+    background: linear-gradient(135deg, #fadbd8 0%, #f5b7b1 100%);
+    color: #922b21;
+    border: 1px solid #f1948a;
+}
+
+/* ─── RESULTS SECTION ──────────────────────────────────────── */
+.eval-results {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.eval-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 8px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+    border: 1px solid #e1e8ed;
+}
+
+.eval-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.eval-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #34495e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e1e8ed;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ─── METRICS TABLE ────────────────────────────────────────── */
+.eval-metrics-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.eval-metrics-table tr {
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.eval-metrics-table tr:last-child {
+    border-bottom: none;
+}
+
+.eval-metrics-table td {
+    padding: 7px 0;
+    font-size: 13px;
+}
+
+.eval-metrics-table td:first-child {
+    color: #5a6c7d;
+    font-weight: 600;
+    width: 55%;
+}
+
+.eval-metrics-table td:last-child {
+    color: #2c3e50;
+    font-weight: 700;
+    text-align: right;
+}
+
+.metric-yes {
+    color: #1e8449 !important;
+}
+
+.metric-no {
+    color: #e74c3c !important;
+}
+
+/* ─── PERFORMANCE CHART ────────────────────────────────────── */
+.eval-chart-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.eval-chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 120px;
+    padding: 0 4px;
+}
+
+.eval-chart-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.eval-chart-bar {
+    width: 100%;
+    max-width: 40px;
+    background: linear-gradient(180deg, #3498db 0%, #2980b9 100%);
+    border-radius: 4px 4px 0 0;
+    min-height: 4px;
+    transition: height 0.6s ease;
+    position: relative;
+}
+
+.eval-chart-bar.highlight {
+    background: linear-gradient(180deg, #f39c12 0%, #e67e22 100%);
+}
+
+.eval-chart-value {
+    font-size: 9px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.eval-chart-label {
+    font-size: 8px;
+    color: #7f8c8d;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.eval-chart-avg {
+    text-align: center;
+    font-size: 12px;
+    color: #5a6c7d;
+    font-weight: 600;
+    padding-top: 6px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.eval-chart-avg strong {
+    color: #2c3e50;
+}
+
+/* ─── BEFORE / AFTER SNAPSHOT ──────────────────────────────── */
+.eval-snapshot {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.eval-snap-col h4 {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 8px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.eval-snap-col.before h4 {
+    color: #5a6c7d;
+}
+
+.eval-snap-col.after h4 {
+    color: #1e8449;
+}
+
+.eval-snap-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-bottom: 3px;
+    transition: background 0.3s;
+}
+
+.eval-snap-item.rac {
+    background: #fef9e7;
+    border-left: 3px solid #f39c12;
+    color: #7d6608;
+}
+
+.eval-snap-item.upgraded {
+    background: #eafaf1;
+    border-left: 3px solid #27ae60;
+    color: #1e8449;
+    animation: snapSlideIn 0.4s ease;
+}
+
+@keyframes snapSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.snap-pnr {
+    font-weight: 700;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.snap-name {
+    flex: 1;
+}
+
+.snap-berth {
+    font-weight: 700;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.snap-arrow {
+    color: #27ae60;
+    font-weight: 700;
+}
+
+/* ─── GRAND SUMMARY TABLE ─────────────────────────────────── */
+.eval-grand-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.eval-grand-table thead {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+.eval-grand-table th {
+    padding: 8px 10px;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 600;
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.eval-grand-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #ecf0f1;
+    color: #2c3e50;
+}
+
+.eval-grand-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.eval-grand-table tbody tr:hover {
+    background: #ebf5fb;
+}
+
+/* ─── ITERATION STATS ──────────────────────────────────────── */
+.eval-iter-stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.eval-iter-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.eval-iter-stat .stat-label {
+    font-size: 10px;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.eval-iter-stat .stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+/* ─── COMPLEXITY INSIGHT ───────────────────────────────────── */
+.eval-complexity-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+
+.eval-complexity-item {
+    text-align: center;
+    padding: 14px 8px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ecf0f1 100%);
+    border-radius: 8px;
+    border: 1px solid #d5dbdb;
+}
+
+.complexity-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #2c3e50;
+    margin-bottom: 4px;
+}
+
+.complexity-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+/* ─── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .eval-results {
+        grid-template-columns: 1fr;
+    }
+
+    .eval-controls-row {
+        flex-direction: column;
+    }
+
+    .eval-snapshot {
+        grid-template-columns: 1fr;
+    }
+
+    .eval-complexity-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

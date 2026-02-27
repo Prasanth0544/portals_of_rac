@@ -1,5 +1,4 @@
-// passenger-portal/src/pages/UpgradeOffersPage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import UpgradeOtpModal from '../components/UpgradeOtpModal';
 import '../styles/pages/UpgradeOffersPage.css';
@@ -32,6 +31,7 @@ const UpgradeOffersPage: React.FC = () => {
     const [isRejected, setIsRejected] = useState<boolean>(false);
     const [countdown, setCountdown] = useState<number>(0);
     const [passengerData, setPassengerData] = useState<any>(null);
+    const lastRefetchRef = useRef<number>(0); // Throttle expired-offers refetch
 
     // OTP Modal State
     const [otpModalOpen, setOtpModalOpen] = useState(false);
@@ -179,10 +179,14 @@ const UpgradeOffersPage: React.FC = () => {
                 return updated.filter(o => o.expiresIn === undefined || o.expiresIn > 0);
             });
 
-            // Refresh from server if all offers expired — check for NEW offers from current station
+            // Refresh from server if all offers expired — throttle to max once per 30s
             if (!hasValid && pnr) {
-                console.log('⏰ All offers expired — re-fetching for new offers');
-                fetchUpgradeOffers(pnr);
+                const now2 = Date.now();
+                if (now2 - lastRefetchRef.current > 30000) {
+                    lastRefetchRef.current = now2;
+                    console.log('⏰ All offers expired — re-fetching for new offers');
+                    fetchUpgradeOffers(pnr);
+                }
             }
         }, 1000);
 

@@ -1693,6 +1693,131 @@ class PassengerController {
       });
     }
   }
+  /**
+   * Self-report deboarding (passenger deboarded before destination)
+   * POST /api/passenger/report-deboarding
+   * Body: { pnr, irctcId, passengerName, deboardingStation }
+   */
+  async selfReportDeboarding(req, res) {
+    try {
+      const { pnr, irctcId, passengerName, deboardingStation } = req.body;
+
+      if (!pnr || !irctcId) {
+        return res.status(400).json({
+          success: false,
+          message: 'PNR and IRCTC ID are required'
+        });
+      }
+
+      if (!deboardingStation) {
+        return res.status(400).json({
+          success: false,
+          message: 'Deboarding station is required'
+        });
+      }
+
+      // Find passenger in database - try both PNR field names
+      const query = passengerName
+        ? {
+          $or: [
+            { PNR_Number: pnr, IRCTC_ID: irctcId, Name: passengerName },
+            { pnr: pnr, IRCTC_ID: irctcId, Name: passengerName }
+          ]
+        }
+        : {
+          $or: [
+            { PNR_Number: pnr, IRCTC_ID: irctcId },
+            { pnr: pnr, IRCTC_ID: irctcId }
+          ]
+        };
+
+      const passenger = await db.getPassengersCollection().findOne(query);
+
+      if (!passenger) {
+        return res.status(404).json({
+          success: false,
+          message: 'Passenger not found or IRCTC ID does not match'
+        });
+      }
+
+      // Check if already marked as no-show
+      if (passenger.NO_show) {
+        return res.status(400).json({
+          success: false,
+          message: 'Passenger is already marked as deboarded/cancelled'
+        });
+      }
+
+      // Update database - set NO_show and record deboarding station
+      const updateQuery = passengerName
+        ? { PNR_Number: pnr, IRCTC_ID: irctcId, Name: passengerName }
+        : { PNR_Number: pnr, IRCTC_ID: irctcId };
+
+      const result = await db.getPassengersCollection().updateOne(
+        updateQuery,
+        {
+          $set: {
+            NO_show: true,
+            NO_show_timestamp: new Date(),
+            selfDeboarded: true,
+            selfDeboardedAt: new Date(),
+            actualDeboardingStation: deboardingStation
+          }
+        }
+      );
+
+      if (result.modifiedCount === 0) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to update deboarding status'
+        });
+      }
+
+      // Update in-memory state if train is initialized
+      const trainState = trainController.getGlobalTrainState();
+      if (trainState) {
+        const memPassenger = trainState.findPassengerByPNR(pnr);
+        if (memPassenger) {
+          memPassenger.noShow = true;
+
+          // Free up the berth
+          const location = trainState.findPassenger(pnr);
+          if (location) {
+            location.berth.removePassenger(pnr);
+            location.berth.updateStatus();
+          }
+        }
+      }
+
+      console.log(`🚉 Deboarding reported for PNR: ${pnr} at station: ${deboardingStation}`);
+
+      // Notify via WebSocket
+      try {
+        wsManager.broadcastToAdmins({
+          type: 'PASSENGER_DEBOARDED',
+          pnr,
+          passengerName: passengerName || passenger.Name,
+          deboardingStation,
+          timestamp: new Date()
+        });
+      } catch (wsErr) {
+        console.warn('WebSocket broadcast failed:', wsErr.message);
+      }
+
+      res.json({
+        success: true,
+        message: `Deboarding reported successfully at ${deboardingStation}. Your berth will be made available for other passengers.`,
+        pnr
+      });
+
+    } catch (error) {
+      console.error('❌ Error reporting deboarding:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new PassengerController();

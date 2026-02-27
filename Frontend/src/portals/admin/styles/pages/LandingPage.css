@@ -252,6 +252,19 @@
     box-shadow: 0 4px 12px rgba(149, 165, 166, 0.4);
 }
 
+/* Evaluation — amber/orange */
+.eval-btn {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
+}
+
+.eval-btn:hover {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+}
+
 /* ============================================================
    TRAINS SECTION WRAPPER  (matches .action-cards-section)
    ============================================================ */

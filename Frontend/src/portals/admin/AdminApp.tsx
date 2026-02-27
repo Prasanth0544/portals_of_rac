@@ -4,6 +4,7 @@ import React from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import TrainDashboard from './pages/TrainDashboard';
+import EvaluationPage from './pages/EvaluationPage';
 
 // CSS imports (previously loaded in admin-portal/src/main.tsx)
 import './index.css';
@@ -34,6 +35,9 @@ function AdminApp({ onLogout }: AdminAppProps): React.ReactElement {
 
             {/* Train Dashboard - Auto-configured from URL param */}
             <Route path="/train/:trainNo" element={<TrainDashboardWithKey />} />
+
+            {/* Evaluation Dashboard */}
+            <Route path="/evaluation" element={<EvaluationPage />} />
 
             {/* Manual Config Page */}
             <Route path="/config" element={<TrainDashboardWithKey initialPage="config" />} />
