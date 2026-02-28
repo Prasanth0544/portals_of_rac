@@ -139,9 +139,10 @@ class TrainController {
           console.log(`      ✓ Pre-boarded ${preBoarded} passengers already on train`);
 
           // STEP 2: Process each station to handle deboarding and calculate vacancies
+          // dryRun=true skips WebSocket/push/email during rebuild — pure logic only
           for (let i = 0; i < savedState.currentStationIdx; i++) {
             try {
-              await StationEventService.processStationArrival(trainState);
+              await StationEventService.processStationArrival(trainState, { dryRun: true });
               trainState.currentStationIdx++;
             } catch (stationError) {
               console.error(`      ❌ Error processing station ${i}:`, stationError.message);

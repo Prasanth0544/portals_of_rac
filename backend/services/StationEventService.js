@@ -9,18 +9,22 @@ class StationEventService {
   /**
    * Process station arrival - main orchestration
    * Sequence: BOARD → DEBOARD → RAC UPGRADES → NO-SHOWS
+   * @param {object} options
+   * @param {boolean} [options.dryRun=false] - Skip DB writes/WS broadcasts (used during state rebuild)
    */
-  async processStationArrival(trainState) {
+  async processStationArrival(trainState, { dryRun = false } = {}) {
     const currentStation = trainState.getCurrentStation();
 
     if (!currentStation) {
       throw new Error('Invalid station index');
     }
 
-    console.log(`\n🚉 ═══════════════════════════════════════════`);
-    console.log(`   Arrived at: ${currentStation.name} (${currentStation.code})`);
-    console.log(`   Station ${currentStation.sno} of ${trainState.stations.length}`);
-    console.log(`═══════════════════════════════════════════\n`);
+    if (!dryRun) {
+      console.log(`\n🚉 ═══════════════════════════════════════════`);
+      console.log(`   Arrived at: ${currentStation.name} (${currentStation.code})`);
+      console.log(`   Station ${currentStation.sno} of ${trainState.stations.length}`);
+      console.log(`═══════════════════════════════════════════\n`);
+    }
 
     const result = {
       station: currentStation.name,
@@ -43,14 +47,17 @@ class StationEventService {
     result.deboarded = deboardResult.count;
 
     // **STEP 3: AUTO-CREATE pending reallocations for TTE/Passenger approval**
-    try {
-      const CurrentStationService = require('./CurrentStationReallocationService');
-      const autoResult = await CurrentStationService.createPendingReallocationsFromMatches(trainState);
-      result.racAllocated = autoResult.created || 0;
-      console.log(`\n✅ Auto-created ${result.racAllocated} pending upgrade(s) for approval`);
-    } catch (autoErr) {
-      console.error('⚠️ Auto upgrade check failed (non-critical):', autoErr.message);
-      result.racAllocated = 0;
+    // Skipped during dryRun (state rebuild) — avoids 20-50 MongoDB round-trips on cold start
+    if (!dryRun) {
+      try {
+        const CurrentStationService = require('./CurrentStationReallocationService');
+        const autoResult = await CurrentStationService.createPendingReallocationsFromMatches(trainState);
+        result.racAllocated = autoResult.created || 0;
+        console.log(`\n✅ Auto-created ${result.racAllocated} pending upgrade(s) for approval`);
+      } catch (autoErr) {
+        console.error('⚠️ Auto upgrade check failed (non-critical):', autoErr.message);
+        result.racAllocated = 0;
+      }
     }
     result.upgrades = [];
 
@@ -61,16 +68,18 @@ class StationEventService {
     trainState.updateStats();
     result.stats = { ...trainState.stats };
 
-    console.log(`\n📊 Station Summary:`);
-    console.log(`   Boarded: ${result.boarded}`);
-    console.log(`   Deboarded: ${result.deboarded}`);
-    console.log(`   RAC Upgraded: ${result.racAllocated}`);
-    console.log(`   No-shows: ${result.noShows}`);
-    console.log(`   Current Onboard: ${result.stats.currentOnboard}`);
-    console.log(`   RAC Queue: ${result.stats.racPassengers}`);
-    console.log(`   Vacant Berths: ${result.stats.vacantBerths}\n`);
+    if (!dryRun) {
+      console.log(`\n📊 Station Summary:`);
+      console.log(`   Boarded: ${result.boarded}`);
+      console.log(`   Deboarded: ${result.deboarded}`);
+      console.log(`   RAC Upgraded: ${result.racAllocated}`);
+      console.log(`   No-shows: ${result.noShows}`);
+      console.log(`   Current Onboard: ${result.stats.currentOnboard}`);
+      console.log(`   RAC Queue: ${result.stats.racPassengers}`);
+      console.log(`   Vacant Berths: ${result.stats.vacantBerths}\n`);
 
-    trainState.logEvent('STATION_ARRIVAL', `Processed station ${currentStation.name}`, result);
+      trainState.logEvent('STATION_ARRIVAL', `Processed station ${currentStation.name}`, result);
+    }
 
     return result;
   }

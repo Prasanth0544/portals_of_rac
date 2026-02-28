@@ -424,7 +424,9 @@ export const initializeTrain = (
   trainName?: string,
 ): Promise<ApiResult> =>
   safeRequest(() =>
-    api.post("/train/initialize", { trainNo, journeyDate, trainName }),
+    api.post("/train/initialize", { trainNo, journeyDate, trainName }, {
+      timeout: 120000, // 2 min — state rebuild replays every past station on Render cold start
+    }),
   );
 
 export const startJourney = (trainNo?: string): Promise<ApiResult> =>
