@@ -22,6 +22,8 @@ const csrfProtection = (req, res, next) => {
     // So we compare against the path WITHOUT /api
     const publicPaths = [
         '/auth/staff/login',
+        '/auth/staff/register',
+        '/auth/tte/register',
         '/auth/passenger/login',
         '/auth/passenger/register',
         '/auth/refresh',
