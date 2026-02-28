@@ -8,10 +8,14 @@ class OTPController {
      */
     async sendOTP(req, res) {
         try {
+            console.log('\n--- OTP SEND REQUEST ---');
+            console.log('Body:', req.body);
+
             const { irctcId, pnr, purpose } = req.body;
 
             // Made irctcId optional — PNR is enough to identify the passenger
             if (!pnr) {
+                console.warn('❌ OTP send failed: Missing PNR in request');
                 return res.status(400).json({
                     success: false,
                     message: 'PNR is required'
@@ -31,31 +35,64 @@ class OTPController {
             } catch (collErr) {
                 console.warn('⚠️ getPassengersCollection() failed, trying fallback lookup:', collErr.message);
                 // Fallback: search in the rac DB across known collections
+                // Fallback: search in the passengers DB across known collections
                 try {
+                    const passengersDb = db.getPassengersDb();
                     const racDb = await db.getDb();
-                    const collections = await racDb.listCollections().toArray();
-                    for (const col of collections) {
-                        const c = racDb.collection(col.name);
-                        passenger = await c.findOne({
-                            $or: [
-                                { PNR_Number: pnr },
-                                { pnr: pnr }
-                            ]
-                        });
-                        if (passenger) {
-                            console.log(`✅ Found passenger in collection: ${col.name}`);
-                            break;
-                        }
+                    const { COLLECTIONS } = require('../config/collections');
+                    const trainsCol = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
+                    const trains = await trainsCol.find({}, {
+                        projection: { Passengers_Collection_Name: 1, passengersCollection: 1 }
+                    }).toArray();
+
+                    const collectionNames = new Set();
+                    for (const t of trains) {
+                        const name = t.passengersCollection || t.Passengers_Collection_Name;
+                        if (name) collectionNames.add(name.trim());
+                    }
+
+                    for (const colName of collectionNames) {
+                        try {
+                            passenger = await passengersDb.collection(colName).findOne({
+                                $or: [
+                                    { PNR_Number: pnr },
+                                    { pnr: pnr }
+                                ]
+                            });
+                            if (passenger) {
+                                console.log(`✅ Found passenger in fallback collection: ${colName}`);
+                                break;
+                            }
+                        } catch (e) { /* skip */ }
                     }
                 } catch (fallbackErr) {
                     console.error('❌ Fallback passenger lookup also failed:', fallbackErr.message);
                 }
             }
 
+            // Final fallback: Check in-memory train state (for dynamically added passengers that might not be in DB yet)
+            if (!passenger) {
+                const trainController = require('./trainController');
+                const trainState = trainController.getGlobalTrainState();
+                if (trainState) {
+                    const inMemoryPassenger = trainState.findPassengerByPNR(pnr);
+                    if (inMemoryPassenger) {
+                        console.log(`✅ Found passenger in memory trainState: ${pnr}`);
+                        passenger = {
+                            PNR_Number: inMemoryPassenger.pnr,
+                            IRCTC_ID: inMemoryPassenger.irctcId || irctcId || 'demo_user',
+                            Email: inMemoryPassenger.email,
+                            email: inMemoryPassenger.email,
+                            Name: inMemoryPassenger.name
+                        };
+                    }
+                }
+            }
+
             if (!passenger) {
                 return res.status(400).json({
                     success: false,
-                    message: `Passenger with PNR ${pnr} not found. Make sure the train journey is started and the PNR is correct.`
+                    message: `Passenger with PNR ${pnr} not found in DB or memory.`
                 });
             }
 
