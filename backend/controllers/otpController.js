@@ -10,10 +10,11 @@ class OTPController {
         try {
             const { irctcId, pnr, purpose } = req.body;
 
-            if (!irctcId || !pnr) {
+            // Made irctcId optional — PNR is enough to identify the passenger
+            if (!pnr) {
                 return res.status(400).json({
                     success: false,
-                    message: 'IRCTC ID and PNR are required'
+                    message: 'PNR is required'
                 });
             }
 
@@ -58,8 +59,8 @@ class OTPController {
                 });
             }
 
-            // Verify IRCTC ID matches
-            if (passenger.IRCTC_ID !== irctcId) {
+            // Verify IRCTC ID matches ONLY IF provided in the request
+            if (irctcId && passenger.IRCTC_ID && passenger.IRCTC_ID !== irctcId) {
                 return res.status(403).json({
                     success: false,
                     message: 'IRCTC ID does not match PNR'
@@ -86,16 +87,18 @@ class OTPController {
                 }
             }
 
+            // Hackathon/Demo graceful fallback: If NO EMAIL AT ALL, still generate the OTP and show on screen!
             if (!email) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'No email address found for this passenger. Please register with an email first.'
-                });
+                console.warn(`⚠️ No email found for PNR ${pnr}. Generating OTP for on-screen display only.`);
+                email = 'demo-passenger@indianrailways.gov.in';
             }
 
             // Send OTP
+            // Pass the active IRCTC ID (either from req, or passenger DB, or fallback)
+            const activeIrctcId = irctcId || passenger.IRCTC_ID || 'demo_user';
+
             const result = await OTPService.sendOTP(
-                irctcId,
+                activeIrctcId,
                 pnr,
                 email,
                 purpose || 'ticket action'
@@ -110,7 +113,6 @@ class OTPController {
                 maskedEmail,
                 expiresIn: result.expiresIn,
                 // Always include OTP in response for reliable demo/hackathon use.
-                // Gmail may silently drop emails (spam filters, daily limits, etc.)
                 devOtp: result.otp,
                 emailSent: result.emailSent
             };
@@ -133,15 +135,27 @@ class OTPController {
         try {
             const { irctcId, pnr, otp } = req.body;
 
-            if (!irctcId || !pnr || !otp) {
+            if (!pnr || !otp) {
                 return res.status(400).json({
                     success: false,
-                    message: 'IRCTC ID, PNR, and OTP are required'
+                    message: 'PNR and OTP are required'
                 });
             }
 
+            // Determine active IRCTC ID matching the sendOTP flow
+            let activeIrctcId = irctcId;
+            if (!activeIrctcId) {
+                try {
+                    const collection = db.getPassengersCollection();
+                    const passenger = await collection.findOne({ PNR_Number: pnr });
+                    activeIrctcId = passenger?.IRCTC_ID || 'demo_user';
+                } catch (e) {
+                    activeIrctcId = 'demo_user';
+                }
+            }
+
             // Verify OTP
-            const result = await OTPService.verifyOTP(irctcId, pnr, otp);
+            const result = await OTPService.verifyOTP(activeIrctcId, pnr, otp);
 
             if (result.success) {
                 res.json({
