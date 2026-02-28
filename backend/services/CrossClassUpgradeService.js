@@ -5,8 +5,8 @@
 const VacancyService = require('./reallocation/VacancyService');
 
 const UPGRADE_RATES = {
-    AC_3_Tier: 5,  // ₹ per km
-    AC_2_Tier: 10,  // ₹ per km
+    AC_3_Tier: 2,  // ₹ per km
+    AC_2_Tier: 5,  // ₹ per km
 };
 
 const CLASS_LABELS = {

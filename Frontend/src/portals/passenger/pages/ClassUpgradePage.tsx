@@ -56,8 +56,8 @@ const ClassUpgradePage: React.FC = () => {
                 }}
             >
                 {[
-                    { cls: '3-Tier AC (3A)', rate: '₹5/km', color: '#0ea5e9', bg: '#e0f2fe' },
-                    { cls: '2-Tier AC (2A)', rate: '₹10/km', color: '#8b5cf6', bg: '#ede9fe' },
+                    { cls: '3-Tier AC (3A)', rate: '₹2/km', color: '#0ea5e9', bg: '#e0f2fe' },
+                    { cls: '2-Tier AC (2A)', rate: '₹5/km', color: '#8b5cf6', bg: '#ede9fe' },
                 ].map(({ cls, rate, color, bg }) => (
                     <Box
                         key={cls}
