@@ -209,8 +209,26 @@ class TrainController {
    */
   async startJourney(req, res) {
     try {
-      const trainNo = req.body.trainNo || req.query.trainNo;
-      const trainState = trainNo ? trainStates.get(String(trainNo)) : trainStates.values().next().value;
+      let trainNo = req.body.trainNo || req.query.trainNo;
+      let trainState = null;
+
+      if (trainNo) {
+        const cleanNo = String(trainNo).trim();
+        trainState = trainStates.get(cleanNo) || trainStates.get(String(trainNo));
+
+        if (!trainState) {
+          for (const [key, state] of trainStates.entries()) {
+            if (key.trim() === cleanNo || Number(key) === Number(cleanNo)) {
+              trainState = state;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!trainState) {
+        trainState = trainStates.values().next().value;
+      }
 
       if (!trainState) {
         return res.status(400).json({
@@ -279,8 +297,26 @@ class TrainController {
    */
   async getTrainState(req, res) {
     try {
-      const trainNo = req.query.trainNo || req.body.trainNo;
-      const trainState = trainNo ? trainStates.get(String(trainNo)) : trainStates.values().next().value;
+      let trainNo = req.query.trainNo || req.body.trainNo;
+      let trainState = null;
+
+      if (trainNo) {
+        const cleanNo = String(trainNo).trim();
+        trainState = trainStates.get(cleanNo) || trainStates.get(String(trainNo));
+
+        if (!trainState) {
+          for (const [key, state] of trainStates.entries()) {
+            if (key.trim() === cleanNo || Number(key) === Number(cleanNo)) {
+              trainState = state;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!trainState) {
+        trainState = trainStates.values().next().value;
+      }
 
       if (!trainState) {
         // No in-memory state — try loading station data from DB
@@ -391,8 +427,26 @@ class TrainController {
    */
   async moveToNextStation(req, res) {
     try {
-      const trainNo = req.body.trainNo || req.query.trainNo;
-      const trainState = trainNo ? trainStates.get(String(trainNo)) : trainStates.values().next().value;
+      let trainNo = req.body.trainNo || req.query.trainNo;
+      let trainState = null;
+
+      if (trainNo) {
+        const cleanNo = String(trainNo).trim();
+        trainState = trainStates.get(cleanNo) || trainStates.get(String(trainNo));
+
+        if (!trainState) {
+          for (const [key, state] of trainStates.entries()) {
+            if (key.trim() === cleanNo || Number(key) === Number(cleanNo)) {
+              trainState = state;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!trainState) {
+        trainState = trainStates.values().next().value;
+      }
 
       if (!trainState) {
         return res.status(400).json({
@@ -562,8 +616,26 @@ class TrainController {
    */
   getTrainStats(req, res) {
     try {
-      const trainNo = req.query.trainNo || req.body.trainNo;
-      const trainState = trainNo ? trainStates.get(String(trainNo)) : trainStates.values().next().value;
+      let trainNo = req.query.trainNo || req.body.trainNo;
+      let trainState = null;
+
+      if (trainNo) {
+        const cleanNo = String(trainNo).trim();
+        trainState = trainStates.get(cleanNo) || trainStates.get(String(trainNo));
+
+        if (!trainState) {
+          for (const [key, state] of trainStates.entries()) {
+            if (key.trim() === cleanNo || Number(key) === Number(cleanNo)) {
+              trainState = state;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!trainState) {
+        trainState = trainStates.values().next().value;
+      }
 
       if (!trainState) {
         return res.status(400).json({
@@ -655,7 +727,24 @@ class TrainController {
    */
   getGlobalTrainState(trainNo) {
     if (!trainNo) return trainStates.values().next().value || null;
-    return trainStates.get(String(trainNo)) || null;
+
+    const cleanNo = String(trainNo).trim();
+    let state = trainStates.get(cleanNo) || trainStates.get(String(trainNo));
+
+    if (!state) {
+      for (const [key, val] of trainStates.entries()) {
+        if (key.trim() === cleanNo || Number(key) === Number(cleanNo)) {
+          state = val;
+          break;
+        }
+      }
+    }
+
+    if (!state && trainStates.size > 0) {
+      state = trainStates.values().next().value;
+    }
+
+    return state || null;
   }
 
   /**

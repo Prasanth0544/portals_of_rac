@@ -32,9 +32,15 @@ function LoginPage({ onLoginSuccess }: LoginPageProps): React.ReactElement {
     const [error, setError] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
 
+    const [csrfTokenState, setCsrfTokenState] = useState<string | null>(null);
+
     // Ensure CSRF token is fetched
     useEffect(() => {
-        axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true }).catch(() => { });
+        axios.get(`${API_BASE_URL}/csrf-token`, { withCredentials: true })
+            .then(res => {
+                if (res.data?.csrfToken) setCsrfTokenState(res.data.csrfToken);
+            })
+            .catch(() => { });
     }, []);
 
     const isStaffRole = role === 'admin' || role === 'tte';
@@ -59,7 +65,7 @@ function LoginPage({ onLoginSuccess }: LoginPageProps): React.ReactElement {
         const value = `; ${document.cookie}`;
         const parts = value.split('; csrfToken=');
         if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
-        return null;
+        return csrfTokenState;
     };
 
     const handleLogin = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
