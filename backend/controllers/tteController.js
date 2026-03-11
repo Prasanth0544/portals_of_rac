@@ -992,7 +992,7 @@ class TTEController {
                         pnrStatus: p.PNR_Status,
                         previousRacStatus: p.Rac_status,
                         coach: p.Assigned_Coach,
-                        berth: p.Assigned_berth,
+                        berth: p.Assigned_Berth,
                         berthType: p.Berth_Type,
                         class: p.Class,
                         from: p.Boarding_Station,

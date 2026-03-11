@@ -306,12 +306,12 @@ class AuthController {
       const racDb = await db.getDb();
 
       // Verify train exists in Trains_Details
-      // Try both field names: 'trainNo' (string) and 'Train_No' (number) for compatibility
+      // Try both field names: 'trainNo' (string) and 'Train_Number' (number) for compatibility
       const trainsCollection = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
       let trainExists = await trainsCollection.findOne({ trainNo });
       if (!trainExists) {
         trainExists = await trainsCollection.findOne({
-          Train_No: Number(trainNo),
+          Train_Number: Number(trainNo),
         });
       }
 
@@ -454,7 +454,7 @@ class AuthController {
           const collName =
             train.passengersCollection ||
             train.Passengers_Collection_Name ||
-            `${train.trainNo || train.Train_No}_passengers`;
+            `${train.trainNo || train.Train_Number}_passengers`;
           if (!collName) continue;
           try {
             const coll = passDb.collection(collName);

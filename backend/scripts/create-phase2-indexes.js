@@ -31,10 +31,10 @@ async function createPhase2Indexes() {
 
         // Priority 3: Berth conflict detection (checking if berth is already assigned)
         await collection.createIndex(
-            { Assigned_Coach: 1, Assigned_berth: 1 },
+            { Assigned_Coach: 1, Assigned_Berth: 1 },
             { name: 'idx_passengers_berth' }
         );
-        console.log('✅ 3/5: {Assigned_Coach, Assigned_berth} - 20x speedup for berth conflict checks');
+        console.log('✅ 3/5: {Assigned_Coach, Assigned_Berth} - 20x speedup for berth conflict checks');
 
         // Priority 4: IRCTC ID lookups (passenger login, boarding pass)
         await collection.createIndex(

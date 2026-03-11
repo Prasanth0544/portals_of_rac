@@ -66,7 +66,7 @@ class PassengerService {
                 $set: {
                     PNR_Status: 'CNF',
                     Assigned_Coach: coach,
-                    Assigned_berth: berth,
+                    Assigned_Berth: berth,
                     Berth_Type: notification.offeredBerthType,
                     Preference_Matched: true,
                     Upgraded_From_RAC: true,
@@ -208,7 +208,7 @@ class PassengerService {
             email: passenger.Email,
             trainNo: passenger.Train_Number,
             trainName: passenger.Train_Name || (trainState ? trainState.trainName : 'Unknown'),
-            berth: `${passenger.Assigned_Coach}-${passenger.Assigned_berth}`,
+            berth: `${passenger.Assigned_Coach}-${passenger.Assigned_Berth}`,
             berthType: passenger.Berth_Type,
             pnrStatus: passenger.PNR_Status,
             racStatus: passenger.Rac_status || '-',
@@ -223,7 +223,7 @@ class PassengerService {
             passengerStatus: passenger.Passenger_Status || 'Offline',
             noShow: passenger.NO_show || false,
             coach: passenger.Assigned_Coach,
-            seatNo: passenger.Assigned_berth
+            seatNo: passenger.Assigned_Berth
         };
     }
 

@@ -265,7 +265,7 @@ class AllocationService {
             PNR_Status: 'CNF',           // RAC → CNF
             Rac_status: '-',             // "1" → "-"
             Assigned_Coach: coach,       // Use correct field name
-            Assigned_berth: berth,       // Use correct field name
+            Assigned_Berth: berth,       // Use correct field name
             Berth_Type: berthType,       // Update from "Side Lower" to actual type
             // Passenger_Status: 'Offline', // REMOVED: Do not force Offline, preserve existing status
             Boarded: true,

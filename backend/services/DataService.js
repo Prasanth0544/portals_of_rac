@@ -295,22 +295,22 @@ class DataService {
           errors.push({
             pnr: p.PNR_Number,
             name: p.Name,
-            berth: `${p.Assigned_Coach}-${p.Assigned_berth}`,
+            berth: `${p.Assigned_Coach}-${p.Assigned_Berth}`,
             error: `Station not found: ${!fromStation ? p.Boarding_Station : p.Deboarding_Station}`
           });
           return;
         }
 
         // Find berth
-        const berth = trainState.findBerth(p.Assigned_Coach, p.Assigned_berth);
+        const berth = trainState.findBerth(p.Assigned_Coach, p.Assigned_Berth);
 
         if (!berth) {
           failed++;
           errors.push({
             pnr: p.PNR_Number,
             name: p.Name,
-            berth: `${p.Assigned_Coach}-${p.Assigned_berth}`,
-            error: `Berth not found: ${p.Assigned_Coach}-${p.Assigned_berth}`
+            berth: `${p.Assigned_Coach}-${p.Assigned_Berth}`,
+            error: `Berth not found: ${p.Assigned_Coach}-${p.Assigned_Berth}`
           });
           return;
         }
@@ -322,7 +322,7 @@ class DataService {
             pnr: p.PNR_Number,
             name: p.Name,
             status: p.PNR_Status,
-            berth: `${p.Assigned_Coach}-${p.Assigned_berth}`,
+            berth: `${p.Assigned_Coach}-${p.Assigned_Berth}`,
             berthType: berth.type,
             from: p.Boarding_Station,
             to: p.Deboarding_Station,
@@ -414,8 +414,8 @@ class DataService {
           pnrStatus: p.PNR_Status,
           racStatus: p.Rac_status ? `RAC ${p.Rac_status}` : "RAC",
           coach: p.Assigned_Coach,
-          seatNo: p.Assigned_berth,
-          berth: `${p.Assigned_Coach}-${p.Assigned_berth}`,
+          seatNo: p.Assigned_Berth,
+          berth: `${p.Assigned_Coach}-${p.Assigned_Berth}`,
           berthType: p.Berth_Type,
           passengerStatus: p.Passenger_Status || "Offline",
           boarded: false, // RAC passengers start as not boarded

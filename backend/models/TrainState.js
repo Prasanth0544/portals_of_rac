@@ -1256,7 +1256,7 @@ class TrainState {
           PNR_Status: 'RAC',              // CNF → RAC
           Rac_status: action.previousState.racStatus || action.target.racNumber, // Restore RAC number
           Assigned_Coach: action.previousState.coach || null,  // Use correct field name
-          Assigned_berth: action.previousState.seat || null,   // Use correct field name
+          Assigned_Berth: action.previousState.seat || null,   // Use correct field name
           Berth_Type: 'Side Lower',       // RAC always Side Lower
         }
       }

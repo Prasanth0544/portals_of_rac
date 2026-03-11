@@ -3,10 +3,10 @@ Scrape running days for all trains from erail.in
 and add 'running_days' field to train_info collection in RailwayData
 
 Source: erail.in/rail/getTrains.aspx (public Indian Railways enquiry)
-Format: ~ delimited response, field[13] = running days (Sun-Sat, 1=runs)
+Format: ~ delimited response, field[13] = running days (Mon-Sun, 1=runs)
 
 Features:
-  - Batch processing with rate limiting (0.3s between requests)
+  - Parallel scraping with 5 threads (~5x faster)
   - Resume capability (saves progress to JSON file)
   - Updates train_info with: running_days, running_days_text, src_station,
     dest_station, departure, arrival, duration, distance_km, train_category,
@@ -17,6 +17,8 @@ import requests
 import time
 import json
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pymongo import MongoClient
 
 MONGO_URI = "mongodb://localhost:27017"
@@ -31,9 +33,13 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-DELAY = 0.3  # seconds between requests
-BATCH_SIZE = 100  # save progress every N trains
+DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+WORKERS = 5        # parallel threads
+DELAY = 0.1        # seconds between requests per thread
+BATCH_SIZE = 50    # save progress every N trains
+
+# Thread-safe lock for progress updates
+progress_lock = threading.Lock()
 
 
 def parse_erail_response(text, train_no):
@@ -71,11 +77,10 @@ def parse_erail_response(text, train_no):
             days_label = ", ".join(days_text)
 
         result = {
-            "running_days": running,              # "1111111"
-            "running_days_text": days_label,       # "Daily" or "Mon, Wed, Fri"
+            "running_days": running,
+            "running_days_text": days_label,
         }
 
-        # Extra fields if available
         if len(fields) > 2 and fields[2]:
             result["src_station_name"] = fields[2]
         if len(fields) > 3 and fields[3]:
@@ -108,14 +113,12 @@ def parse_erail_response(text, train_no):
             result["gauge"] = fields[55]
 
         result["data_source"] = "erail.in"
-
         return result
 
     return None
 
 
 def load_progress():
-    """Load scraped train numbers from progress file."""
     if os.path.exists(PROGRESS_FILE):
         with open(PROGRESS_FILE, "r") as f:
             return json.load(f)
@@ -123,24 +126,45 @@ def load_progress():
 
 
 def save_progress(progress):
-    """Save progress to file."""
     with open(PROGRESS_FILE, "w") as f:
         json.dump(progress, f)
 
 
+def scrape_one(train_no):
+    """Scrape a single train. Returns (train_no, status, data)."""
+    try:
+        time.sleep(DELAY)
+        params = {
+            "TrainNo": train_no,
+            "DataSource": "0",
+            "Language": "0",
+            "Cache": "true"
+        }
+        r = requests.get(ERAIL_URL, params=params, headers=HEADERS, timeout=15)
+
+        if r.status_code == 200 and r.text.strip():
+            data = parse_erail_response(r.text, train_no)
+            if data:
+                return (train_no, "ok", data)
+            else:
+                return (train_no, "not_found", None)
+        else:
+            return (train_no, "failed", None)
+    except Exception:
+        return (train_no, "failed", None)
+
+
 def main():
-    print("🚂 Running Days Scraper (erail.in)")
+    print("🚂 Running Days Scraper (erail.in) — FAST MODE")
     print("=" * 60)
 
     client = MongoClient(MONGO_URI)
     db = client[DB_NAME]
     col = db[COLLECTION]
 
-    # Get all train numbers
     all_trains = [doc["train_no"] for doc in col.find({}, {"train_no": 1})]
     print(f"   Total trains in DB: {len(all_trains)}")
 
-    # Load progress
     progress = load_progress()
     done = set(progress["completed"])
     remaining = [t for t in all_trains if t not in done]
@@ -152,67 +176,43 @@ def main():
         client.close()
         return
 
+    est_min = len(remaining) * DELAY / WORKERS / 60
+    print(f"\n   Starting scrape ({len(remaining)} trains, ~{est_min:.0f} min estimated)")
+    print(f"   Threads: {WORKERS} | Delay: {DELAY}s/thread")
+    print(f"   Progress saves every {BATCH_SIZE} completions\n")
+
     success = 0
     failed = 0
     not_found = 0
-    batch_count = 0
+    processed = 0
 
-    print(f"\n   Starting scrape ({len(remaining)} trains, ~{len(remaining)*DELAY/60:.0f} min estimated)...")
-    print(f"   Rate: {DELAY}s delay between requests")
-    print(f"   Progress saves every {BATCH_SIZE} trains")
-    print()
+    with ThreadPoolExecutor(max_workers=WORKERS) as executor:
+        futures = {executor.submit(scrape_one, t): t for t in remaining}
 
-    for i, train_no in enumerate(remaining):
-        try:
-            params = {
-                "TrainNo": train_no,
-                "DataSource": "0",
-                "Language": "0",
-                "Cache": "true"
-            }
-            r = requests.get(ERAIL_URL, params=params, headers=HEADERS, timeout=15)
+        for future in as_completed(futures):
+            train_no, status, data = future.result()
+            processed += 1
 
-            if r.status_code == 200 and r.text.strip():
-                data = parse_erail_response(r.text, train_no)
-                if data:
-                    col.update_one(
-                        {"train_no": train_no},
-                        {"$set": data}
-                    )
-                    success += 1
+            with progress_lock:
+                if status == "ok" and data:
+                    col.update_one({"train_no": train_no}, {"$set": data})
                     progress["completed"].append(train_no)
-                else:
-                    not_found += 1
+                    success += 1
+                elif status == "not_found":
                     progress["not_found"].append(train_no)
-            else:
-                failed += 1
-                progress["failed"].append(train_no)
+                    not_found += 1
+                else:
+                    progress["failed"].append(train_no)
+                    failed += 1
 
-        except Exception as e:
-            failed += 1
-            progress["failed"].append(train_no)
-            if "429" in str(e) or "Too Many" in str(e):
-                print(f"   ⚠️  Rate limited! Waiting 30s...")
-                time.sleep(30)
-
-        batch_count += 1
-
-        # Progress log
-        if batch_count % 50 == 0:
-            total_done = len(done) + success + not_found + failed
-            pct = total_done / len(all_trains) * 100
-            print(f"   [{pct:5.1f}%] {total_done}/{len(all_trains)} | ✅ {success} | ❌ {failed} | 🔍 {not_found} | train: {train_no}")
-
-        # Save progress
-        if batch_count % BATCH_SIZE == 0:
-            save_progress(progress)
-
-        time.sleep(DELAY)
+                if processed % BATCH_SIZE == 0:
+                    save_progress(progress)
+                    total_done = len(done) + success + not_found + failed
+                    pct = total_done / len(all_trains) * 100
+                    print(f"   [{pct:5.1f}%] {total_done}/{len(all_trains)} | ✅ {success} | ❌ {failed} | 🔍 {not_found} | train: {train_no}")
 
     # Final save
     save_progress(progress)
-
-    # Summary
     total_with_days = col.count_documents({"running_days": {"$exists": True}})
 
     print(f"\n{'='*60}")
@@ -220,13 +220,11 @@ def main():
     print(f"   Scraped: {success} trains")
     print(f"   Not found on erail: {not_found}")
     print(f"   Failed: {failed}")
-    print(f"   Total with running_days field: {total_with_days}/{len(all_trains)}")
-    print(f"   Source: erail.in")
+    print(f"   Total with running_days: {total_with_days}/{len(all_trains)}")
 
-    # Show sample
-    print(f"\n📋 Sample enriched documents:")
+    print(f"\n📋 Sample:")
     for doc in col.find({"running_days": {"$exists": True}}).limit(5):
-        print(f"   {doc['train_no']} | {doc.get('train_name','')[:30]:30} | days={doc.get('running_days','')} ({doc.get('running_days_text','')})")
+        print(f"   {doc['train_no']} | {doc.get('train_name','')[:30]:30} | {doc.get('running_days_text','')}")
 
     client.close()
     print("\n✅ Done!")

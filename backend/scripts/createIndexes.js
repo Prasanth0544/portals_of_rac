@@ -192,10 +192,10 @@ async function createPassengerIndexes(db, collectionName) {
 
         // Priority 3: Berth conflict detection
         await collection.createIndex(
-            { Assigned_Coach: 1, Assigned_berth: 1 },
+            { Assigned_Coach: 1, Assigned_Berth: 1 },
             { name: 'idx_passengers_berth' }
         );
-        console.log('   ✅ Priority 3: {Assigned_Coach, Assigned_berth} - 20x speedup for berth conflicts');
+        console.log('   ✅ Priority 3: {Assigned_Coach, Assigned_Berth} - 20x speedup for berth conflicts');
 
         // Priority 4: Common filters
         await collection.createIndex(

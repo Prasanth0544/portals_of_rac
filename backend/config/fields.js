@@ -4,9 +4,9 @@
  * =============================================================================
  *
  * WHY THIS FILE EXISTS:
- * The MongoDB Trains_Details collection uses field names like "Train_No" and
+ * The MongoDB Trains_Details collection uses field names like "Train_Number" and
  * "Station_Collection_Name", but developers often accidentally write
- * "Train_Number" or "Stations_Collection_Name" — causing silent 404s and
+ * "Train_No" or "Stations_Collection_Name" — causing silent 404s and
  * "not found" bugs that are hard to debug.
  *
  * RULE: Never hardcode MongoDB field names. Always import from here.
@@ -22,8 +22,8 @@
 // Database: rac | Collection: Trains_Details
 // These are the EXACT field names in the MongoDB Trains_Details collection.
 const TRAIN_FIELDS = {
-    // ⚠️ This is "Train_No" — NOT "Train_Number"
-    TRAIN_NO: 'Train_No',
+    // ✅ Standardized to "Train_Number" everywhere (v2)
+    TRAIN_NO: 'Train_Number',
     TRAIN_NAME: 'Train_Name',
     // ⚠️ Some DB documents have a trailing space in this key: "Station_Collection_Name "
     STATION_COLLECTION_NAME: 'Station_Collection_Name',
@@ -41,10 +41,10 @@ const TRAIN_FIELDS = {
 
 // ─── Passenger Collection Fields ─────────────────────────────────────────────
 // Database: PassengersDB | Collection: per-train (e.g. 17225_passengers)
-// ⚠️ Passengers use "Train_Number" — this is DIFFERENT from Trains_Details "Train_No"!
+// ✅ Both Trains_Details and Passengers now use "Train_Number" (v2 standardized)
 const PASSENGER_FIELDS = {
     PNR_NUMBER: 'PNR_Number',
-    TRAIN_NUMBER: 'Train_Number',   // ✅ Passengers use Train_Number (NOT Train_No)
+    TRAIN_NUMBER: 'Train_Number',   // ✅ Same as TRAIN_FIELDS.TRAIN_NO
     TRAIN_NAME: 'Train_Name',
     JOURNEY_DATE: 'Journey_Date',   // Format: DD-MM-YYYY
     NAME: 'Name',
@@ -53,7 +53,7 @@ const PASSENGER_FIELDS = {
     BOARDING_STATION: 'Boarding_Station',
     DEBOARDING_STATION: 'Deboarding_Station',
     ASSIGNED_COACH: 'Assigned_Coach',
-    ASSIGNED_BERTH: 'Assigned_berth',  // lowercase 'b' !
+    ASSIGNED_BERTH: 'Assigned_Berth',  // ✅ Fixed to capital B (v2)
     BERTH_TYPE: 'Berth_Type',
     PNR_STATUS: 'PNR_Status',
     CURRENT_STATUS: 'Current_Status',

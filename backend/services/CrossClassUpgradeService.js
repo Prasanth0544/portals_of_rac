@@ -224,7 +224,7 @@ class CrossClassUpgradeService {
                     {
                         $set: {
                             Assigned_Coach: targetCoach,
-                            Assigned_berth: String(targetBerthNo),
+                            Assigned_Berth: String(targetBerthNo),
                             Class: tc.class,
                             PNR_Status: 'CNF',
                             Cross_Class_Upgraded: true,

@@ -94,3 +94,17 @@ Railway_data/train_17225_*.txt
 Railway_data/erail_parse.txt
 Railway_data/wimt_schema.txt
 Railway_data/schedule_schema.txt
+
+# Reverse engineering debug/temp files
+Railway_data/db_analysis.json
+Railway_data/gaps.json
+Railway_data/ladoo_decoded.md
+Railway_data/ladoo_debug2.txt
+Railway_data/method_G.md
+Railway_data/method_G.txt
+Railway_data/route_*.json
+Railway_data/scrape_completed.json
+Railway_data/scrape_failed.json
+Railway_data/scrape_not_found.json
+Railway_data/route_scrape_progress.json
+runcmd

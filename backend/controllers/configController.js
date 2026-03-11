@@ -116,7 +116,7 @@ class ConfigController {
       let existingDoc = await trainsCollection.findOne({ trainNo });
       if (!existingDoc) {
         existingDoc = await trainsCollection.findOne({
-          Train_No: Number(trainNo),
+          Train_Number: Number(trainNo),
         });
       }
 
@@ -195,11 +195,11 @@ class ConfigController {
 
       const rawTrains = await trainsCollection.find({}).toArray();
 
-      // Normalize field names: DB may have Train_No/Train_Name (old schema)
+      // Normalize field names: DB may have Train_Number/Train_Name (old schema)
       // or trainNo/trainName (new schema). Map both to consistent camelCase.
       const trains = rawTrains.map((doc) => ({
         _id: doc._id,
-        trainNo: doc.trainNo || String(doc.Train_No || ""),
+        trainNo: doc.trainNo || String(doc.Train_Number || ""),
         trainName: doc.trainName || doc.Train_Name || "",
         status: doc.status || "REGISTERED",
         stationsCollection:
@@ -252,8 +252,8 @@ class ConfigController {
         $or: [
           { trainNo },
           { trainNo: Number(trainNo) },
-          { Train_No: trainNo },
-          { Train_No: Number(trainNo) },
+          { Train_Number: trainNo },
+          { Train_Number: Number(trainNo) },
           { Train_Number: trainNo },
           { Train_Number: Number(trainNo) },
         ]
@@ -345,7 +345,7 @@ class ConfigController {
       let trainDoc = await trainsCollection.findOne({ trainNo });
       if (!trainDoc) {
         trainDoc = await trainsCollection.findOne({
-          Train_No: Number(trainNo),
+          Train_Number: Number(trainNo),
         });
       }
 
@@ -371,7 +371,7 @@ class ConfigController {
       // Use the same filter key as the found document
       const filterKey = trainDoc.trainNo
         ? { trainNo }
-        : { Train_No: Number(trainNo) };
+        : { Train_Number: Number(trainNo) };
 
       await trainsCollection.updateOne(filterKey, { $set: updateFields });
 

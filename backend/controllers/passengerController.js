@@ -378,7 +378,7 @@ class PassengerController {
         Boarding_Station: passengerData.from,
         Deboarding_Station: passengerData.to,
         Assigned_Coach: passengerData.coach,
-        Assigned_berth: parseInt(passengerData.seat_no),
+        Assigned_Berth: parseInt(passengerData.seat_no),
         Berth_Type: berth.berth_type,
         Passenger_Status: passengerData.passenger_status || "Offline",
         NO_show: false,
@@ -431,7 +431,7 @@ class PassengerController {
             ? `RAC ${newPassenger.Rac_status}`
             : "RAC",
           coach: newPassenger.Assigned_Coach,
-          seatNo: newPassenger.Assigned_berth,
+          seatNo: newPassenger.Assigned_Berth,
           berthType: newPassenger.Berth_Type,
         });
 

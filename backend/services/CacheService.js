@@ -255,7 +255,7 @@ class CacheService {
                         Boarding_Station: 1,
                         Deboarding_Station: 1,
                         Assigned_Coach: 1,
-                        Assigned_berth: 1
+                        Assigned_Berth: 1
                     }).toArray();
 
                     this.setPassengers(trainNo, 'rac', racPassengers);
