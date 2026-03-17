@@ -483,7 +483,7 @@ describe('trainController', () => {
         it('should list all trains', async () => {
             const mockTrains = [
                 {
-                    Train_No: '17225',
+                    Train_Number: '17225',
                     Train_Name: 'Test Express',
                     Sleeper_Coaches_Count: 10,
                     Three_TierAC_Coaches_Count: 5,

@@ -394,14 +394,14 @@ describe('DataService - Comprehensive Tests', () => {
     describe('getTrainName', () => {
         it('should get train name from Train_Details collection', async () => {
             mockTrainDetailsCollection.findOne.mockResolvedValue({
-                Train_No: 17225,
+                Train_Number: 17225,
                 Train_Name: 'Amaravathi Express'
             });
 
             const name = await DataService.getTrainName('17225');
 
             expect(name).toBe('Amaravathi Express');
-            expect(mockTrainDetailsCollection.findOne).toHaveBeenCalledWith({ Train_No: 17225 });
+            expect(mockTrainDetailsCollection.findOne).toHaveBeenCalledWith({ Train_Number: 17225 });
         });
 
         it('should fallback to stations collection', async () => {
@@ -437,7 +437,7 @@ describe('DataService - Comprehensive Tests', () => {
     describe('getTrainDetails', () => {
         it('should get train details successfully', async () => {
             const mockDetails = {
-                Train_No: 17225,
+                Train_Number: 17225,
                 Train_Name: 'Amaravathi Express',
                 Sleeper_Coaches_Count: 9,
                 Three_TierAC_Coaches_Count: 2
@@ -448,7 +448,7 @@ describe('DataService - Comprehensive Tests', () => {
             const details = await DataService.getTrainDetails('17225');
 
             expect(details).toEqual(mockDetails);
-            expect(mockTrainDetailsCollection.findOne).toHaveBeenCalledWith({ Train_No: 17225 });
+            expect(mockTrainDetailsCollection.findOne).toHaveBeenCalledWith({ Train_Number: 17225 });
         });
 
         it('should return null if train details not found', async () => {
@@ -491,7 +491,7 @@ describe('DataService - Comprehensive Tests', () => {
             mockPassengersCollection.find = jest.fn(() => ({ toArray: passengersToArrayMock }));
             
             mockTrainDetailsCollection.findOne.mockResolvedValue({
-                Train_No: 17225,
+                Train_Number: 17225,
                 Train_Name: 'Test Express',
                 Sleeper_Coaches_Count: 9
             });

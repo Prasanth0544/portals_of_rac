@@ -359,7 +359,7 @@ async function main() {
         // 3. Load station data for each train
         const trainInfos = [];
         for (const doc of trainDocs) {
-            const trainNo = String(doc[TRAIN_FIELDS.TRAIN_NO] || doc.Train_No || '');
+            const trainNo = String(doc[TRAIN_FIELDS.TRAIN_NO] || '');
             const trainName = doc[TRAIN_FIELDS.TRAIN_NAME] || doc.Train_Name || `Train ${trainNo}`;
             const sleeperCoaches = Number(doc[TRAIN_FIELDS.SLEEPER_COACHES_COUNT] || doc.Sleeper_Coaches_Count || 9);
             const acCoaches = Number(doc[TRAIN_FIELDS.THREE_TIER_AC_COACHES_COUNT] || doc.Three_TierAC_Coaches_Count || 0);

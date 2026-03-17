@@ -190,7 +190,7 @@ function DashboardPage(): React.ReactElement {
                     setPassenger(passData);
 
                     // ✅ Extract and store trainNo so subsequent calls (like /train/state) work for multi-train
-                    const trainNo = passData.Train_No || passData.trainNo;
+                    const trainNo = passData.Train_Number || passData.trainNo;
                     if (trainNo) {
                         localStorage.setItem('trainNo', String(trainNo));
                     }
