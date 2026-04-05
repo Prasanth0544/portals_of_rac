@@ -375,9 +375,19 @@ class TTEController {
 
                 // ✅ SEND PUSH NOTIFICATION
                 try {
-                    const PushNotificationService = require('../services/PushNotificationService');
-                    await PushNotificationService.notifyUpgrade(passenger);
-                    console.log(`📨 Push notification sent to ${passenger.Name}`);
+                    const WebPushService = require('../services/WebPushService');
+                    if (passenger.irctcId || passenger.IRCTC_ID) {
+                        await WebPushService.sendPushNotification(
+                            passenger.irctcId || passenger.IRCTC_ID,
+                            {
+                                title: '🎉 Upgrade Confirmed!',
+                                body: `Your RAC ticket has been upgraded to ${acceptedNotification.offeredCoach}-${acceptedNotification.offeredSeatNo}`,
+                                url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/passenger`,
+                                tag: `upgrade-${pnr}`
+                            }
+                        );
+                    }
+                    console.log(`📨 Push notification sent to ${passenger.name}`);
                 } catch (notifError) {
                     console.error('⚠️ Failed to send push notification:', notifError);
                 }

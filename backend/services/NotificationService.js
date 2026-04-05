@@ -34,7 +34,7 @@ class NotificationService {
         this.emailTransporter = nodemailer.createTransport(transportConfig);
 
         // Configurable frontend URL for email links
-        this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5175';
+        this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
         console.log('📧 NotificationService initialized');
         console.log('   Email User:', process.env.EMAIL_USER || '✗ NOT SET');

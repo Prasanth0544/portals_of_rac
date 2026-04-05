@@ -27,7 +27,7 @@ webPush.setVapidDetails(
 );
 
 // Frontend URL for deep-links in push notifications
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5175';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 class WebPushService {
     constructor() {

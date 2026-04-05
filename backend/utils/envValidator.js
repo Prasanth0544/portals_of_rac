@@ -13,7 +13,7 @@ const requiredEnvVars = [
     { name: 'NODE_ENV', default: 'development', required: false },
 
     // CORS
-    { name: 'CORS_ORIGIN', default: 'http://localhost:5173,http://localhost:5174,http://localhost:5175', required: false }
+    { name: 'CORS_ORIGIN', default: 'http://localhost:3000,https://portals-of-rac.vercel.app', required: false }
 ];
 
 const optionalEnvVars = [

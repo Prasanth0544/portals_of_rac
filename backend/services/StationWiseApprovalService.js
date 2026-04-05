@@ -418,7 +418,7 @@ class StationWiseApprovalService {
                             title: '❌ Upgrade Rejected',
                             body: `Your upgrade to ${pending.proposedBerthFull} was rejected. Reason: ${reason}`,
                             icon: '/logo192.png',
-                            url: 'http://localhost:5175/#/dashboard',
+                            url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/passenger`,
                             data: {
                                 type: 'RAC_UPGRADE_REJECTED',
                                 pnr: pending.passengerPNR,

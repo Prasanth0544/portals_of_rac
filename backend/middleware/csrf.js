@@ -47,6 +47,11 @@ const csrfProtection = (req, res, next) => {
         '/passenger/deny-upgrade',
         '/passenger/send-upgrade-otp',
         '/passenger/verify-upgrade-otp',
+        // OTP-protected passenger actions (secured by IRCTC ID + PNR + OTP)
+        '/passenger/self-cancel',
+        '/passenger/report-deboarding',
+        '/passenger/change-boarding-station',
+        '/passenger/available-boarding-stations',
     ];
 
     // Also check full path in case middleware is mounted differently

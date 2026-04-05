@@ -10,7 +10,7 @@ jest.mock('../../services/ValidationService');
 jest.mock('../../services/NotificationService');
 jest.mock('../../services/InAppNotificationService');
 jest.mock('../../services/WebPushService');
-jest.mock('../../services/PushNotificationService');
+
 jest.mock('../../config/db');
 jest.mock('../../config/websocket', () => ({
     broadcastNoShow: jest.fn(),
@@ -623,8 +623,8 @@ describe('reallocationController', () => {
                 berthDetails: { coach: 'S1', berthNo: 10, type: 'Lower' }
             };
 
-            const PushNotificationService = require('../../services/PushNotificationService');
-            PushNotificationService.sendUpgradeOffer = jest.fn().mockResolvedValue({ sent: true });
+            const WebPushService = require('../../services/WebPushService');
+            WebPushService.sendPushNotification = jest.fn().mockResolvedValue({ sent: 1 });
 
             await reallocationController.sendUpgradeOffer(req, res);
 

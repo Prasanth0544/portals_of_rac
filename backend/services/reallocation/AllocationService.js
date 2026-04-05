@@ -126,7 +126,7 @@ class AllocationService {
             body: `Your RAC ticket has been upgraded to ${fullBerthNo} (${berthObj.type})`,
             icon: '/logo192.png',
             badge: '/badge.png',
-            url: 'http://localhost:5175/#/dashboard',
+            url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/passenger`,
             data: {
               type: 'RAC_UPGRADE_CONFIRMED',
               pnr: pnr,

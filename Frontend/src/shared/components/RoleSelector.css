@@ -219,11 +219,11 @@ nav.scrolled {
 
 @keyframes trainMove {
     0% {
-        left: -220px
+        left: 110%
     }
 
     100% {
-        left: 110%
+        left: -220px
     }
 }
 
@@ -559,11 +559,11 @@ nav.scrolled {
 
 @keyframes howTrain {
     0% {
-        left: -180px
+        left: 110%
     }
 
     100% {
-        left: 110%
+        left: -180px
     }
 }
 

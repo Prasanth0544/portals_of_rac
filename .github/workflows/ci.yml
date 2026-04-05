@@ -38,20 +38,18 @@ jobs:
           cache: 'npm'
           cache-dependency-path: |
             backend/package-lock.json
-            admin-portal/package-lock.json
-            tte-portal/package-lock.json
-            passenger-portal/package-lock.json
+            Frontend/package-lock.json
       
       - name: Install backend dependencies
         working-directory: ./backend
         run: npm ci
       
-      - name: Install admin-portal dependencies
-        working-directory: ./admin-portal
+      - name: Install Frontend dependencies
+        working-directory: ./Frontend
         run: npm ci
       
-      - name: Lint admin-portal
-        working-directory: ./admin-portal
+      - name: Lint Frontend
+        working-directory: ./Frontend
         run: npm run lint || true  # Don't fail on lint warnings
 
   # ─────────────────────────────────────────
@@ -123,30 +121,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
-      - name: Build Admin Portal Image
+      - name: Build Frontend Image
         uses: docker/build-push-action@v6
         with:
-          context: ./admin-portal
+          context: ./Frontend
           push: false
-          tags: rac-admin-portal:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      
-      - name: Build TTE Portal Image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./tte-portal
-          push: false
-          tags: rac-tte-portal:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      
-      - name: Build Passenger Portal Image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./passenger-portal
-          push: false
-          tags: rac-passenger-portal:${{ github.sha }}
+          tags: rac-frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       

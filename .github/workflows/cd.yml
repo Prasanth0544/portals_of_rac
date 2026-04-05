@@ -82,39 +82,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
-      # Build and push Admin Portal
-      - name: Build & Push Admin Portal
+      # Build and push unified Frontend
+      - name: Build & Push Frontend
         uses: docker/build-push-action@v6
         with:
-          context: ./admin-portal
+          context: ./Frontend
           push: true
           tags: |
-            ${{ env.IMAGE_PREFIX }}-admin:${{ steps.version.outputs.version }}
-            ${{ env.IMAGE_PREFIX }}-admin:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      
-      # Build and push TTE Portal
-      - name: Build & Push TTE Portal
-        uses: docker/build-push-action@v6
-        with:
-          context: ./tte-portal
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-tte:${{ steps.version.outputs.version }}
-            ${{ env.IMAGE_PREFIX }}-tte:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      
-      # Build and push Passenger Portal
-      - name: Build & Push Passenger Portal
-        uses: docker/build-push-action@v6
-        with:
-          context: ./passenger-portal
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-passenger:${{ steps.version.outputs.version }}
-            ${{ env.IMAGE_PREFIX }}-passenger:latest
+            ${{ env.IMAGE_PREFIX }}-frontend:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -137,9 +113,7 @@ jobs:
           echo "🚀 Deploying version ${{ needs.build-and-push.outputs.version }} to STAGING"
           echo "Images pushed:"
           echo "  - ${{ env.IMAGE_PREFIX }}-backend:${{ needs.build-and-push.outputs.version }}"
-          echo "  - ${{ env.IMAGE_PREFIX }}-admin:${{ needs.build-and-push.outputs.version }}"
-          echo "  - ${{ env.IMAGE_PREFIX }}-tte:${{ needs.build-and-push.outputs.version }}"
-          echo "  - ${{ env.IMAGE_PREFIX }}-passenger:${{ needs.build-and-push.outputs.version }}"
+          echo "  - ${{ env.IMAGE_PREFIX }}-frontend:${{ needs.build-and-push.outputs.version }}"
 
       # Uncomment and configure for actual deployment:
       # - name: Deploy to server via SSH
@@ -174,9 +148,7 @@ jobs:
           echo "Release: ${{ github.event.release.name }}"
           echo "Images pushed:"
           echo "  - ${{ env.IMAGE_PREFIX }}-backend:${{ needs.build-and-push.outputs.version }}"
-          echo "  - ${{ env.IMAGE_PREFIX }}-admin:${{ needs.build-and-push.outputs.version }}"
-          echo "  - ${{ env.IMAGE_PREFIX }}-tte:${{ needs.build-and-push.outputs.version }}"
-          echo "  - ${{ env.IMAGE_PREFIX }}-passenger:${{ needs.build-and-push.outputs.version }}"
+          echo "  - ${{ env.IMAGE_PREFIX }}-frontend:${{ needs.build-and-push.outputs.version }}"
 
       # Uncomment and configure for actual deployment:
       # - name: Deploy to production server via SSH

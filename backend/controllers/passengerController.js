@@ -1492,8 +1492,14 @@ class PassengerController {
       }
 
       // Update database - set NO_show to true
+      // Use $or to match both PascalCase and camelCase PNR field names
       const result = await db.getPassengersCollection().updateOne(
-        { PNR_Number: pnr, IRCTC_ID: irctcId },
+        {
+          $or: [
+            { PNR_Number: pnr, IRCTC_ID: irctcId },
+            { pnr: pnr, IRCTC_ID: irctcId }
+          ]
+        },
         {
           $set: {
             NO_show: true,
@@ -1749,9 +1755,20 @@ class PassengerController {
       }
 
       // Update database - set NO_show and record deboarding station
+      // Use $or to match both PascalCase and camelCase PNR field names
       const updateQuery = passengerName
-        ? { PNR_Number: pnr, IRCTC_ID: irctcId, Name: passengerName }
-        : { PNR_Number: pnr, IRCTC_ID: irctcId };
+        ? {
+            $or: [
+              { PNR_Number: pnr, IRCTC_ID: irctcId, Name: passengerName },
+              { pnr: pnr, IRCTC_ID: irctcId, Name: passengerName }
+            ]
+          }
+        : {
+            $or: [
+              { PNR_Number: pnr, IRCTC_ID: irctcId },
+              { pnr: pnr, IRCTC_ID: irctcId }
+            ]
+          };
 
       const result = await db.getPassengersCollection().updateOne(
         updateQuery,

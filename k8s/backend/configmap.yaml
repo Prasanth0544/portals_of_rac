@@ -30,4 +30,4 @@ data:
   JWT_EXPIRES_IN: "24h"
   
   # CORS (update with your domain)
-  ALLOWED_ORIGINS: "https://admin.yourdomain.com,https://tte.yourdomain.com,https://passenger.yourdomain.com"
+  ALLOWED_ORIGINS: "https://portals-of-rac.vercel.app"

@@ -15,12 +15,12 @@ const JWT_SECRET =
  *  2. httpOnly accessToken cookie (fallback for browser-only flows)
  *
  * Why header-first?
- *  Cookies are scoped to the *domain* (localhost), NOT the port. When the admin portal
- *  (localhost:3000) and TTE portal (localhost:3001) both call the same backend
- *  (localhost:5000), they share the same cookie jar. A TTE login therefore overwrites
- *  the admin's accessToken cookie, causing a 403 on admin-only routes.
- *  localStorage IS port-scoped, so the Authorization header carries the correct,
- *  portal-specific token and must be checked first.
+ *  All portals now run on a single origin (localhost:3000 / portals-of-rac.vercel.app).
+ *  However, cookies are scoped to the domain, not the path. When admin, TTE, and
+ *  passenger portals share the same cookie jar, a login from one portal can overwrite
+ *  another's accessToken cookie. localStorage IS path-independent but per-origin,
+ *  so the Authorization header carries the correct, role-specific token and is
+ *  checked first.
  */
 const authMiddleware = (req, res, next) => {
   try {
@@ -73,6 +73,38 @@ const authMiddleware = (req, res, next) => {
       message: "Authentication failed",
     });
   }
+};
+
+/**
+ * Optional Authentication Middleware
+ * Attaches user info if a valid JWT is present, but does NOT block
+ * the request if the token is missing or expired.
+ *
+ * Used for OTP-protected routes (cancel, deboarding, change boarding)
+ * where OTP verification replaces JWT as the authentication mechanism.
+ * Logged-in users still benefit from user context being attached.
+ */
+const optionalAuth = (req, res, next) => {
+  try {
+    let token = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      token = authHeader.startsWith("Bearer ")
+        ? authHeader.substring(7)
+        : authHeader;
+    }
+    if (!token) {
+      token = req.cookies?.accessToken;
+    }
+
+    if (token) {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = decoded;
+    }
+  } catch (_) {
+    // Token invalid/expired — that's fine, proceed without user context
+  }
+  next();
 };
 
 /**
@@ -193,6 +225,7 @@ const requireTrainMatch = (req, res, next) => {
 
 module.exports = {
   authMiddleware,
+  optionalAuth,
   requireRole,
   requirePermission,
   requireTrainMatch,

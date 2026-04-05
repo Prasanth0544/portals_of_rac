@@ -605,17 +605,15 @@ class ReallocationController {
       }
 
       // Send WebSocket upgrade offer
-      const PushNotificationService = require('../services/PushNotificationService');
-      const offerResult = await PushNotificationService.sendUpgradeOffer(
+      // Send push notification via WebPushService
+      const WebPushService = require('../services/WebPushService');
+      await WebPushService.sendPushNotification(
         passenger.irctcId || passenger.IRCTC_ID,
         {
-          pnr: pnr,
-          currentStatus: passenger.pnrStatus,
-          offeredBerth: `${berthDetails.coach}-${berthDetails.berthNo}`,
-          coach: berthDetails.coach,
-          berthNo: berthDetails.berthNo,
-          berthType: berthDetails.type || 'Lower',
-          expiresIn: 900 // 15 minutes
+          title: '🎉 Upgrade Offer Available!',
+          body: `Berth ${berthDetails.coach}-${berthDetails.berthNo} (${berthDetails.type || 'Lower'}) is available for you!`,
+          url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/passenger/upgrade-offers`,
+          tag: `upgrade-offer-${pnr}`
         }
       );
 

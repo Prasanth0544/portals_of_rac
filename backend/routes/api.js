@@ -12,7 +12,7 @@ const tteController = require('../controllers/tteController'); // ✅ NEW - TTE 
 const stationWiseApprovalController = require('../controllers/StationWiseApprovalController'); // ✅ NEW - Station-wise approval
 const otpController = require('../controllers/otpController'); // ✅ NEW - OTP verification
 const validationMiddleware = require('../middleware/validation');
-const { authMiddleware, requireRole, requirePermission } = require('../middleware/auth'); // ✅ NEW
+const { authMiddleware, optionalAuth, requireRole, requirePermission } = require('../middleware/auth'); // ✅ NEW
 const { authLimiter, otpLimiter } = require('../middleware/rateLimiter'); // ✅ Rate limiting
 const CurrentStationService = require('../services/CurrentStationReallocationService');
 const AllocationService = require('../services/reallocation/AllocationService');
@@ -142,26 +142,27 @@ router.post('/passenger/revert-no-show',
 );
 
 // Get available boarding stations for change (next 3 forward stations)
+// Uses optionalAuth: OTP flow provides identity verification, JWT is optional
 router.get('/passenger/available-boarding-stations/:pnr',
-  authMiddleware,
+  optionalAuth,
   (req, res) => passengerController.getAvailableBoardingStations(req, res)
 );
 
-// Change boarding station (one-time only, requires authentication)
+// Change boarding station (one-time only, OTP-verified)
 router.post('/passenger/change-boarding-station',
-  authMiddleware,
+  optionalAuth,
   (req, res) => passengerController.changeBoardingStation(req, res)
 );
 
-// Self-cancel ticket (passenger marks as NO-SHOW, requires authentication)
+// Self-cancel ticket (passenger marks as NO-SHOW, OTP-verified)
 router.post('/passenger/self-cancel',
-  authMiddleware,
+  optionalAuth,
   (req, res) => passengerController.selfCancelTicket(req, res)
 );
 
-// Self-report deboarding (passenger left before destination, requires authentication)
+// Self-report deboarding (passenger left before destination, OTP-verified)
 router.post('/passenger/report-deboarding',
-  authMiddleware,
+  optionalAuth,
   (req, res) => passengerController.selfReportDeboarding(req, res)
 );
 

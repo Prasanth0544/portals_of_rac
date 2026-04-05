@@ -143,7 +143,7 @@ class ReallocationService {
                 {
                   title: '🎉 Upgrade Offer Available!',
                   body: `Berth ${vacantBerthInfo.fullBerthNo} in ${vacantBerthInfo.coachNo} is available!`,
-                  url: 'http://localhost:5175/#/upgrade-offers',
+                  url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/passenger/upgrade-offers`,
                   tag: `upgrade-${racPassenger.pnr}`
                 }
               );
