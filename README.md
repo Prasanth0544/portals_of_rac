@@ -1,6 +1,6 @@
 # 🚂 RAC Reallocation System
 
-A **real-time Railway RAC (Reservation Against Cancellation) seat reallocation system** built with the MERN stack. This system enables dynamic seat upgrades for RAC passengers when confirmed berths become vacant due to no-shows or cancellations.
+**Proof of Concept (PoC)** to automate the reallocation of vacant train berths to RAC passengers. A **real-time Railway RAC (Reservation Against Cancellation) seat reallocation system** built with the MERN stack. This system enables dynamic seat upgrades for RAC passengers when confirmed berths become vacant due to no-shows or cancellations.
 
 ---
 
@@ -503,6 +503,6 @@ ISC
 
 ---
 
-**Built for Indian Railways — Train 17225 Amaravathi Express** 🚂
+**Proof of Concept built for Indian Railways — Train 17225 Amaravathi Express** 🚂
 
 **Last Updated:** February 26, 2026

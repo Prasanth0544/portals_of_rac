@@ -9,6 +9,10 @@ dist/
 */build/
 */dist/
 
+# Coverage reports
+coverage/
+**/coverage/
+
 # Environment variables
 .env
 **/.env
@@ -43,9 +47,10 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Package manager lock files (optional - uncomment if needed)
-# package-lock.json
-# yarn.lock
+# Package manager lock files
+package-lock.json
+**/package-lock.json
+yarn.lock
 
 # Gemini artifacts (optional - uncomment if you don't want to track)
 # .gemini/

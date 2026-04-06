@@ -12,11 +12,10 @@ const tteController = require('../controllers/tteController'); // ✅ NEW - TTE 
 const stationWiseApprovalController = require('../controllers/StationWiseApprovalController'); // ✅ NEW - Station-wise approval
 const otpController = require('../controllers/otpController'); // ✅ NEW - OTP verification
 const validationMiddleware = require('../middleware/validation');
-const { authMiddleware, optionalAuth, requireRole, requirePermission } = require('../middleware/auth'); // ✅ NEW
+const { authMiddleware, requireRole, requirePermission } = require('../middleware/auth'); // ✅ NEW
 const { authLimiter, otpLimiter } = require('../middleware/rateLimiter'); // ✅ Rate limiting
 const CurrentStationService = require('../services/CurrentStationReallocationService');
 const AllocationService = require('../services/reallocation/AllocationService');
-const dbReady = require('../middleware/dbReady'); // ✅ Connection-ready gate
 
 // ========== AUTHENTICATION ROUTES ========== ✅ NEW
 // Staff Login (Admin + TTE)
@@ -31,13 +30,6 @@ router.post('/auth/passenger/login',
   authLimiter, // Rate limit: 5 attempts per 15 minutes
   validationMiddleware.sanitizeBody,
   (req, res) => authController.passengerLogin(req, res)
-);
-
-// Passenger Registration
-router.post('/auth/passenger/register',
-  authLimiter,
-  validationMiddleware.sanitizeBody,
-  (req, res) => authController.passengerRegister(req, res)
 );
 
 // Verify Token
@@ -64,63 +56,6 @@ router.post('/auth/staff/register',
   (req, res) => authController.staffRegister(req, res)
 );
 
-// TTE Registration for a specific train (Admin Landing Page) ✅ FIXED - was missing
-router.post('/auth/tte/register',
-  authLimiter,
-  validationMiddleware.sanitizeBody,
-  (req, res) => authController.registerTTE(req, res)
-);
-
-// Register / Add a new train to Trains_Details ✅ NEW - was missing
-router.post('/trains/register',
-  validationMiddleware.sanitizeBody,
-  async (req, res) => {
-    try {
-      const db = require('../config/db');
-      const { TRAIN_FIELDS } = require('../config/fields');
-      const { COLLECTIONS } = require('../config/collections');
-      const racDb = await db.getDb();
-      const col = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
-
-      const {
-        trainNo, trainName,
-        totalCoaches, sleeperCoachesCount, threeTierACCoachesCount, twoTierACCoachesCount
-      } = req.body;
-
-      if (!trainNo || !trainName) {
-        return res.status(400).json({ success: false, message: 'trainNo and trainName are required' });
-      }
-
-      // Check for duplicate
-      const existing = await col.findOne({ [TRAIN_FIELDS.TRAIN_NO]: Number(trainNo) });
-      if (existing) {
-        return res.status(409).json({ success: false, message: `Train ${trainNo} is already registered` });
-      }
-
-      const doc = {
-        [TRAIN_FIELDS.TRAIN_NO]: Number(trainNo),
-        [TRAIN_FIELDS.TRAIN_NAME]: trainName.trim(),
-        Total_Coaches: totalCoaches ? Number(totalCoaches) : null,
-        [TRAIN_FIELDS.SLEEPER_COACHES_COUNT]: sleeperCoachesCount ? Number(sleeperCoachesCount) : null,
-        [TRAIN_FIELDS.THREE_TIER_AC_COACHES_COUNT]: threeTierACCoachesCount ? Number(threeTierACCoachesCount) : null,
-        Two_TierAC_Coaches_Count: twoTierACCoachesCount ? Number(twoTierACCoachesCount) : null,
-        status: 'REGISTERED',
-        createdAt: new Date(),
-      };
-
-
-      await col.insertOne(doc);
-      console.log(`✅ Train ${trainNo} (${trainName}) registered`);
-
-      res.status(201).json({ success: true, message: `Train ${trainNo} registered successfully`, data: doc });
-    } catch (error) {
-      console.error('Error registering train:', error);
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-);
-
-
 // Mark passenger as NO_SHOW
 router.post('/tte/mark-no-show',
   authMiddleware,
@@ -142,28 +77,21 @@ router.post('/passenger/revert-no-show',
 );
 
 // Get available boarding stations for change (next 3 forward stations)
-// Uses optionalAuth: OTP flow provides identity verification, JWT is optional
 router.get('/passenger/available-boarding-stations/:pnr',
-  optionalAuth,
+  authMiddleware,
   (req, res) => passengerController.getAvailableBoardingStations(req, res)
 );
 
-// Change boarding station (one-time only, OTP-verified)
+// Change boarding station (one-time only, requires authentication)
 router.post('/passenger/change-boarding-station',
-  optionalAuth,
+  authMiddleware,
   (req, res) => passengerController.changeBoardingStation(req, res)
 );
 
-// Self-cancel ticket (passenger marks as NO-SHOW, OTP-verified)
+// Self-cancel ticket (passenger marks as NO-SHOW, requires authentication)
 router.post('/passenger/self-cancel',
-  optionalAuth,
+  authMiddleware,
   (req, res) => passengerController.selfCancelTicket(req, res)
-);
-
-// Self-report deboarding (passenger left before destination, OTP-verified)
-router.post('/passenger/report-deboarding',
-  optionalAuth,
-  (req, res) => passengerController.selfReportDeboarding(req, res)
 );
 
 // ✅ DUAL-APPROVAL: Passenger can approve their own RAC upgrade
@@ -180,7 +108,6 @@ router.get('/passenger/pending-upgrades/:irctcId',
 
 // ========== OTP ROUTES ==========
 // Send OTP for verification
-// NOTE: No checkTrainInitialized — OTP controller queries MongoDB directly via db.getPassengersCollection()
 router.post('/otp/send',
   otpLimiter, // Rate limit: 3 requests per hour
   validationMiddleware.sanitizeBody,
@@ -281,14 +208,6 @@ router.get('/config/current', (req, res) => {
   }
 });
 
-// ── Evaluation Dashboard API (independent DB connections) ──
-const evaluationRouter = require('./evaluationApi');
-router.use('/evaluation', evaluationRouter);
-
-// ── All routes below wait for DB connection to be ready ──
-// Prevents "Invalid Topology is closed" errors during train switching.
-router.use(dbReady);
-
 router.post('/train/initialize',
   validationMiddleware.sanitizeBody,
   validationMiddleware.validateTrainInit,
@@ -301,6 +220,7 @@ router.post('/train/start-journey',
 );
 
 router.get('/train/state',
+  validationMiddleware.checkTrainInitialized,
   (req, res) => trainController.getTrainState(req, res)
 );
 
@@ -325,71 +245,7 @@ router.get('/train/allocation-errors',
   (req, res) => trainController.getAllocationErrors(req, res)
 );
 
-// Admin train overview — TTEs, passenger counts, notification stats per train
-router.get('/admin/train-overview',
-  (req, res) => trainController.getTrainOverview(req, res)
-);
-
-// Engine status
-router.get('/train/engine-status',
-  (req, res) => trainController.getEngineStatus(req, res)
-);
-
-// Get train config from Trains_Details collection
-// → Field names from: backend/config/fields.js (SINGLE SOURCE OF TRUTH)
-router.get('/trains/:trainNo/config', async (req, res) => {
-  try {
-    const db = require('../config/db');
-    const { findTrainByNo, toTrainConfig } = require('../config/fields');
-    const col = db.getTrainDetailsCollection();
-
-    const train = await col.findOne(findTrainByNo(req.params.trainNo));
-
-    if (!train) {
-      return res.status(404).json({ success: false, message: `Train ${req.params.trainNo} not found` });
-    }
-
-    res.json({ success: true, data: toTrainConfig(train) });
-  } catch (error) {
-    console.error('Error getting train config:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Update train config in Trains_Details collection
-// → Field names from: backend/config/fields.js (SINGLE SOURCE OF TRUTH)
-router.put('/trains/:trainNo/config',
-  validationMiddleware.sanitizeBody,
-  async (req, res) => {
-    try {
-      const db = require('../config/db');
-      const { TRAIN_FIELDS, findTrainByNo } = require('../config/fields');
-      const col = db.getTrainDetailsCollection();
-
-      const updateFields = {};
-      if (req.body.trainName) updateFields[TRAIN_FIELDS.TRAIN_NAME] = req.body.trainName;
-      if (req.body.stationsCollection) updateFields[TRAIN_FIELDS.STATION_COLLECTION_NAME] = req.body.stationsCollection;
-      if (req.body.passengersCollection) updateFields[TRAIN_FIELDS.PASSENGERS_COLLECTION_NAME] = req.body.passengersCollection;
-      if (req.body.journeyDate) updateFields[TRAIN_FIELDS.JOURNEY_DATE] = req.body.journeyDate;
-
-      const result = await col.updateOne(
-        findTrainByNo(req.params.trainNo),
-        { $set: updateFields }
-      );
-
-      if (result.matchedCount === 0) {
-        return res.status(404).json({ success: false, message: `Train ${req.params.trainNo} not found` });
-      }
-
-      res.json({ success: true, message: 'Train config updated' });
-    } catch (error) {
-      console.error('Error updating train config:', error);
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-);
-
-
+// ========== REALLOCATION ROUTES ==========
 router.post('/passenger/no-show',
   validationMiddleware.sanitizeBody,
   validationMiddleware.validatePNR,
@@ -720,6 +576,8 @@ router.get('/visualization/vacancy-matrix',
 // ========== NEW PASSENGER PORTAL ROUTES ==========
 // Public PNR lookup (requires journey to have started)
 router.get('/passenger/pnr/:pnr',
+  validationMiddleware.checkTrainInitialized,
+  validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.getPNRDetails(req, res)
 );
 
@@ -765,74 +623,6 @@ router.post('/passenger/deny-upgrade',
   validationMiddleware.checkTrainInitialized,
   validationMiddleware.checkJourneyStarted,
   (req, res) => passengerController.denyUpgrade(req, res)
-);
-
-// ========== OTP VERIFICATION FOR UPGRADE OFFERS ========== ✅ NEW
-// Step 1: Send OTP to passenger's registered email
-router.post('/passenger/send-upgrade-otp',
-  otpLimiter, // Rate limit OTP sending
-  validationMiddleware.sanitizeBody,
-  validationMiddleware.checkTrainInitialized,
-  (req, res) => otpController.sendOTP(req, res)
-);
-
-// Step 2: Verify OTP and process upgrade accept/deny atomically
-router.post('/passenger/verify-upgrade-otp',
-  validationMiddleware.sanitizeBody,
-  validationMiddleware.checkTrainInitialized,
-  validationMiddleware.checkJourneyStarted,
-  async (req, res) => {
-    try {
-      const { irctcId, pnr, otp, action, offerId, berth } = req.body;
-
-      // Validate required fields
-      if (!irctcId || !pnr || !otp || !action || !offerId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Missing required fields: irctcId, pnr, otp, action, offerId'
-        });
-      }
-
-      if (!['accept', 'deny'].includes(action)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Action must be "accept" or "deny"'
-        });
-      }
-
-      // Step 1: Verify OTP
-      const OTPService = require('../services/OTPService');
-      const otpResult = await OTPService.verifyOTP(irctcId, pnr, otp);
-
-      if (!otpResult.success) {
-        return res.status(400).json({
-          success: false,
-          message: otpResult.message,
-          verified: false
-        });
-      }
-
-      // Step 2: OTP verified — now process the upgrade action
-      // Inject verified data into req.body for the existing controllers
-      req.body.pnr = pnr;
-      req.body.notificationId = offerId;
-
-      if (action === 'accept') {
-        req.body.berth = berth;
-        return passengerController.acceptUpgrade(req, res);
-      } else {
-        return passengerController.denyUpgrade(req, res);
-      }
-
-    } catch (error) {
-      console.error('❌ Error in verify-upgrade-otp:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to process upgrade verification',
-        error: error.message
-      });
-    }
-  }
 );
 
 // ========== TTE/ADMIN PORTAL ROUTES ==========
@@ -1045,7 +835,7 @@ router.get('/push/subscriptions-count', async (req, res) => {
   try {
     const PushSubscriptionService = require('../services/PushSubscriptionService');
     const count = await PushSubscriptionService.getTotalCount();
-
+    
     const adminSubs = await PushSubscriptionService.getAllAdminSubscriptions();
     const tteSubs = await PushSubscriptionService.getAllTTESubscriptions();
     const collection = await PushSubscriptionService.getCollection();
@@ -1073,11 +863,11 @@ router.post('/push/test', async (req, res) => {
     console.log('🔔 Sending test push notification to all subscribers...');
 
     const PushSubscriptionService = require('../services/PushSubscriptionService');
-
+    
     // Get all subscriptions
     const adminSubs = await PushSubscriptionService.getAllAdminSubscriptions();
     const tteSubs = await PushSubscriptionService.getAllTTESubscriptions();
-
+    
     // Get all passenger subscriptions (need to query collection directly)
     const collection = await PushSubscriptionService.getCollection();
     const passengerSubs = await collection.find({ type: 'passenger' }).toArray();
@@ -1085,8 +875,8 @@ router.post('/push/test', async (req, res) => {
     const allSubscriptions = [...adminSubs, ...passengerSubs, ...tteSubs];
 
     if (allSubscriptions.length === 0) {
-      return res.json({
-        success: false,
+      return res.json({ 
+        success: false, 
         message: 'No subscriptions found',
         details: { admin: 0, passenger: 0, tte: 0 }
       });
@@ -1116,8 +906,8 @@ router.post('/push/test', async (req, res) => {
       }
     }
 
-    res.json({
-      success: true,
+    res.json({ 
+      success: true, 
       message: `Test push sent to ${successCount} subscribers`,
       details: {
         total: allSubscriptions.length,
@@ -1133,8 +923,8 @@ router.post('/push/test', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Test push error:', error);
-    res.status(500).json({
-      success: false,
+    res.status(500).json({ 
+      success: false, 
       message: error.message,
       error: error.toString()
     });
@@ -1145,11 +935,11 @@ router.post('/push/test', async (req, res) => {
 router.post('/test-email', async (req, res) => {
   try {
     const { recipientEmail, testType } = req.body;
-
+    
     if (!recipientEmail) {
-      return res.status(400).json({
-        success: false,
-        message: 'recipientEmail is required'
+      return res.status(400).json({ 
+        success: false, 
+        message: 'recipientEmail is required' 
       });
     }
 
@@ -1245,9 +1035,9 @@ router.post('/test-email', async (req, res) => {
     }
 
     await notificationService.emailTransporter.sendMail(mailOptions);
-
-    res.json({
-      success: true,
+    
+    res.json({ 
+      success: true, 
       message: `Test email sent from ${process.env.EMAIL_USER} to ${recipientEmail}`,
       details: {
         from: process.env.EMAIL_USER,
@@ -1257,81 +1047,11 @@ router.post('/test-email', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Test email error:', error);
-    res.status(500).json({
-      success: false,
+    res.status(500).json({ 
+      success: false, 
       message: error.message,
       error: error.toString()
     });
-  }
-});
-
-// ========== CROSS-CLASS UPGRADE ROUTES ==========
-const CrossClassUpgradeService = require('../services/CrossClassUpgradeService');
-
-// GET /reallocation/cross-class-upgrades  — admin: view all eligible SL RAC → 3A/2A
-router.get('/reallocation/cross-class-upgrades', dbReady, async (req, res) => {
-  try {
-    const trainState = trainController.getGlobalTrainState(req.query.trainNo);
-    if (!trainState) return res.status(400).json({ success: false, message: 'Train not initialized' });
-    const upgrades = CrossClassUpgradeService.getEligibleUpgrades(trainState);
-    res.json({ success: true, data: { total: upgrades.length, upgrades } });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// GET /passenger/upgrade-options/:irctcId  — passenger portal: my upgrade options with costs
-router.get('/passenger/upgrade-options/:irctcId', authMiddleware, dbReady, async (req, res) => {
-  try {
-    const { irctcId } = req.params;
-    const trainState = trainController.getGlobalTrainState(req.query.trainNo);
-    if (!trainState) return res.status(400).json({ success: false, message: 'Train not initialized' });
-    const result = CrossClassUpgradeService.getUpgradeOptionsForPassenger(trainState, irctcId);
-    res.json({ success: true, data: result });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// POST /reallocation/apply-cross-class-upgrade  — admin applies upgrade
-router.post('/reallocation/apply-cross-class-upgrade', dbReady, async (req, res) => {
-  try {
-    const { pnr, targetCoach, targetBerthNo } = req.body;
-    if (!pnr || !targetCoach || !targetBerthNo) {
-      return res.status(400).json({ success: false, message: 'pnr, targetCoach, targetBerthNo required' });
-    }
-    const trainState = trainController.getGlobalTrainState(req.body.trainNo || req.query.trainNo);
-    if (!trainState) return res.status(400).json({ success: false, message: 'Train not initialized' });
-    const db = require('../config/db');
-    const result = await CrossClassUpgradeService.applyUpgrade(trainState, pnr, targetCoach, Number(targetBerthNo), db);
-    res.json({ success: true, data: result });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// POST /passenger/request-cross-class-upgrade  — passenger self-requests upgrade
-router.post('/passenger/request-cross-class-upgrade', authMiddleware, dbReady, async (req, res) => {
-  try {
-    const { pnr, targetCoach, targetBerthNo } = req.body;
-    if (!pnr || !targetCoach || !targetBerthNo) {
-      return res.status(400).json({ success: false, message: 'pnr, targetCoach, targetBerthNo required' });
-    }
-    const trainState = trainController.getGlobalTrainState(req.body.trainNo || req.query.trainNo);
-    if (!trainState) return res.status(400).json({ success: false, message: 'Train not initialized' });
-
-    // Security: only allow passenger to upgrade their own PNR
-    const passenger = trainState.racQueue.find(p => p.pnr === pnr);
-    if (!passenger) return res.status(404).json({ success: false, message: 'Passenger not found in RAC queue' });
-    if (passenger.irctcId !== req.user?.irctcId && passenger.IRCTC_ID !== req.user?.irctcId) {
-      return res.status(403).json({ success: false, message: 'You can only upgrade your own booking' });
-    }
-
-    const db = require('../config/db');
-    const result = await CrossClassUpgradeService.applyUpgrade(trainState, pnr, targetCoach, Number(targetBerthNo), db);
-    res.json({ success: true, message: 'Upgrade applied successfully', data: result });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
   }
 });
 

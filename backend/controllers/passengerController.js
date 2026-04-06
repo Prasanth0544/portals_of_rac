@@ -40,7 +40,6 @@ class PassengerController {
 
   /**
    * Get passenger details by IRCTC_ID (for passenger portal)
-   * Works even without train initialization — falls back to searching all passenger collections
    */
   async getPassengerByIRCTC(req, res) {
     try {
@@ -53,42 +52,10 @@ class PassengerController {
         });
       }
 
-      let passenger = null;
-
-      // Strategy 1: Try configured collection first
-      try {
-        passenger = await db.getPassengersCollection().findOne({ IRCTC_ID: irctcId });
-      } catch (_) {
-        // Collection not configured — fall through to strategy 2
-      }
-
-      // Strategy 2: Search across all trains' passenger collections
-      if (!passenger) {
-        try {
-          const { COLLECTIONS } = require('../config/collections');
-          const racDb = await db.getDb();
-          const passengersDb = db.getPassengersDb();
-          const trainsCol = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
-          const trains = await trainsCol.find({}, {
-            projection: { Passengers_Collection_Name: 1, passengersCollection: 1 }
-          }).toArray();
-
-          const collectionNames = new Set();
-          for (const t of trains) {
-            const name = t.passengersCollection || t.Passengers_Collection_Name;
-            if (name) collectionNames.add(name.trim());
-          }
-
-          for (const colName of collectionNames) {
-            try {
-              passenger = await passengersDb.collection(colName).findOne({ IRCTC_ID: irctcId });
-              if (passenger) break;
-            } catch (e) { /* skip */ }
-          }
-        } catch (e) {
-          console.warn('Could not search passenger collections:', e.message);
-        }
-      }
+      // Find passenger in database by IRCTC_ID
+      const passenger = await db.getPassengersCollection().findOne({
+        IRCTC_ID: irctcId
+      });
 
       if (!passenger) {
         return res.status(404).json({
@@ -96,6 +63,9 @@ class PassengerController {
           message: "No booking found for this IRCTC ID"
         });
       }
+
+      // Passenger already has Train_Name, Train_Number, Booking_Date, etc. from database
+      // No need to enrich with train state data
 
       res.json({
         success: true,
@@ -378,7 +348,7 @@ class PassengerController {
         Boarding_Station: passengerData.from,
         Deboarding_Station: passengerData.to,
         Assigned_Coach: passengerData.coach,
-        Assigned_Berth: parseInt(passengerData.seat_no),
+        Assigned_berth: parseInt(passengerData.seat_no),
         Berth_Type: berth.berth_type,
         Passenger_Status: passengerData.passenger_status || "Offline",
         NO_show: false,
@@ -431,7 +401,7 @@ class PassengerController {
             ? `RAC ${newPassenger.Rac_status}`
             : "RAC",
           coach: newPassenger.Assigned_Coach,
-          seatNo: newPassenger.Assigned_Berth,
+          seatNo: newPassenger.Assigned_berth,
           berthType: newPassenger.Berth_Type,
         });
 
@@ -646,13 +616,13 @@ class PassengerController {
   /**
    * Get pending upgrade notifications for a passenger
    */
-  async getUpgradeNotifications(req, res) {
+  getUpgradeNotifications(req, res) {
     try {
       const { pnr } = req.params;
       const UpgradeNotificationService = require("../services/UpgradeNotificationService");
 
       const notifications =
-        await UpgradeNotificationService.getPendingNotifications(pnr);
+        UpgradeNotificationService.getPendingNotifications(pnr);
 
       res.json({
         success: true,
@@ -1492,14 +1462,8 @@ class PassengerController {
       }
 
       // Update database - set NO_show to true
-      // Use $or to match both PascalCase and camelCase PNR field names
       const result = await db.getPassengersCollection().updateOne(
-        {
-          $or: [
-            { PNR_Number: pnr, IRCTC_ID: irctcId },
-            { pnr: pnr, IRCTC_ID: irctcId }
-          ]
-        },
+        { PNR_Number: pnr, IRCTC_ID: irctcId },
         {
           $set: {
             NO_show: true,
@@ -1693,142 +1657,6 @@ class PassengerController {
       }
     } catch (error) {
       console.error('❌ Error in passenger approveUpgrade:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message
-      });
-    }
-  }
-  /**
-   * Self-report deboarding (passenger deboarded before destination)
-   * POST /api/passenger/report-deboarding
-   * Body: { pnr, irctcId, passengerName, deboardingStation }
-   */
-  async selfReportDeboarding(req, res) {
-    try {
-      const { pnr, irctcId, passengerName, deboardingStation } = req.body;
-
-      if (!pnr || !irctcId) {
-        return res.status(400).json({
-          success: false,
-          message: 'PNR and IRCTC ID are required'
-        });
-      }
-
-      if (!deboardingStation) {
-        return res.status(400).json({
-          success: false,
-          message: 'Deboarding station is required'
-        });
-      }
-
-      // Find passenger in database - try both PNR field names
-      const query = passengerName
-        ? {
-          $or: [
-            { PNR_Number: pnr, IRCTC_ID: irctcId, Name: passengerName },
-            { pnr: pnr, IRCTC_ID: irctcId, Name: passengerName }
-          ]
-        }
-        : {
-          $or: [
-            { PNR_Number: pnr, IRCTC_ID: irctcId },
-            { pnr: pnr, IRCTC_ID: irctcId }
-          ]
-        };
-
-      const passenger = await db.getPassengersCollection().findOne(query);
-
-      if (!passenger) {
-        return res.status(404).json({
-          success: false,
-          message: 'Passenger not found or IRCTC ID does not match'
-        });
-      }
-
-      // Check if already marked as no-show
-      if (passenger.NO_show) {
-        return res.status(400).json({
-          success: false,
-          message: 'Passenger is already marked as deboarded/cancelled'
-        });
-      }
-
-      // Update database - set NO_show and record deboarding station
-      // Use $or to match both PascalCase and camelCase PNR field names
-      const updateQuery = passengerName
-        ? {
-            $or: [
-              { PNR_Number: pnr, IRCTC_ID: irctcId, Name: passengerName },
-              { pnr: pnr, IRCTC_ID: irctcId, Name: passengerName }
-            ]
-          }
-        : {
-            $or: [
-              { PNR_Number: pnr, IRCTC_ID: irctcId },
-              { pnr: pnr, IRCTC_ID: irctcId }
-            ]
-          };
-
-      const result = await db.getPassengersCollection().updateOne(
-        updateQuery,
-        {
-          $set: {
-            NO_show: true,
-            NO_show_timestamp: new Date(),
-            selfDeboarded: true,
-            selfDeboardedAt: new Date(),
-            actualDeboardingStation: deboardingStation
-          }
-        }
-      );
-
-      if (result.modifiedCount === 0) {
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to update deboarding status'
-        });
-      }
-
-      // Update in-memory state if train is initialized
-      const trainState = trainController.getGlobalTrainState();
-      if (trainState) {
-        const memPassenger = trainState.findPassengerByPNR(pnr);
-        if (memPassenger) {
-          memPassenger.noShow = true;
-
-          // Free up the berth
-          const location = trainState.findPassenger(pnr);
-          if (location) {
-            location.berth.removePassenger(pnr);
-            location.berth.updateStatus();
-          }
-        }
-      }
-
-      console.log(`🚉 Deboarding reported for PNR: ${pnr} at station: ${deboardingStation}`);
-
-      // Notify via WebSocket
-      try {
-        wsManager.broadcastToAdmins({
-          type: 'PASSENGER_DEBOARDED',
-          pnr,
-          passengerName: passengerName || passenger.Name,
-          deboardingStation,
-          timestamp: new Date()
-        });
-      } catch (wsErr) {
-        console.warn('WebSocket broadcast failed:', wsErr.message);
-      }
-
-      res.json({
-        success: true,
-        message: `Deboarding reported successfully at ${deboardingStation}. Your berth will be made available for other passengers.`,
-        pnr
-      });
-
-    } catch (error) {
-      console.error('❌ Error reporting deboarding:', error);
       res.status(500).json({
         success: false,
         error: error.message

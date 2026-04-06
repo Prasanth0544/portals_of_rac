@@ -14,6 +14,9 @@ class NotificationService {
                 secure: isSecurePort,           // true only for port 465 (SSL)
                 requireTLS: !isSecurePort,      // force STARTTLS on port 587
                 pool: true,                     // reuse connections — avoids Gmail rate limits from repeated auth
+                connectionTimeout: 10000,       // 10s to establish TCP connection
+                greetingTimeout: 10000,         // 10s to receive SMTP greeting
+                socketTimeout: 15000,           // 15s for socket inactivity
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASSWORD
@@ -25,6 +28,9 @@ class NotificationService {
             : {
                 service: 'gmail',
                 pool: true,
+                connectionTimeout: 10000,       // 10s to establish TCP connection
+                greetingTimeout: 10000,         // 10s to receive SMTP greeting
+                socketTimeout: 15000,           // 15s for socket inactivity
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASSWORD

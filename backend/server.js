@@ -30,8 +30,12 @@ if (process.env.NODE_ENV === 'production') {
 // Middleware
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || [
-    'http://localhost:3000',  // Unified Frontend (Vite)
-    'https://portals-of-rac.vercel.app'
+    'http://localhost:3000',  // Admin Portal (React)
+    'http://localhost:5174',  // TTE Portal (Vite)
+    'http://localhost:5175',   // Passenger Portal (Vite)
+    'https://passengerportal.vercel.app',
+    'https://rac-tte.vercel.app',
+    'https://rac-admin-page.vercel.app'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
@@ -238,28 +242,6 @@ async function startServer() {
       console.log(`  curl http://localhost:${PORT}/`);
       console.log(`  curl http://localhost:${PORT}/api/health`);
       console.log('');
-
-      // ═══════════════════════════════════════════════════════════
-      // KEEP-ALIVE SELF-PING (prevents Render free tier from sleeping)
-      // Pings /api/health every 14 minutes so the server stays awake
-      // ═══════════════════════════════════════════════════════════
-      if (process.env.NODE_ENV === 'production' && process.env.RENDER_EXTERNAL_URL) {
-        const KEEP_ALIVE_INTERVAL = 14 * 60 * 1000; // 14 minutes
-        const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
-
-        setInterval(async () => {
-          try {
-            const res = await fetch(keepAliveUrl);
-            const data = await res.json();
-            console.log(`💓 Keep-alive ping OK (uptime: ${Math.round(data.uptime)}s, clients: ${data.websocket?.connectedClients || 0})`);
-          } catch (err) {
-            console.error('💔 Keep-alive ping failed:', err.message);
-          }
-        }, KEEP_ALIVE_INTERVAL);
-
-        console.log(`💓 Keep-alive enabled: pinging ${keepAliveUrl} every 14 minutes`);
-        console.log('');
-      }
     });
 
   } catch (error) {

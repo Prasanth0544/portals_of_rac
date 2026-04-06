@@ -18,53 +18,27 @@ const csrfProtection = (req, res, next) => {
     }
 
     // Skip CSRF for specific public endpoints (login, OTP, push notifications)
-    // NOTE: req.path does NOT include the /api prefix (Express strips the mount prefix)
-    // So we compare against the path WITHOUT /api
     const publicPaths = [
-        '/auth/staff/login',
-        '/auth/staff/register',
-        '/auth/tte/register',
-        '/auth/passenger/login',
-        '/auth/passenger/register',
-        '/auth/refresh',
-        '/otp/send',
-        '/otp/verify',
-        '/config/setup',
-        '/train/initialize',
-        '/train/start-journey',
-        '/train/next-station',
-        '/train/reset',
-        '/admin/push-subscribe',
-        '/tte/push-subscribe',
-        '/passenger/push-subscribe',
-        '/test-email',
-        '/push/test',
-        '/passenger/revert-no-show',
-        '/push-subscribe',
-        '/passenger/no-show',
-        '/passenger/cancel',
-        '/passenger/accept-upgrade',
-        '/passenger/deny-upgrade',
-        '/passenger/send-upgrade-otp',
-        '/passenger/verify-upgrade-otp',
-        // OTP-protected passenger actions (secured by IRCTC ID + PNR + OTP)
-        '/passenger/self-cancel',
-        '/passenger/report-deboarding',
-        '/passenger/change-boarding-station',
-        '/passenger/available-boarding-stations',
+        '/api/auth/staff/login',
+        '/api/auth/passenger/login',
+        '/api/auth/refresh',
+        '/api/otp/send',
+        '/api/otp/verify',
+        '/api/config/setup',
+        '/api/train/initialize',
+        '/api/train/start-journey',
+        '/api/train/next-station',
+        '/api/train/reset',
+        '/api/admin/push-subscribe',
+        '/api/tte/push-subscribe',
+        '/api/passenger/push-subscribe',
+        '/api/test-email',
+        '/api/push/test',
+        '/api/passenger/revert-no-show',  // Allow passengers to revert no-show
+        '/api/push-subscribe'
     ];
 
-    // Also check full path in case middleware is mounted differently
-    const fullPath = req.originalUrl?.split('?')[0] || req.path;
-    if (publicPaths.some(p => req.path.startsWith(p) || fullPath.includes(p))) {
-        return next();
-    }
-
-    // If request has a Bearer JWT token, skip CSRF check.
-    // JWT tokens are manually attached (not auto-sent like cookies),
-    // so they inherently protect against CSRF attacks.
-    const authHeader = req.headers['authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    if (publicPaths.some(path => req.path.startsWith(path))) {
         return next();
     }
 

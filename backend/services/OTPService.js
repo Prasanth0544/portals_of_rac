@@ -93,9 +93,11 @@ class OTPService {
             console.log(`🔐 OTP stored in MongoDB for ${irctcId}/${pnr}`);
 
             // Try sending OTP email (best-effort — don't fail if email doesn't work)
+            // Uses a timeout to prevent hanging on slow SMTP connections (e.g., Render free tier)
             let emailSent = false;
             try {
-                await NotificationService.emailTransporter.sendMail({
+                const EMAIL_TIMEOUT_MS = 12000; // 12 seconds max for email delivery
+                const emailPromise = NotificationService.emailTransporter.sendMail({
                     from: `"Indian Railways OTP" <${process.env.EMAIL_USER}>`,
                     to: email,
                     subject: '🔐 Your OTP for Indian Railways',
@@ -154,6 +156,10 @@ class OTPService {
                         </html>
                     `
                 });
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Email send timed out after 12s')), EMAIL_TIMEOUT_MS)
+                );
+                await Promise.race([emailPromise, timeoutPromise]);
                 emailSent = true;
                 console.log(`📧 OTP sent to ${email} for ${irctcId}/${pnr}`);
             } catch (emailErr) {
