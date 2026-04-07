@@ -1,8 +1,22 @@
 /**
  * CSRF Protection Middleware
- * Uses double-submit cookie pattern for stateless CSRF protection
+ * Uses double-submit cookie pattern with server-side fallback
+ * for cross-origin deployments (Vercel frontend + Render backend)
+ * where third-party cookies are blocked by browsers.
  */
 const crypto = require('crypto');
+
+// Server-side token store (fallback when cookies are blocked cross-origin)
+// Maps token -> expiry timestamp
+const issuedTokens = new Map();
+
+// Cleanup expired tokens every 30 minutes
+setInterval(() => {
+    const now = Date.now();
+    for (const [token, expiry] of issuedTokens) {
+        if (now > expiry) issuedTokens.delete(token);
+    }
+}, 30 * 60 * 1000);
 
 // Generate a secure random CSRF token
 const generateToken = () => {
@@ -42,11 +56,11 @@ const csrfProtection = (req, res, next) => {
         return next();
     }
 
-    // Get token from header
+    // Get token from header and cookie
     const headerToken = req.headers['x-csrf-token'];
     const cookieToken = req.cookies?.csrfToken;
 
-    if (!headerToken || !cookieToken) {
+    if (!headerToken) {
         return res.status(403).json({
             success: false,
             message: 'CSRF token missing',
@@ -54,15 +68,30 @@ const csrfProtection = (req, res, next) => {
         });
     }
 
-    if (headerToken !== cookieToken) {
-        return res.status(403).json({
-            success: false,
-            message: 'CSRF token mismatch',
-            error: 'FORBIDDEN'
-        });
+    // Strategy 1: Double-submit cookie (same-origin or cookies working)
+    if (cookieToken) {
+        if (headerToken !== cookieToken) {
+            return res.status(403).json({
+                success: false,
+                message: 'CSRF token mismatch',
+                error: 'FORBIDDEN'
+            });
+        }
+        return next();
     }
 
-    next();
+    // Strategy 2: Server-side validation (cross-origin fallback)
+    // When third-party cookies are blocked, validate against issued tokens
+    const tokenExpiry = issuedTokens.get(headerToken);
+    if (tokenExpiry && Date.now() < tokenExpiry) {
+        return next();
+    }
+
+    return res.status(403).json({
+        success: false,
+        message: 'CSRF token missing',
+        error: 'FORBIDDEN'
+    });
 };
 
 // Endpoint to get CSRF token - sets cookie and returns token
@@ -80,6 +109,9 @@ const getCsrfToken = (req, res) => {
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
+    // Store token server-side as fallback (for cross-origin where cookies fail)
+    issuedTokens.set(token, Date.now() + 24 * 60 * 60 * 1000);
+
     res.json({
         success: true,
         csrfToken: token
@@ -91,3 +123,4 @@ module.exports = {
     getCsrfToken,
     generateToken
 };
+
