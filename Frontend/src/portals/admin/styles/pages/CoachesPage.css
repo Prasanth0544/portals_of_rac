@@ -8,7 +8,6 @@
   height: auto;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
   box-shadow: 0 4px 12px rgba(44, 62, 80, 0.1);
   border: 1px solid #e1e8ed;
 }
@@ -341,6 +340,25 @@
 
 .berth.shared:hover {
   background: linear-gradient(135deg, #f57c00 0%, #ef6c00 100%);
+}
+
+/* No-Show berth (red/grey) */
+.berth.noshow {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: line-through;
+}
+
+.berth.noshow:hover {
+  background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%);
+}
+
+/* RAC PNR badge */
+.pnr-badge.rac {
+  background: #ff9800;
+  color: white;
 }
 
 .coach-summary {

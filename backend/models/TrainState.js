@@ -353,24 +353,31 @@ class TrainState {
     let totalOnboard = 0;
     let vacant = 0;
     let occupied = 0;
-    const currentIdx = this.currentStationIdx;
 
     this.coaches.forEach(coach => {
       coach.berths.forEach(berth => {
-        // Count boarded passengers (actual people)
+        // Count boarded passengers (actual people - CNF only in berths)
         const boardedPassengers = berth.getBoardedPassengers();
         totalOnboard += boardedPassengers.length;
 
         // Count BERTHS (not passengers)
-        // Occupied = berth has at least 1 boarded passenger
-        // Vacant = berth has NO boarded passengers
         if (boardedPassengers.length > 0) {
-          occupied++;  // This berth is occupied (1 or 2 passengers, still 1 berth)
+          occupied++;
         } else {
-          vacant++;    // This berth is empty
+          vacant++;
         }
       });
     });
+
+    // ✅ FIX: Also count boarded RAC queue passengers in currentOnboard
+    // RAC passengers live in racQueue (NOT berth.passengers), so they were missed before
+    let racOnboard = 0;
+    this.racQueue.forEach(rac => {
+      if (rac.boarded && !rac.noShow) {
+        racOnboard++;
+      }
+    });
+    totalOnboard += racOnboard;
 
     this.stats.currentOnboard = totalOnboard;
     this.stats.vacantBerths = vacant;
@@ -382,7 +389,7 @@ class TrainState {
     this._buildPassengerIndexes();
 
     // Debug log to verify counts
-    console.log(`📊 Stats Update: Vacant=${vacant}, Occupied=${occupied}, Total=${vacant + occupied}, Onboard=${totalOnboard}, RAC Queue=${this.racQueue.length}`);
+    console.log(`📊 Stats Update: Vacant=${vacant}, Occupied=${occupied}, Total=${vacant+occupied}, CNF Onboard=${totalOnboard-racOnboard}, RAC Onboard=${racOnboard}, Total Onboard=${totalOnboard}, RAC Queue=${this.racQueue.length}`);
   }
 
   /**

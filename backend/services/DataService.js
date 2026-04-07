@@ -264,6 +264,14 @@ class DataService {
         return []; // Gracefully return empty array instead of throwing
       }
 
+      // ✅ FIX: Normalize DB field names — MongoDB has `Assigned_berth` (lowercase b)
+      // but all code expects `Assigned_Berth` (uppercase B)
+      passengers.forEach(p => {
+        if (p.Assigned_berth !== undefined && p.Assigned_Berth === undefined) {
+          p.Assigned_Berth = p.Assigned_berth;
+        }
+      });
+
       return passengers;
     } catch (error) {
       throw new Error(`Failed to load passengers: ${error.message}`);

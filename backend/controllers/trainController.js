@@ -400,6 +400,7 @@ class TrainController {
             class: coach.class,
             capacity: coach.capacity,
             berths: coach.berths.map(berth => ({
+              coachNo: berth.coachNo,
               berthNo: berth.berthNo,
               fullBerthNo: berth.fullBerthNo,
               type: berth.type,

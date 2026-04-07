@@ -51,6 +51,8 @@ interface TrainData {
   currentStationIdx?: number;
   journeyStarted?: boolean;
   stats?: any;
+  coaches?: any[];
+  racQueue?: any[];
 }
 
 interface StationArrivalData {
