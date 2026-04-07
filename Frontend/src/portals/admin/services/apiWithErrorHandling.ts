@@ -68,20 +68,20 @@ const getCsrfToken = (): string | null => {
 // Fetch CSRF token from server
 const fetchCsrfToken = async (): Promise<boolean> => {
   try {
-    console.log("[API] Fetching CSRF token...");
+    if (import.meta.env.DEV) console.log("[API] Fetching CSRF token...");
     const response = await axios.get(`${API_BASE_URL}/csrf-token`, {
       withCredentials: true,
     });
     // Store token from response body as fallback (cross-origin cookies may be blocked)
     if (response.data?.csrfToken) {
       csrfTokenFallback = response.data.csrfToken;
-      console.log("[API] CSRF token stored from response body");
+      if (import.meta.env.DEV) console.log("[API] CSRF token stored from response body");
     }
     const hasToken = !!getCsrfToken();
-    console.log("[API] CSRF token fetched successfully:", hasToken);
+    if (import.meta.env.DEV) console.log("[API] CSRF token fetched successfully:", hasToken);
     return hasToken;
   } catch (error) {
-    console.error("[API] Failed to fetch CSRF token:", error);
+    if (import.meta.env.DEV) console.error("[API] Failed to fetch CSRF token:", error);
     return false;
   }
 };
@@ -90,7 +90,7 @@ const fetchCsrfToken = async (): Promise<boolean> => {
 const ensureCsrfToken = async (): Promise<boolean> => {
   const existingToken = getCsrfToken();
   if (existingToken) {
-    console.log("[API] CSRF token already present");
+    if (import.meta.env.DEV) console.log("[API] CSRF token already present");
     return true;
   }
   return await fetchCsrfToken();
@@ -117,7 +117,7 @@ api.interceptors.request.use(
 
       // If CSRF token is missing, try to fetch it
       if (!csrfToken) {
-        console.warn("[API] CSRF token missing, fetching now...");
+        if (import.meta.env.DEV) console.warn("[API] CSRF token missing, fetching now...");
         await ensureCsrfToken();
         csrfToken = getCsrfToken();
       }
@@ -131,7 +131,7 @@ api.interceptors.request.use(
           );
         }
       } else {
-        console.error("[API] CSRF token still missing after fetch attempt");
+        if (import.meta.env.DEV) console.error("[API] CSRF token still missing after fetch attempt");
       }
     }
 
@@ -145,7 +145,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error("[API] Request error:", error);
+    if (import.meta.env.DEV) console.error("[API] Request error:", error);
     return Promise.reject(error);
   },
 );
@@ -161,7 +161,7 @@ api.interceptors.response.use(
   },
   async (error) => {
     if (!error.response) {
-      console.error("[API] Network error:", error.message);
+      if (import.meta.env.DEV) console.error("[API] Network error:", error.message);
       networkErrorToast();
       return Promise.reject({
         type: "NETWORK_ERROR",
@@ -173,7 +173,7 @@ api.interceptors.response.use(
     const { status, data } = error.response;
 
     if (status === 400) {
-      console.error("[API] Validation error:", data);
+      if (import.meta.env.DEV) console.error("[API] Validation error:", data);
       // Suppress toast for "journey not started" errors — these are expected
       // state mismatches (e.g. page loaded before journey init), not user errors.
       const isJourneyNotStarted =
@@ -200,7 +200,7 @@ api.interceptors.response.use(
         const refreshToken = localStorage.getItem("refreshToken");
         if (refreshToken) {
           try {
-            console.log("[API] Token expired, attempting refresh...");
+            if (import.meta.env.DEV) console.log("[API] Token expired, attempting refresh...");
             const refreshResponse = await axios.post(
               `${API_BASE_URL}/auth/refresh`,
               { refreshToken },
@@ -209,19 +209,19 @@ api.interceptors.response.use(
 
             // Save new token
             localStorage.setItem("token", newToken);
-            console.log("[API] Token refreshed successfully");
+            if (import.meta.env.DEV) console.log("[API] Token refreshed successfully");
 
             // Retry original request with new token
             error.config.headers.Authorization = `Bearer ${newToken}`;
             return api.request(error.config);
           } catch (refreshError) {
-            console.error("[API] Token refresh failed:", refreshError);
+            if (import.meta.env.DEV) console.error("[API] Token refresh failed:", refreshError);
           }
         }
       }
 
       // If refresh fails or no refresh token, logout
-      console.error("[API] Auth error:", data);
+      if (import.meta.env.DEV) console.error("[API] Auth error:", data);
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
@@ -234,14 +234,12 @@ api.interceptors.response.use(
     }
 
     if (status === 403) {
-      console.error("[API] Forbidden:", data);
+      if (import.meta.env.DEV) console.error("[API] Forbidden:", data);
 
       // If CSRF token error, try to refetch and retry
       const isCsrfError = data.message?.toLowerCase().includes("csrf");
       if (isCsrfError && !error.config._retry) {
-        console.log(
-          "[API] CSRF error detected, attempting to refetch token and retry...",
-        );
+        if (import.meta.env.DEV) console.log("[API] CSRF error detected, retrying...");
         error.config._retry = true;
 
         try {
@@ -252,7 +250,7 @@ api.interceptors.response.use(
             return api.request(error.config);
           }
         } catch (retryError) {
-          console.error("[API] CSRF token refetch failed:", retryError);
+          if (import.meta.env.DEV) console.error("[API] CSRF token refetch failed:", retryError);
         }
       }
 
@@ -265,7 +263,7 @@ api.interceptors.response.use(
     }
 
     if (status === 404) {
-      console.error("[API] Not found:", data);
+      if (import.meta.env.DEV) console.error("[API] Not found:", data);
       // Suppress toast for endpoints that commonly return 404 during normal
       // operation (e.g. /train/state before init, /trains/:id/config for new trains).
       // The calling code handles these cases gracefully — no need to alarm the user.
@@ -283,7 +281,7 @@ api.interceptors.response.use(
     }
 
     if (status === 409) {
-      console.error("[API] Conflict:", data);
+      if (import.meta.env.DEV) console.error("[API] Conflict:", data);
       errorToast("Conflict", data.message || "Operation conflict");
       return Promise.reject({
         type: "CONFLICT",
@@ -293,7 +291,7 @@ api.interceptors.response.use(
     }
 
     if (status >= 500) {
-      console.error("[API] Server error:", data);
+      if (import.meta.env.DEV) console.error("[API] Server error:", data);
       serverErrorToast();
       return Promise.reject({
         type: "SERVER_ERROR",
@@ -302,7 +300,7 @@ api.interceptors.response.use(
       } as ApiError);
     }
 
-    console.error("[API] Error:", data);
+    if (import.meta.env.DEV) console.error("[API] Error:", data);
     errorToast("Error", data.message || "An error occurred");
     return Promise.reject({
       type: "UNKNOWN_ERROR",
@@ -334,7 +332,7 @@ const safeRequest = async <T = any>(
     }
 
     if (showError && error.type !== "NOT_FOUND") {
-      console.error("[API Error Handler]", error);
+      if (import.meta.env.DEV) console.error("[API Error Handler]", error);
     }
 
     return {

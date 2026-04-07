@@ -176,8 +176,26 @@ router.post('/tte/undo',
   (req, res) => tteController.undoAction(req, res)
 );
 
+// ========== ADMIN OVERVIEW ROUTES ==========
+// Get admin train overview (TTEs, passenger counts, notification stats)
+router.get('/admin/train-overview',
+  (req, res) => trainController.getTrainOverview(req, res)
+);
+
 // ========== TRAIN ROUTES ==========
 router.get('/trains', (req, res) => trainController.list(req, res));
+
+// Register a new train (validates collections exist before registering)
+router.post('/trains/register',
+  validationMiddleware.sanitizeBody,
+  (req, res) => configController.registerTrain(req, res)
+);
+
+// List all registered trains
+router.get('/trains/list',
+  (req, res) => configController.listTrains(req, res)
+);
+
 // Dynamic configuration setup (from frontend)
 router.post('/config/setup',
   validationMiddleware.sanitizeBody,
@@ -207,6 +225,17 @@ router.get('/config/current', (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// Get config for a specific train (auto-derived from Trains_Details)
+router.get('/trains/:trainNo/config',
+  (req, res) => configController.getTrainConfig(req, res)
+);
+
+// Update config for a specific train (persists to Trains_Details)
+router.put('/trains/:trainNo/config',
+  validationMiddleware.sanitizeBody,
+  (req, res) => configController.updateTrainConfig(req, res)
+);
 
 router.post('/train/initialize',
   validationMiddleware.sanitizeBody,
@@ -243,6 +272,15 @@ router.get('/train/stats',
 router.get('/train/allocation-errors',
   validationMiddleware.checkTrainInitialized,
   (req, res) => trainController.getAllocationErrors(req, res)
+);
+
+// Engine status (for auto-timer display)
+router.get('/train/engine-status',
+  (req, res) => trainController.getEngineStatus(req, res)
+);
+
+router.get('/train/engines',
+  (req, res) => trainController.getEngineStatus(req, res)
 );
 
 // ========== REALLOCATION ROUTES ==========
