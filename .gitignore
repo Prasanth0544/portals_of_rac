@@ -47,9 +47,7 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Package manager lock files
-package-lock.json
-**/package-lock.json
+
 yarn.lock
 
 # Gemini artifacts (optional - uncomment if you don't want to track)
