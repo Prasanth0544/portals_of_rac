@@ -253,7 +253,7 @@ const UpgradeOtpModal: React.FC<UpgradeOtpModalProps> = ({
 
                 {/* Step Indicator */}
                 <div className="otp-steps">
-                    <div className={`otp-step ${step === 'identity' ? 'active' : (step !== 'identity' ? 'completed' : '')}`}>
+                    <div className={`otp-step ${step === 'identity' ? 'active' : 'completed'}`}>
                         <span className="otp-step-number">
                             {step !== 'identity' ? '✓' : '1'}
                         </span>
