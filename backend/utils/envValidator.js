@@ -26,7 +26,7 @@ const optionalEnvVars = [
     { name: 'EMAIL_HOST', default: null },
     { name: 'EMAIL_PORT', default: null },
     { name: 'EMAIL_USER', default: null },
-    { name: 'EMAIL_PASS', default: null },
+    { name: 'EMAIL_PASSWORD', default: null },
 
     // Logging
     { name: 'LOG_LEVEL', default: 'info' }

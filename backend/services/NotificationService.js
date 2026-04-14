@@ -47,17 +47,41 @@ class NotificationService {
         console.log('   Email Pass:', process.env.EMAIL_PASSWORD ? `✓ Set (${process.env.EMAIL_PASSWORD.length} chars)` : '✗ NOT SET');
         console.log('   SMTP:', process.env.EMAIL_HOST || 'gmail (default)');
 
-        // ✅ Verify SMTP credentials on startup
+        // ✅ Verify SMTP credentials on startup (non-blocking)
+        // Tracks whether SMTP is reachable so we can skip doomed send attempts
+        this.smtpVerified = false;
+        this.smtpFailed = false;
+
         if (this.emailTransporter && process.env.NODE_ENV !== 'test') {
-            this.emailTransporter.verify((error, success) => {
-                if (error) {
-                    console.error('❌ SMTP credential verification FAILED:', error.message);
-                    console.error('   → Check EMAIL_USER and EMAIL_PASSWORD in .env');
-                    console.error('   → Generate a new App Password: https://myaccount.google.com/apppasswords');
-                } else {
-                    console.log('✅ SMTP credentials verified — email is ready to send');
-                }
+            // Run verification async — don't block server startup
+            const VERIFY_TIMEOUT_MS = 5000; // 5s max (was 10s)
+            const verifyPromise = new Promise((resolve, reject) => {
+                this.emailTransporter.verify((error, success) => {
+                    if (error) reject(error);
+                    else resolve(success);
+                });
             });
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('SMTP verify timed out after 5s')), VERIFY_TIMEOUT_MS)
+            );
+
+            Promise.race([verifyPromise, timeoutPromise])
+                .then(() => {
+                    this.smtpVerified = true;
+                    console.log('✅ SMTP credentials verified — email is ready to send');
+                })
+                .catch((error) => {
+                    this.smtpFailed = true;
+                    console.error('❌ SMTP credential verification FAILED:', error.message);
+                    if (error.message.includes('timeout') || error.message.includes('ECONNREFUSED')) {
+                        console.error('   → Render free tier blocks outbound SMTP (port 587/465)');
+                        console.error('   → Emails will fall back to console logging');
+                        console.error('   → For production email, use an HTTP email API (Resend, SendGrid)');
+                    } else {
+                        console.error('   → Check EMAIL_USER and EMAIL_PASSWORD in .env');
+                        console.error('   → Generate a new App Password: https://myaccount.google.com/apppasswords');
+                    }
+                });
         }
     }
 
