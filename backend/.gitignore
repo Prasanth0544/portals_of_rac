@@ -6,3 +6,9 @@
 node_modules
 ENV_UPDATE_INSTRUCTIONS.txt
 
+# Coverage and test outputs
+coverage/
+coverage_*.txt
+jest_*.txt
+jest_*.json
+test_failures.log

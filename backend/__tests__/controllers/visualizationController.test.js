@@ -21,7 +21,8 @@ describe('visualizationController', () => {
     beforeEach(() => {
         req = {
             params: {},
-            query: {}
+            query: {},
+            body: {}
         };
         res = {
             json: jest.fn(),

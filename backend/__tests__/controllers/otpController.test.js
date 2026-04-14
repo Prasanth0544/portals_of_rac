@@ -44,7 +44,8 @@ describe('otpController', () => {
 
             OTPService.sendOTP.mockResolvedValue({
                 success: true,
-                expiresIn: 300
+                expiresIn: 300,
+                emailSent: true
             });
 
             await otpController.sendOTP(req, res);
@@ -64,19 +65,6 @@ describe('otpController', () => {
             );
         });
 
-        it('should return 400 if irctcId is missing', async () => {
-            req.body = { pnr: '1234567890' };
-
-            await otpController.sendOTP(req, res);
-
-            expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    success: false,
-                    message: expect.stringContaining('required')
-                })
-            );
-        });
 
         it('should return 400 if pnr is missing', async () => {
             req.body = { irctcId: 'TEST123' };
@@ -86,7 +74,7 @@ describe('otpController', () => {
             expect(res.status).toHaveBeenCalledWith(400);
         });
 
-        it('should return 404 if passenger not found', async () => {
+        it('should return 400 if passenger not found', async () => {
             req.body = {
                 irctcId: 'TEST123',
                 pnr: '1234567890'
@@ -98,10 +86,11 @@ describe('otpController', () => {
 
             await otpController.sendOTP(req, res);
 
-            expect(res.status).toHaveBeenCalledWith(404);
+            expect(res.status).toHaveBeenCalledWith(400);
             expect(res.json).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    message: 'Passenger not found'
+                    success: false,
+                    message: expect.stringContaining('not found')
                 })
             );
         });
@@ -132,31 +121,6 @@ describe('otpController', () => {
             );
         });
 
-        it('should return 400 if passenger has no email', async () => {
-            req.body = {
-                irctcId: 'TEST123',
-                pnr: '1234567890'
-            };
-
-            const mockPassenger = {
-                PNR_Number: '1234567890',
-                IRCTC_ID: 'TEST123'
-                // No Email field
-            };
-
-            db.getPassengersCollection.mockReturnValue({
-                findOne: jest.fn().mockResolvedValue(mockPassenger)
-            });
-
-            await otpController.sendOTP(req, res);
-
-            expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    message: expect.stringContaining('No email address')
-                })
-            );
-        });
 
         it('should mask email in response', async () => {
             req.body = {
@@ -176,7 +140,8 @@ describe('otpController', () => {
 
             OTPService.sendOTP.mockResolvedValue({
                 success: true,
-                expiresIn: 300
+                expiresIn: 300,
+                emailSent: true
             });
 
             await otpController.sendOTP(req, res);
@@ -204,7 +169,8 @@ describe('otpController', () => {
 
             OTPService.sendOTP.mockResolvedValue({
                 success: true,
-                expiresIn: 300
+                expiresIn: 300,
+                emailSent: true
             });
 
             await otpController.sendOTP(req, res);
@@ -245,6 +211,153 @@ describe('otpController', () => {
                 })
             );
         });
+
+        it('should support fallback lookup when primary collection access fails', async () => {
+            req.body = { irctcId: 'TEST123', pnr: '1234567890' };
+            db.getPassengersCollection.mockImplementation(() => {
+                throw new Error('primary fail');
+            });
+            const trainsCol = {
+                find: jest.fn(() => ({
+                    toArray: jest.fn().mockResolvedValue([{ Passengers_Collection_Name: 'pax_col' }])
+                }))
+            };
+            const passengersDb = {
+                collection: jest.fn(() => ({
+                    findOne: jest.fn().mockResolvedValue({
+                        PNR_Number: '1234567890',
+                        IRCTC_ID: 'TEST123',
+                        Email: 'fallback@example.com'
+                    })
+                }))
+            };
+            db.getPassengersDb.mockReturnValue(passengersDb);
+            db.getDb.mockResolvedValue({
+                collection: jest.fn(() => trainsCol)
+            });
+            OTPService.sendOTP.mockResolvedValue({ expiresIn: 300, otp: '123456', emailSent: true });
+
+            await otpController.sendOTP(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('should return not found when both primary and fallback passenger lookups fail', async () => {
+            req.body = { irctcId: 'TEST123', pnr: '1234567890' };
+            db.getPassengersCollection.mockImplementation(() => {
+                throw new Error('primary fail');
+            });
+            db.getPassengersDb.mockImplementation(() => {
+                throw new Error('fallback fail');
+            });
+            db.getDb.mockResolvedValue({ collection: jest.fn() });
+
+            await otpController.sendOTP(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should use in-memory passenger fallback when DB lookup fails', async () => {
+            jest.resetModules();
+            jest.doMock('../../services/OTPService');
+            jest.doMock('../../config/db');
+            jest.doMock('../../controllers/trainController', () => ({
+                getGlobalTrainState: jest.fn(() => ({
+                    findPassengerByPNR: jest.fn(() => ({
+                        pnr: '1234567890',
+                        irctcId: 'TEST123',
+                        email: 'memory@example.com',
+                        name: 'Memory User'
+                    }))
+                }))
+            }));
+            const localController = require('../../controllers/otpController');
+            const localOtpService = require('../../services/OTPService');
+            const localDb = require('../../config/db');
+
+            const localReq = { body: { pnr: '1234567890', irctcId: 'TEST123' } };
+            const localRes = { json: jest.fn(), status: jest.fn().mockReturnThis() };
+
+            localDb.getPassengersCollection.mockReturnValue({
+                findOne: jest.fn().mockResolvedValue(null)
+            });
+            localOtpService.sendOTP.mockResolvedValue({ expiresIn: 300, otp: '123456', emailSent: true });
+
+            await localController.sendOTP(localReq, localRes);
+            expect(localRes.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('should fallback email from passenger accounts when passenger email missing', async () => {
+            req.body = { pnr: '1234567890', irctcId: 'TEST123' };
+            db.getPassengersCollection.mockReturnValue({
+                findOne: jest.fn().mockResolvedValue({
+                    PNR_Number: '1234567890',
+                    IRCTC_ID: 'TEST123'
+                })
+            });
+            db.getDb.mockResolvedValue({
+                collection: jest.fn(() => ({
+                    findOne: jest.fn().mockResolvedValue({ email: 'account@example.com' })
+                }))
+            });
+            OTPService.sendOTP.mockResolvedValue({ expiresIn: 300, otp: '123456', emailSent: true });
+
+            await otpController.sendOTP(req, res);
+            expect(OTPService.sendOTP).toHaveBeenCalledWith(
+                'TEST123',
+                '1234567890',
+                'account@example.com',
+                'ticket action'
+            );
+        });
+
+        it('should use demo email fallback when no email found anywhere', async () => {
+            req.body = { pnr: '1234567890', irctcId: 'TEST123' };
+            db.getPassengersCollection.mockReturnValue({
+                findOne: jest.fn().mockResolvedValue({
+                    PNR_Number: '1234567890',
+                    IRCTC_ID: 'TEST123'
+                })
+            });
+            db.getDb.mockResolvedValue({
+                collection: jest.fn(() => ({
+                    findOne: jest.fn().mockResolvedValue(null)
+                }))
+            });
+            OTPService.sendOTP.mockResolvedValue({ expiresIn: 300, otp: '123456', emailSent: false });
+
+            await otpController.sendOTP(req, res);
+            expect(OTPService.sendOTP).toHaveBeenCalledWith(
+                'TEST123',
+                '1234567890',
+                'demo-passenger@indianrailways.gov.in',
+                'ticket action'
+            );
+            expect(res.json).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    emailSent: false,
+                    message: expect.stringContaining('email delivery failed')
+                })
+            );
+        });
+
+        it('should continue with demo email when account email fallback lookup fails', async () => {
+            req.body = { pnr: '1234567890', irctcId: 'TEST123' };
+            db.getPassengersCollection.mockReturnValue({
+                findOne: jest.fn().mockResolvedValue({
+                    PNR_Number: '1234567890',
+                    IRCTC_ID: 'TEST123'
+                })
+            });
+            db.getDb.mockRejectedValue(new Error('account lookup fail'));
+            OTPService.sendOTP.mockResolvedValue({ expiresIn: 300, otp: '123456', emailSent: false });
+
+            await otpController.sendOTP(req, res);
+            expect(OTPService.sendOTP).toHaveBeenCalledWith(
+                'TEST123',
+                '1234567890',
+                'demo-passenger@indianrailways.gov.in',
+                'ticket action'
+            );
+        });
     });
 
     describe('verifyOTP', () => {
@@ -271,13 +384,6 @@ describe('otpController', () => {
             );
         });
 
-        it('should return 400 if irctcId is missing', async () => {
-            req.body = { pnr: '1234567890', otp: '123456' };
-
-            await otpController.verifyOTP(req, res);
-
-            expect(res.status).toHaveBeenCalledWith(400);
-        });
 
         it('should return 400 if pnr is missing', async () => {
             req.body = { irctcId: 'TEST123', otp: '123456' };
@@ -337,6 +443,28 @@ describe('otpController', () => {
                     verified: false
                 })
             );
+        });
+
+        it('should infer IRCTC id from passengers collection when missing in request', async () => {
+            req.body = { pnr: '1234567890', otp: '123456' };
+            db.getPassengersCollection.mockReturnValue({
+                findOne: jest.fn().mockResolvedValue({ IRCTC_ID: 'INF123' })
+            });
+            OTPService.verifyOTP.mockResolvedValue({ success: true, message: 'ok' });
+
+            await otpController.verifyOTP(req, res);
+            expect(OTPService.verifyOTP).toHaveBeenCalledWith('INF123', '1234567890', '123456');
+        });
+
+        it('should fallback to demo_user when inferring IRCTC fails', async () => {
+            req.body = { pnr: '1234567890', otp: '123456' };
+            db.getPassengersCollection.mockImplementation(() => {
+                throw new Error('collection fail');
+            });
+            OTPService.verifyOTP.mockResolvedValue({ success: true, message: 'ok' });
+
+            await otpController.verifyOTP(req, res);
+            expect(OTPService.verifyOTP).toHaveBeenCalledWith('demo_user', '1234567890', '123456');
         });
     });
 });

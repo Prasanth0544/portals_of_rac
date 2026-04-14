@@ -123,7 +123,6 @@ describe('UpgradeNotificationService - Comprehensive Tests', () => {
 
             expect(count).toBe(5);
             expect(mockCollection.deleteMany).toHaveBeenCalledWith({
-                stationCode: 'STB',
                 status: 'PENDING'
             });
         });
@@ -246,8 +245,8 @@ describe('UpgradeNotificationService - Comprehensive Tests', () => {
     describe('getPendingNotifications', () => {
         it('should get pending notifications for passenger', async () => {
             const mockNotifications = [
-                { id: 'N1', pnr: 'P001', status: 'PENDING' },
-                { id: 'N2', pnr: 'P001', status: 'PENDING' }
+                { id: 'N1', pnr: 'P001', status: 'PENDING', createdAt: new Date().toISOString() },
+                { id: 'N2', pnr: 'P001', status: 'PENDING', createdAt: new Date().toISOString() }
             ];
             mockCollection.toArray.mockResolvedValue(mockNotifications);
 

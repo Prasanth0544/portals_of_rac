@@ -12,9 +12,11 @@ const trainStates = new Map();
 let wsManager = null;
 
 // Initialize wsManager after server starts
-setTimeout(() => {
-  wsManager = require('../config/websocket');
-}, 1000);
+if (process.env.NODE_ENV !== 'test') {
+  setTimeout(() => {
+    wsManager = require('../config/websocket');
+  }, 1000).unref();
+}
 
 /**
  * Update train status in MongoDB (Trains_Details collection)

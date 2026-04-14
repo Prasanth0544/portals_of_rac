@@ -111,7 +111,8 @@ describe('Auth Flow Integration', () => {
                 passwordHash: hashedPassword,
                 name: 'Test TTE',
                 role: 'TTE',
-                active: true
+                active: true,
+                trainAssigned: '17225'
             });
 
             const req = {

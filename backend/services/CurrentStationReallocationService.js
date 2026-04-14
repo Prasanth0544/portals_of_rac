@@ -581,7 +581,11 @@ class CurrentStationReallocationService {
             console.log(`   📡 Sent targeted WS offers to ${pushEligible.length} passengers`);
 
             // 2️⃣ Background queue — push + email processed asynchronously (fire-and-forget)
-            NotificationQueueService.enqueueUpgradeOffers(pushEligible);
+            try {
+                NotificationQueueService.enqueueUpgradeOffers(pushEligible);
+            } catch (queueErr) {
+                console.error(`   ⚠️ Failed to enqueue upgrade offers:`, queueErr.message);
+            }
         }
 
         console.log(`✅ Created ${pendingReallocations.length} pending reallocations for approval`);

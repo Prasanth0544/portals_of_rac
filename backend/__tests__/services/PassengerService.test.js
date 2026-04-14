@@ -24,7 +24,8 @@ describe('PassengerService', () => {
         };
 
         mockPassengersCollection = {
-            findOne: jest.fn()
+            findOne: jest.fn(),
+            updateOne: jest.fn()
         };
 
         db.getPassengersCollection = jest.fn(() => mockPassengersCollection);
@@ -61,7 +62,7 @@ describe('PassengerService', () => {
 
             expect(result.success).toBe(true);
             expect(result.notification.status).toBe('ACCEPTED');
-            expect(UpgradeNotificationService.acceptUpgrade).toHaveBeenCalledWith('P001', 'NOTIF123');
+            expect(UpgradeNotificationService.acceptUpgrade).toHaveBeenCalledWith('P001', 'NOTIF123', undefined);
         });
 
         it('should throw error if notification not found', async () => {
@@ -140,7 +141,7 @@ describe('PassengerService', () => {
 
             const result = await PassengerService.acceptUpgrade('P001', 'NOTIF123', mockTrainState);
 
-            expect(result.message).toContain('Pending TTE confirmation');
+            expect(result.message).toContain('Upgrade completed');
         });
     });
 
@@ -156,7 +157,7 @@ describe('PassengerService', () => {
 
             expect(result.success).toBe(true);
             expect(result.notification.status).toBe('DENIED');
-            expect(UpgradeNotificationService.denyUpgrade).toHaveBeenCalledWith('P001', 'NOTIF123');
+            expect(UpgradeNotificationService.denyUpgrade).toHaveBeenCalledWith('P001', 'NOTIF123', 'Passenger declined', null);
         });
 
         it('should throw error if notification not found', async () => {
@@ -195,7 +196,7 @@ describe('PassengerService', () => {
             const result = await PassengerService.getUpgradeNotifications('P001');
 
             expect(result).toEqual(notifications);
-            expect(UpgradeNotificationService.getAllNotifications).toHaveBeenCalledWith('P001');
+            expect(UpgradeNotificationService.getAllNotifications).toHaveBeenCalledWith('P001', null);
         });
 
         it('should return empty array if no notifications', async () => {
@@ -219,7 +220,7 @@ describe('PassengerService', () => {
             Train_Number: '17225',
             Train_Name: 'Amaravathi Express',
             Assigned_Coach: 'S1',
-            Assigned_berth: 15,
+            Assigned_Berth: 15,
             Berth_Type: 'Lower Berth',
             PNR_Status: 'CNF',
             Rac_status: '-',
@@ -314,7 +315,7 @@ describe('PassengerService', () => {
                 Age: 30,
                 Gender: 'M',
                 Assigned_Coach: 'S1',
-                Assigned_berth: 15,
+                Assigned_Berth: 15,
                 PNR_Status: 'CNF',
                 Class: 'SL'
             };

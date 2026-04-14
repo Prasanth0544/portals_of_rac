@@ -108,10 +108,30 @@ describe('tteController - Comprehensive Tests', () => {
             expect(response.data.count).toBe(2);
         });
 
+        it('should filter by pending status', async () => {
+            req.query.status = 'pending';
+            await controller.getAllPassengersFiltered(req, res);
+            const response = res.json.mock.calls[0][0];
+            expect(response.data.count).toBe(0);
+        });
+
+        it('should filter by deboarded status', async () => {
+            req.query.status = 'deboarded';
+            await controller.getAllPassengersFiltered(req, res);
+            const response = res.json.mock.calls[0][0];
+            expect(response.data.count).toBe(0);
+        });
+
         it('should return 400 if train not initialized', async () => {
             trainController.getGlobalTrainState.mockReturnValue(null);
             await controller.getAllPassengersFiltered(req, res);
             expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 500 when filter processing throws', async () => {
+            mockTrainState.getAllPassengers.mockImplementation(() => { throw new Error('filter fail'); });
+            await controller.getAllPassengersFiltered(req, res);
+            expect(res.status).toHaveBeenCalledWith(500);
         });
     });
 
@@ -140,6 +160,12 @@ describe('tteController - Comprehensive Tests', () => {
             await controller.getCurrentlyBoardedPassengers(req, res);
             expect(res.status).toHaveBeenCalledWith(400);
         });
+
+        it('should return 500 when boarded passenger lookup throws', async () => {
+            mockTrainState.getAllPassengers.mockImplementation(() => { throw new Error('boarded fail'); });
+            await controller.getCurrentlyBoardedPassengers(req, res);
+            expect(res.status).toHaveBeenCalledWith(500);
+        });
     });
 
     describe('getBoardedRACPassengers', () => {
@@ -166,6 +192,12 @@ describe('tteController - Comprehensive Tests', () => {
             trainController.getGlobalTrainState.mockReturnValue(null);
             await controller.getBoardedRACPassengers(req, res);
             expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 500 when boarded RAC processing throws', async () => {
+            mockTrainState.getAllPassengers.mockImplementation(() => { throw new Error('rac fail'); });
+            await controller.getBoardedRACPassengers(req, res);
+            expect(res.status).toHaveBeenCalledWith(500);
         });
     });
 
@@ -203,6 +235,14 @@ describe('tteController - Comprehensive Tests', () => {
             await controller.manualMarkBoarded(req, res);
             expect(res.status).toHaveBeenCalledWith(404);
         });
+
+        it('should return 500 when DB update fails in manualMarkBoarded', async () => {
+            req.body.pnr = 'P001';
+            mockTrainState.findPassengerByPNR.mockReturnValue({ pnr: 'P001', name: 'John', boarded: false });
+            mockPassengersCollection.updateOne.mockRejectedValue(new Error('boarded db fail'));
+            await controller.manualMarkBoarded(req, res);
+            expect(res.status).toHaveBeenCalledWith(500);
+        });
     });
 
     describe('manualMarkDeboarded', () => {
@@ -235,6 +275,20 @@ describe('tteController - Comprehensive Tests', () => {
             await controller.manualMarkDeboarded(req, res);
             expect(res.status).toHaveBeenCalledWith(404);
         });
+
+        it('should return 400 if train not initialized in manualMarkDeboarded', async () => {
+            req.body.pnr = 'P001';
+            trainController.getGlobalTrainState.mockReturnValue(null);
+            await controller.manualMarkDeboarded(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 500 when manualMarkDeboarded throws', async () => {
+            req.body.pnr = 'P001';
+            mockTrainState.findPassengerByPNR.mockImplementation(() => { throw new Error('deboard fail'); });
+            await controller.manualMarkDeboarded(req, res);
+            expect(res.status).toHaveBeenCalledWith(500);
+        });
     });
 
     describe('confirmUpgrade', () => {
@@ -264,6 +318,40 @@ describe('tteController - Comprehensive Tests', () => {
             trainController.getGlobalTrainState.mockReturnValue(null);
             await controller.confirmUpgrade(req, res);
             expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 404 when notification is missing', async () => {
+            req.body = { pnr: 'P001234567', notificationId: 'N404' };
+            const UpgradeNotificationService = require('../../services/UpgradeNotificationService');
+            UpgradeNotificationService.getAllNotifications = jest.fn(() => []);
+            await controller.confirmUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should return 400 when notification is already finalized', async () => {
+            req.body = { pnr: 'P001234567', notificationId: 'N001' };
+            const UpgradeNotificationService = require('../../services/UpgradeNotificationService');
+            UpgradeNotificationService.getAllNotifications = jest.fn(() => [{ id: 'N001', status: 'DENIED' }]);
+            await controller.confirmUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should confirm upgrade successfully', async () => {
+            req.body = { pnr: 'P001234567', notificationId: 'N001' };
+            req.user = { username: 'tte_user' };
+            const UpgradeNotificationService = require('../../services/UpgradeNotificationService');
+            UpgradeNotificationService.getAllNotifications = jest.fn(() => [{ id: 'N001', status: 'PENDING' }]);
+            UpgradeNotificationService.acceptUpgrade = jest.fn(() => ({
+                offeredCoach: 'S1',
+                offeredSeatNo: 10,
+                offeredBerth: 'S1-10'
+            }));
+            ReallocationService.upgradeRACPassengerWithCoPassenger.mockResolvedValue({ success: true });
+            mockTrainState.findPassengerByPNR.mockReturnValue({ name: 'John', irctcId: 'IR123' });
+            mockTrainState.recordAction = jest.fn();
+
+            await controller.confirmUpgrade(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
     });
 
@@ -426,6 +514,236 @@ describe('tteController - Comprehensive Tests', () => {
             expect(res.json).toHaveBeenCalled();
             const response = res.json.mock.calls[0][0];
             expect(response.success).toBe(true);
+        });
+
+        it('should continue when vacancy processing reports an error', async () => {
+            req.body.pnr = 'P001';
+            mockTrainState.findPassenger.mockReturnValue({
+                berth: { berthNo: 15, fullBerthNo: 'S1-15', type: 'LB' },
+                coachNo: 'S1',
+                coach: { class: 'SL', coach_name: 'S1' },
+                passenger: { name: 'John', coach: 'S1', berth: 15 }
+            });
+            mockTrainState.markBoardedPassengerNoShow = jest.fn().mockResolvedValue({ pnr: 'P001' });
+            mockPassengersCollection.findOne.mockResolvedValue({
+                PNR_Number: 'P001',
+                Email: 'test@test.com',
+                Mobile: '1234567890',
+                IRCTC_ID: 'IR123'
+            });
+            const NotificationService = require('../../services/NotificationService');
+            const InAppNotificationService = require('../../services/InAppNotificationService');
+            const WebPushService = require('../../services/WebPushService');
+            NotificationService.sendNoShowMarkedNotification = jest.fn().mockResolvedValue();
+            InAppNotificationService.createNotification = jest.fn();
+            WebPushService.sendNoShowAlert = jest.fn().mockResolvedValue({ success: true });
+            ReallocationService.processVacancyForUpgrade.mockResolvedValue({ error: 'offer failed', offersCreated: 0 });
+
+            await controller.markNoShow(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('should map markNoShow not found error to 404', async () => {
+            req.body.pnr = 'P404';
+            mockTrainState.findPassenger.mockReturnValue(null);
+            mockTrainState.markBoardedPassengerNoShow = jest.fn().mockRejectedValue(new Error('passenger not found'));
+            await controller.markNoShow(req, res);
+            expect(res.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should map markNoShow not boarded error to 400', async () => {
+            req.body.pnr = 'P500';
+            mockTrainState.findPassenger.mockReturnValue(null);
+            mockTrainState.markBoardedPassengerNoShow = jest.fn().mockRejectedValue(new Error('passenger not boarded'));
+            await controller.markNoShow(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+    });
+
+    describe('revertNoShow', () => {
+        it('should return 400 when PNR is missing', async () => {
+            req.body = {};
+            await controller.revertNoShow(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 400 when train not initialized', async () => {
+            req.body = { pnr: 'P001234567' };
+            trainController.getGlobalTrainState.mockReturnValue(null);
+            await controller.revertNoShow(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 404 when passenger is absent in DB timestamp check', async () => {
+            req.body = { pnr: 'P001234567' };
+            mockPassengersCollection.findOne.mockResolvedValue(null);
+            await controller.revertNoShow(req, res);
+            expect(res.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should return 403 when 30-minute window expired', async () => {
+            req.body = { pnr: 'P001234567' };
+            const oldTime = new Date(Date.now() - 31 * 60 * 1000).toISOString();
+            mockPassengersCollection.findOne.mockResolvedValue({ NO_show_timestamp: oldTime });
+            await controller.revertNoShow(req, res);
+            expect(res.status).toHaveBeenCalledWith(403);
+        });
+
+        it('should revert no-show successfully', async () => {
+            req.body = { pnr: 'P001234567' };
+            mockPassengersCollection.findOne.mockResolvedValue({ NO_show_timestamp: new Date().toISOString() });
+            mockTrainState.revertBoardedPassengerNoShow = jest.fn().mockResolvedValue({
+                pnr: 'P001234567',
+                passenger: { name: 'John' }
+            });
+            await controller.revertNoShow(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+    });
+
+    describe('getActionHistory', () => {
+        it('should return 400 when train not initialized', async () => {
+            trainController.getGlobalTrainState.mockReturnValue(null);
+            await controller.getActionHistory(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return action history', async () => {
+            mockTrainState.getActionHistory = jest.fn().mockReturnValue([{ id: 'A1' }]);
+            await controller.getActionHistory(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, data: [{ id: 'A1' }] }));
+        });
+    });
+
+    describe('undoAction', () => {
+        it('should return 400 when actionId missing', async () => {
+            req.body = {};
+            await controller.undoAction(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 404 for action not found error', async () => {
+            req.body = { actionId: 'A1' };
+            mockTrainState.undoLastAction = jest.fn().mockRejectedValue(new Error('Action not found'));
+            await controller.undoAction(req, res);
+            expect(res.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should return success when undo works', async () => {
+            req.body = { actionId: 'A1' };
+            mockTrainState.undoLastAction = jest.fn().mockResolvedValue({ action: { id: 'A1' } });
+            await controller.undoAction(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('should map already undone error to 409', async () => {
+            req.body = { actionId: 'A1' };
+            mockTrainState.undoLastAction = jest.fn().mockRejectedValue(new Error('already undone'));
+            await controller.undoAction(req, res);
+            expect(res.status).toHaveBeenCalledWith(409);
+        });
+
+        it('should map action expired error to 410', async () => {
+            req.body = { actionId: 'A1' };
+            mockTrainState.undoLastAction = jest.fn().mockRejectedValue(new Error('too old to undo'));
+            await controller.undoAction(req, res);
+            expect(res.status).toHaveBeenCalledWith(410);
+        });
+
+        it('should map station mismatch error to 409', async () => {
+            req.body = { actionId: 'A1' };
+            mockTrainState.undoLastAction = jest.fn().mockRejectedValue(new Error('Cannot undo actions from previous stations'));
+            await controller.undoAction(req, res);
+            expect(res.status).toHaveBeenCalledWith(409);
+        });
+
+        it('should map berth collision error to 409', async () => {
+            req.body = { actionId: 'A1' };
+            mockTrainState.undoLastAction = jest.fn().mockRejectedValue(new Error('Cannot undo because berth is now occupied'));
+            await controller.undoAction(req, res);
+            expect(res.status).toHaveBeenCalledWith(409);
+        });
+
+        it('should map unknown action type to 400', async () => {
+            req.body = { actionId: 'A1' };
+            mockTrainState.undoLastAction = jest.fn().mockRejectedValue(new Error('Unknown action type'));
+            await controller.undoAction(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+    });
+
+    describe('offline upgrade flows', () => {
+        it('should return 400 when addOfflineUpgrade fields are missing', async () => {
+            req.body = { pnr: 'P001' };
+            await controller.addOfflineUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should add offline upgrade successfully', async () => {
+            req.body = { pnr: 'P001', berthDetails: { coach: 'S1', berthNo: 10, type: 'Lower' } };
+            mockTrainState.racQueue = [{ pnr: 'P001', name: 'John', pnrStatus: 'RAC', racStatus: 'RAC 1', from: 'STA', to: 'STC', class: 'SL', age: 30, gender: 'M' }];
+            await controller.addOfflineUpgrade(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('should return pending offline upgrades', async () => {
+            controller.offlineUpgradesQueue = [{ id: 'U1', status: 'pending' }, { id: 'U2', status: 'confirmed' }];
+            await controller.getOfflineUpgrades(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                success: true,
+                data: expect.objectContaining({ total: 1 })
+            }));
+        });
+
+        it('should return 400 when confirmOfflineUpgrade id missing', async () => {
+            req.body = {};
+            await controller.confirmOfflineUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 404 when confirmOfflineUpgrade id not found', async () => {
+            req.body = { upgradeId: 'U404' };
+            controller.offlineUpgradesQueue = [];
+            await controller.confirmOfflineUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should return 400 when confirmOfflineUpgrade train is not initialized', async () => {
+            req.body = { upgradeId: 'U1' };
+            controller.offlineUpgradesQueue = [{ id: 'U1', pnr: 'P001', coach: 'S1', berthNo: 10, passengerName: 'John' }];
+            trainController.getGlobalTrainState.mockReturnValue(null);
+            await controller.confirmOfflineUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 400 when confirmOfflineUpgrade service fails', async () => {
+            req.body = { upgradeId: 'U1' };
+            controller.offlineUpgradesQueue = [{ id: 'U1', pnr: 'P001', coach: 'S1', berthNo: 10, passengerName: 'John' }];
+            ReallocationService.upgradeRACPassengerWithCoPassenger.mockResolvedValue({ success: false, error: 'upgrade fail' });
+            await controller.confirmOfflineUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should confirm offline upgrade successfully', async () => {
+            req.body = { upgradeId: 'U1' };
+            controller.offlineUpgradesQueue = [{ id: 'U1', pnr: 'P001', coach: 'S1', berthNo: 10, passengerName: 'John', status: 'pending' }];
+            ReallocationService.upgradeRACPassengerWithCoPassenger.mockResolvedValue({ success: true });
+            await controller.confirmOfflineUpgrade(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('should return 404 when rejecting missing offline upgrade', async () => {
+            req.body = { upgradeId: 'U404' };
+            controller.offlineUpgradesQueue = [];
+            await controller.rejectOfflineUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should reject offline upgrade successfully', async () => {
+            req.body = { upgradeId: 'U1' };
+            controller.offlineUpgradesQueue = [{ id: 'U1', passengerName: 'John', status: 'pending' }];
+            await controller.rejectOfflineUpgrade(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
     });
 

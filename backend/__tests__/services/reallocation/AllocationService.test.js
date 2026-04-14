@@ -27,7 +27,7 @@ describe('AllocationService', () => {
         };
 
         db.getPassengersCollection = jest.fn(() => mockPassengersCollection);
-        wsManager.broadcast = jest.fn();
+        wsManager.sendToTTEs = jest.fn();
         WebPushService.sendPushNotification = jest.fn().mockResolvedValue(true);
         NotificationService.sendUpgradeNotification = jest.fn().mockResolvedValue(true);
 
@@ -156,10 +156,9 @@ describe('AllocationService', () => {
 
             await AllocationService._processAllocation(mockTrainState, allocation);
 
-            expect(wsManager.broadcast).toHaveBeenCalledWith('RAC_UPGRADED', expect.objectContaining({
-                pnr: 'P001',
-                coach: 'S1',
-                berth: 15
+            expect(wsManager.sendToTTEs).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'RAC_UPGRADED',
+                pnr: 'P001'
             }));
         });
 
@@ -325,8 +324,10 @@ describe('AllocationService', () => {
                         PNR_Status: 'CNF',
                         Rac_status: '-',
                         Assigned_Coach: 'S1',
-                        Assigned_berth: 15,
-                        Berth_Type: 'Lower Berth'
+                        Assigned_Berth: 15,
+                        Berth_Type: 'Lower Berth',
+                        Boarded: true,
+                        Upgraded_From: 'RAC'
                     })
                 }
             );
@@ -418,12 +419,14 @@ describe('AllocationService', () => {
             ).rejects.toThrow('RAC passenger P999 not found');
         });
 
-        it('should throw error if co-passenger not found', async () => {
+        it('should upgrade only RAC passenger if co-passenger not found', async () => {
+            // Only return the RAC passenger, no co-passenger
             mockTrainState.getAllPassengers.mockReturnValue([mockPassenger]);
-
-            await expect(
-                AllocationService.upgradeRACPassengerWithCoPassenger('P001', { coachNo: 'S1', berthNo: 15 }, mockTrainState)
-            ).rejects.toThrow('Co-passenger not found');
+            
+            const result = await AllocationService.upgradeRACPassengerWithCoPassenger('P001', { coachNo: 'S1', berthNo: 15 }, mockTrainState);
+            
+            expect(result.success).toBe(true);
+            expect(result.coPassengerPNR).toBeNull();
         });
 
         it('should throw error if berth not found', async () => {

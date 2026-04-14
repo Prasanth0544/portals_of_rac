@@ -231,6 +231,35 @@ function App({ initialPage }: AppProps): React.ReactElement {
     restoreState();
   }, []);
 
+  // ── Browser history integration for trackpad swipe back/forward ──────────
+  // Sub-page navigation (home → passengers, etc.) is state-only — no URL change.
+  // We push invisible history entries so that browser back (trackpad 2-finger swipe)
+  // follows the hierarchy:  Sub-page → Home → (Landing page via React Router)
+  useEffect(() => {
+    // Tag the current history entry as 'home' so popstate can recognise it.
+    // Preserve any existing state React Router may have set.
+    const existing = window.history.state || {};
+    if (!existing.racPage) {
+      window.history.replaceState({ ...existing, racPage: 'home' }, '');
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      const racPage = event.state?.racPage as PageType | undefined;
+      if (racPage) {
+        // We landed on one of our own entries — update the in-app page
+        setCurrentPage(racPage);
+        if (racPage === 'home') {
+          loadTrainState();
+        }
+      }
+      // If racPage is absent the browser is navigating to a different URL
+      // (e.g. /admin landing) — React Router will handle that automatically.
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Save state to IndexedDB when key states change
   useEffect(() => {
     // Skip saving on initial mount
@@ -667,6 +696,10 @@ function App({ initialPage }: AppProps): React.ReactElement {
   };
 
   const handleNavigate = (page: PageType): void => {
+    // Push a history entry (same URL, different state) so browser back / trackpad
+    // swipe returns to the previous in-app page instead of the landing page.
+    const existing = window.history.state || {};
+    window.history.pushState({ ...existing, racPage: page }, '');
     setCurrentPage(page);
   };
 
@@ -720,8 +753,14 @@ function App({ initialPage }: AppProps): React.ReactElement {
       navigate('/admin');
       return;
     }
-    setCurrentPage('home');
-    loadTrainState();
+    // Use browser back so the history stack stays consistent with swipe gestures.
+    // Our popstate handler will catch this and set currentPage = 'home'.
+    if (window.history.state?.racPage && window.history.state.racPage !== 'home') {
+      window.history.back();
+    } else {
+      setCurrentPage('home');
+      loadTrainState();
+    }
   };
 
   // Show loading while state is being restored from IndexedDB and verified with backend

@@ -5,14 +5,68 @@
 
 const PushSubscriptionService = require('../../services/PushSubscriptionService');
 
+jest.mock('../../config/db');
+const db = require('../../config/db');
+
 describe('PushSubscriptionService - Comprehensive Tests', () => {
+    let mockData = [];
+
     beforeEach(() => {
-        // Clear all subscriptions before each test
-        PushSubscriptionService.subscriptions.clear();
-        PushSubscriptionService.tteSubscriptions.clear();
-        if (PushSubscriptionService.adminSubscriptions) {
-            PushSubscriptionService.adminSubscriptions.clear();
-        }
+        jest.clearAllMocks();
+        mockData = [];
+        
+        const mockCollection = {
+            updateOne: jest.fn(async (query, update, options) => {
+                const existingIndex = mockData.findIndex(d => 
+                    d.type === query.type && 
+                    d.userId === query.userId && 
+                    d.subscription?.endpoint === query['subscription.endpoint']
+                );
+                if (existingIndex !== -1) {
+                    Object.assign(mockData[existingIndex], update.$set);
+                } else if (options?.upsert) {
+                    mockData.push({ ...query, ...update.$set, ...(update.$setOnInsert || {}) });
+                }
+            }),
+            find: jest.fn((query) => {
+                let filtered = mockData;
+                if (query.type) filtered = filtered.filter(d => d.type === query.type);
+                if (query.userId) filtered = filtered.filter(d => d.userId === query.userId);
+                return { toArray: jest.fn().mockResolvedValue(filtered) };
+            }),
+            deleteOne: jest.fn(async (query) => {
+                const initialLength = mockData.length;
+                mockData = mockData.filter(d => {
+                    let match = true;
+                    if (query.type && d.type !== query.type) match = false;
+                    if (query.userId && d.userId !== query.userId) match = false;
+                    if (query['subscription.endpoint'] && d.subscription?.endpoint !== query['subscription.endpoint']) match = false;
+                    return !match;
+                });
+                return { deletedCount: initialLength - mockData.length };
+            }),
+            deleteMany: jest.fn(async (query) => {
+                const initialLength = mockData.length;
+                mockData = mockData.filter(d => {
+                    let match = true;
+                    if (query.type && d.type !== query.type) match = false;
+                    if (query.userId && d.userId !== query.userId) match = false;
+                    return !match;
+                });
+                return { deletedCount: initialLength - mockData.length };
+            }),
+            countDocuments: jest.fn(async (query) => {
+                return mockData.filter(d => query.type ? d.type === query.type : true).length;
+            }),
+            distinct: jest.fn(async (field, query) => {
+                const items = mockData.filter(d => query.type ? d.type === query.type : true);
+                return [...new Set(items.map(d => d[field]))];
+            })
+        };
+
+        db.getDb.mockResolvedValue({
+            collection: jest.fn(() => mockCollection)
+        });
     });
 
     describe('Passenger Subscriptions', () => {
@@ -106,7 +160,8 @@ describe('PushSubscriptionService - Comprehensive Tests', () => {
 
                 await PushSubscriptionService.removeSubscription('IR123', 'https://push.example.com/1');
 
-                expect(PushSubscriptionService.subscriptions.has('IR123')).toBe(false);
+                const subs = await PushSubscriptionService.getSubscriptions('IR123');
+                expect(subs).toHaveLength(0);
             });
         });
 
@@ -317,13 +372,13 @@ describe('PushSubscriptionService - Comprehensive Tests', () => {
                 await PushSubscriptionService.addSubscription('IR123', sub1);
                 await PushSubscriptionService.addSubscription('IR456', sub2);
 
-                const count = PushSubscriptionService.getTotalCount();
+                const count = await PushSubscriptionService.getTotalCount();
 
                 expect(count).toBe(2);
             });
 
-            it('should return 0 when no subscriptions', () => {
-                const count = PushSubscriptionService.getTotalCount();
+            it('should return 0 when no subscriptions', async () => {
+                const count = await PushSubscriptionService.getTotalCount();
 
                 expect(count).toBe(0);
             });
@@ -340,8 +395,10 @@ describe('PushSubscriptionService - Comprehensive Tests', () => {
 
                 const stats = await PushSubscriptionService.getStats();
 
-                expect(stats.totalUsers).toBe(2);
-                expect(stats.totalSubscriptions).toBe(3);
+                expect(stats.passengers.users).toBe(2);
+                expect(stats.passengers.subscriptions).toBe(3);
+                expect(stats.ttes.users).toBe(0);
+                expect(stats.ttes.subscriptions).toBe(0);
             });
         });
     });

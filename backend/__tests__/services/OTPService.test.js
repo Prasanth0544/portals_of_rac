@@ -133,7 +133,7 @@ describe('OTPService', () => {
                 irctcId: 'IR123',
                 pnr: 'P001234567',
                 attempts: 0,
-                maxAttempts: 3
+                maxAttempts: 10
             });
         });
 
@@ -146,12 +146,12 @@ describe('OTPService', () => {
             expect(emailCall.subject).toContain('OTP');
         });
 
-        it('should handle email sending errors', async () => {
+        it('should handle email sending errors gracefully', async () => {
             NotificationService.emailTransporter.sendMail.mockRejectedValue(new Error('Email failed'));
 
-            await expect(
-                OTPService.sendOTP('IR123', 'P001234567', 'test@test.com')
-            ).rejects.toThrow('Failed to send OTP');
+            const result = await OTPService.sendOTP('IR123', 'P001234567', 'test@test.com');
+            expect(result.success).toBe(true);
+            expect(result.emailSent).toBe(false);
         });
 
         it('should use upsert to replace existing OTP', async () => {
@@ -168,7 +168,7 @@ describe('OTPService', () => {
                 key: 'IR123_P001234567',
                 otp: '123456',
                 attempts: 0,
-                maxAttempts: 3
+                maxAttempts: 10
             });
 
             const result = await OTPService.verifyOTP('IR123', 'P001234567', '123456');
@@ -182,7 +182,7 @@ describe('OTPService', () => {
                 key: 'IR123_P001234567',
                 otp: '123456',
                 attempts: 0,
-                maxAttempts: 3
+                maxAttempts: 10
             });
 
             const result = await OTPService.verifyOTP('IR123', 'P001234567', '999999');
@@ -196,7 +196,7 @@ describe('OTPService', () => {
                 key: 'IR123_P001234567',
                 otp: '123456',
                 attempts: 0,
-                maxAttempts: 3
+                maxAttempts: 10
             });
 
             await OTPService.verifyOTP('IR123', 'P001234567', '999999');
@@ -220,8 +220,8 @@ describe('OTPService', () => {
             mockCollection.findOne.mockResolvedValue({
                 key: 'IR123_P001234567',
                 otp: '123456',
-                attempts: 3,
-                maxAttempts: 3
+                attempts: 10,
+                maxAttempts: 10
             });
 
             const result = await OTPService.verifyOTP('IR123', 'P001234567', '123456');
@@ -236,12 +236,12 @@ describe('OTPService', () => {
                 key: 'IR123_P001234567',
                 otp: '123456',
                 attempts: 1,
-                maxAttempts: 3
+                maxAttempts: 10
             });
 
             const result = await OTPService.verifyOTP('IR123', 'P001234567', '999999');
 
-            expect(result.message).toContain('1 attempt(s) remaining');
+            expect(result.message).toContain('8 attempt(s) remaining');
         });
 
         it('should handle database errors gracefully', async () => {
@@ -273,16 +273,15 @@ describe('OTPService', () => {
             mockCollection.findOne.mockResolvedValue({
                 key: 'IR123_P001234567',
                 otp: '123456',
-                createdAt: new Date(),
                 attempts: 1,
-                maxAttempts: 3
+                maxAttempts: 10
             });
 
             const status = await OTPService.getOTPStatus('IR123', 'P001234567');
 
             expect(status.exists).toBe(true);
             expect(status.attempts).toBe(1);
-            expect(status.maxAttempts).toBe(3);
+            expect(status.maxAttempts).toBe(10);
         });
 
         it('should return exists false if no OTP found', async () => {

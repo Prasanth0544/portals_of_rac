@@ -10,6 +10,9 @@ jest.mock('../../services/ValidationService');
 jest.mock('../../services/NotificationService');
 jest.mock('../../services/InAppNotificationService');
 jest.mock('../../services/WebPushService');
+jest.mock('../../services/reallocation/VacancyService');
+jest.mock('../../services/GroupUpgradeService');
+jest.mock('../../services/reallocation/AllocationService');
 
 jest.mock('../../config/db');
 jest.mock('../../config/websocket', () => ({
@@ -26,6 +29,9 @@ const ReallocationService = require('../../services/ReallocationService');
 const ValidationService = require('../../services/ValidationService');
 const trainController = require('../../controllers/trainController');
 const db = require('../../config/db');
+const VacancyService = require('../../services/reallocation/VacancyService');
+const GroupUpgradeService = require('../../services/GroupUpgradeService');
+const AllocationService = require('../../services/reallocation/AllocationService');
 
 describe('reallocationController', () => {
     let req, res;
@@ -94,6 +100,7 @@ describe('reallocationController', () => {
             ValidationService.validatePNR.mockReturnValue({ valid: true });
             ReallocationService.markNoShow.mockResolvedValue({ passenger: mockPassenger });
             ReallocationService.processVacancyForUpgrade.mockResolvedValue({ offersCreated: 1 });
+            ReallocationService.getEligibleGroupsForVacantSeats.mockReturnValue({ eligibleGroups: [], totalVacantSeats: 0 });
             
             db.getPassengersCollection.mockReturnValue({
                 findOne: jest.fn().mockResolvedValue({
@@ -186,6 +193,37 @@ describe('reallocationController', () => {
                     message: 'Passenger not found'
                 })
             );
+        });
+
+        it('should continue when vacancy processing reports error object', async () => {
+            req.body = { pnr: '1234567890' };
+            const mockLocation = {
+                berth: { berthNo: 10, fullBerthNo: 'S1-10', type: 'Lower' },
+                coachNo: 'S1',
+                coach: { class: 'SL', coach_name: 'S1' }
+            };
+            mockTrainState.findPassenger.mockReturnValue(mockLocation);
+            ValidationService.validatePNR.mockReturnValue({ valid: true });
+            ReallocationService.markNoShow.mockResolvedValue({ passenger: { pnr: '1234567890' } });
+            ReallocationService.processVacancyForUpgrade.mockResolvedValue({ error: 'offer error' });
+            ReallocationService.getEligibleGroupsForVacantSeats.mockReturnValue({ eligibleGroups: [], totalVacantSeats: 0 });
+            db.getPassengersCollection.mockReturnValue({
+                findOne: jest.fn().mockResolvedValue(null)
+            });
+
+            await reallocationController.markPassengerNoShow(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('should continue when passenger location is not found for vacancy', async () => {
+            req.body = { pnr: '1234567890' };
+            mockTrainState.findPassenger.mockReturnValue(null);
+            ValidationService.validatePNR.mockReturnValue({ valid: true });
+            ReallocationService.markNoShow.mockResolvedValue({ passenger: { pnr: '1234567890' } });
+            ReallocationService.getEligibleGroupsForVacantSeats.mockReturnValue({ eligibleGroups: [], totalVacantSeats: 0 });
+
+            await reallocationController.markPassengerNoShow(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
     });
 
@@ -684,6 +722,328 @@ describe('reallocationController', () => {
                     message: expect.stringContaining('offline')
                 })
             );
+        });
+    });
+
+    describe('group upgrade flows', () => {
+        beforeEach(() => {
+            trainController.getGlobalTrainState.mockReturnValue(mockTrainState);
+        });
+
+        it('getEligibleGroups should return 400 if train not initialized', async () => {
+            trainController.getGlobalTrainState.mockReturnValue(null);
+            await reallocationController.getEligibleGroups(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('getEligibleGroups should return service data', async () => {
+            ReallocationService.getEligibleGroupsForVacantSeats.mockReturnValue({
+                totalVacantSeats: 1,
+                eligibleGroups: [{ pnr: 'PNR001' }]
+            });
+
+            await reallocationController.getEligibleGroups(req, res);
+
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                success: true,
+                data: expect.objectContaining({ totalVacantSeats: 1 })
+            }));
+        });
+
+        it('selectPassengersForUpgrade should validate required fields', async () => {
+            req.body = { pnr: 'PNR001' };
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('selectPassengersForUpgrade should validate requestedBy', async () => {
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'admin' };
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('selectPassengersForUpgrade should deny passenger selecting other PNR', async () => {
+            req.user = { pnr: 'DIFFERENT_PNR' };
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'passenger' };
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(403);
+        });
+
+        it('selectPassengersForUpgrade should return 400 when train not initialized', async () => {
+            trainController.getGlobalTrainState.mockReturnValue(null);
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'tte' };
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('selectPassengersForUpgrade should return 400 when no vacant seats', async () => {
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'tte' };
+            VacancyService.getVacantSegments.mockReturnValue([]);
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('selectPassengersForUpgrade should return 409 when selected exceeds vacancies', async () => {
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1', '2'], requestedBy: 'tte' };
+            VacancyService.getVacantSegments.mockReturnValue([{ fromIdx: 0, toIdx: 2 }]);
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(409);
+        });
+
+        it('selectPassengersForUpgrade should return 404 when no RAC passengers for pnr', async () => {
+            req.body = { pnr: 'NO_MATCH', selectedPassengerIds: ['1'], requestedBy: 'tte' };
+            VacancyService.getVacantSegments.mockReturnValue([{ fromIdx: 0, toIdx: 2 }]);
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({
+                hasOffer: true,
+                isExpired: false,
+                visibleToPassenger: true
+            });
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(404);
+        });
+
+        it('selectPassengersForUpgrade should return 404 when no active offer', async () => {
+            mockTrainState.racQueue = [{ pnr: 'PNR001', pnrStatus: 'RAC', _id: { toString: () => '1' } }];
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'tte' };
+            VacancyService.getVacantSegments.mockReturnValue([{ fromIdx: 0, toIdx: 2 }]);
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({ hasOffer: false });
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(404);
+        });
+
+        it('selectPassengersForUpgrade should return 410 when offer expired', async () => {
+            mockTrainState.racQueue = [{ pnr: 'PNR001', pnrStatus: 'RAC', _id: { toString: () => '1' } }];
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'tte' };
+            VacancyService.getVacantSegments.mockReturnValue([{ fromIdx: 0, toIdx: 2 }]);
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({ hasOffer: true, isExpired: true });
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(410);
+        });
+
+        it('selectPassengersForUpgrade should return 403 when passenger visibility is false', async () => {
+            mockTrainState.racQueue = [{ pnr: 'PNR001', pnrStatus: 'RAC', _id: { toString: () => '1' } }];
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'passenger' };
+            req.user = { pnr: 'PNR001' };
+            VacancyService.getVacantSegments.mockReturnValue([{ fromIdx: 0, toIdx: 2 }]);
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({
+                hasOffer: true,
+                isExpired: false,
+                visibleToPassenger: false
+            });
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(403);
+        });
+
+        it('selectPassengersForUpgrade should return 401 for passenger request without pnr in session', async () => {
+            req.user = {};
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'passenger' };
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(401);
+        });
+
+        it('selectPassengersForUpgrade should return 400 when selected passenger id not found', async () => {
+            mockTrainState.racQueue = [{ pnr: 'PNR001', pnrStatus: 'RAC', _id: { toString: () => '1' } }];
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['missing'], requestedBy: 'tte' };
+            VacancyService.getVacantSegments.mockReturnValue([{ fromIdx: 0, toIdx: 5 }]);
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({
+                hasOffer: true,
+                isExpired: false,
+                visibleToPassenger: true
+            });
+
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('selectPassengersForUpgrade should return 400 when selected passenger is not RAC', async () => {
+            mockTrainState.racQueue = [{ pnr: 'PNR001', pnrStatus: 'CNF', _id: { toString: () => '1' }, name: 'X' }];
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'tte' };
+            VacancyService.getVacantSegments.mockReturnValue([{ fromIdx: 0, toIdx: 5 }]);
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({
+                hasOffer: true,
+                isExpired: false,
+                visibleToPassenger: true
+            });
+
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('selectPassengersForUpgrade should complete upgrade flow successfully', async () => {
+            mockTrainState.racQueue = [{
+                pnr: 'PNR001',
+                pnrStatus: 'RAC',
+                _id: { toString: () => '1' },
+                name: 'RAC Passenger',
+                fromIdx: 1,
+                toIdx: 3,
+                racStatus: 1,
+                coach: 'S1',
+                seat: 20
+            }];
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'tte' };
+            VacancyService.getVacantSegments.mockReturnValue([{
+                coachNo: 'S1',
+                berthNo: 10,
+                type: 'Lower',
+                fromIdx: 0,
+                toIdx: 5
+            }]);
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({
+                hasOffer: true,
+                isExpired: false,
+                visibleToPassenger: true
+            });
+            AllocationService.upgradeRACPassengerWithCoPassenger.mockResolvedValue(true);
+
+            await reallocationController.selectPassengersForUpgrade(req, res);
+
+            expect(AllocationService.upgradeRACPassengerWithCoPassenger).toHaveBeenCalled();
+            expect(res.json).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    success: true,
+                    data: expect.objectContaining({
+                        totalUpgraded: 1
+                    })
+                })
+            );
+        });
+
+        it('selectPassengersForUpgrade should add error when no matching vacant segment', async () => {
+            mockTrainState.racQueue = [{
+                pnr: 'PNR001',
+                pnrStatus: 'RAC',
+                _id: { toString: () => '1' },
+                name: 'RAC Passenger',
+                from: 'STA',
+                to: 'STC',
+                fromIdx: 4,
+                toIdx: 7
+            }];
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'tte' };
+            VacancyService.getVacantSegments.mockReturnValue([{
+                coachNo: 'S1',
+                berthNo: 10,
+                type: 'Lower',
+                fromIdx: 0,
+                toIdx: 3
+            }]);
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({
+                hasOffer: true,
+                isExpired: false,
+                visibleToPassenger: true
+            });
+
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.json).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    success: true,
+                    data: expect.objectContaining({
+                        totalUpgraded: 0,
+                        errors: expect.any(Array)
+                    })
+                })
+            );
+        });
+
+        it('selectPassengersForUpgrade should capture allocation service errors', async () => {
+            mockTrainState.racQueue = [{
+                pnr: 'PNR001',
+                pnrStatus: 'RAC',
+                _id: { toString: () => '1' },
+                name: 'RAC Passenger',
+                from: 'STA',
+                to: 'STC',
+                fromIdx: 1,
+                toIdx: 3
+            }];
+            req.body = { pnr: 'PNR001', selectedPassengerIds: ['1'], requestedBy: 'tte' };
+            VacancyService.getVacantSegments.mockReturnValue([{
+                coachNo: 'S1',
+                berthNo: 10,
+                type: 'Lower',
+                fromIdx: 0,
+                toIdx: 5
+            }]);
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({
+                hasOffer: true,
+                isExpired: false,
+                visibleToPassenger: true
+            });
+            AllocationService.upgradeRACPassengerWithCoPassenger.mockRejectedValue(new Error('allocation failed'));
+
+            await reallocationController.selectPassengersForUpgrade(req, res);
+            expect(res.json).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    success: true,
+                    data: expect.objectContaining({
+                        totalUpgraded: 0,
+                        errors: expect.arrayContaining([
+                            expect.objectContaining({ error: 'allocation failed' })
+                        ])
+                    })
+                })
+            );
+        });
+
+        it('rejectGroupUpgrade should validate pnr', async () => {
+            req.body = {};
+            await reallocationController.rejectGroupUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('rejectGroupUpgrade should return success payload', async () => {
+            req.body = { pnr: 'PNR001', reason: 'Declined' };
+            GroupUpgradeService.rejectGroupUpgradeOffer.mockResolvedValue({
+                success: true,
+                modifiedCount: 2
+            });
+            await reallocationController.rejectGroupUpgrade(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+        });
+
+        it('rejectGroupUpgrade should return 500 when service fails', async () => {
+            req.body = { pnr: 'PNR001' };
+            GroupUpgradeService.rejectGroupUpgradeOffer.mockResolvedValue({
+                success: false,
+                message: 'failed'
+            });
+            await reallocationController.rejectGroupUpgrade(req, res);
+            expect(res.status).toHaveBeenCalledWith(500);
+        });
+
+        it('getGroupUpgradeStatus should validate pnr', async () => {
+            req.params = {};
+            await reallocationController.getGroupUpgradeStatus(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        it('getGroupUpgradeStatus should return inactive when no offer', async () => {
+            req.params = { pnr: 'PNR001' };
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({ hasOffer: false });
+            await reallocationController.getGroupUpgradeStatus(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ hasActiveOffer: false }));
+        });
+
+        it('getGroupUpgradeStatus should return inactive when offer expired', async () => {
+            req.params = { pnr: 'PNR001' };
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({ hasOffer: true, isExpired: true });
+            await reallocationController.getGroupUpgradeStatus(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ hasActiveOffer: false }));
+        });
+
+        it('getGroupUpgradeStatus should return active offer details', async () => {
+            req.params = { pnr: 'PNR001' };
+            GroupUpgradeService.getOfferStatus.mockResolvedValue({
+                hasOffer: true,
+                isExpired: false,
+                vacantSeatsCount: 1,
+                passengerCount: 1,
+                expiresAt: '2026-01-01',
+                createdAt: '2025-01-01'
+            });
+            await reallocationController.getGroupUpgradeStatus(req, res);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ hasActiveOffer: true }));
         });
     });
 });

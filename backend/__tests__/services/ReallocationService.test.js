@@ -115,6 +115,38 @@ describe('ReallocationService - Comprehensive Tests', () => {
         });
     });
 
+    describe('eligibility wrappers', () => {
+        it('delegates isEligibleForSegment', () => {
+            const racPassenger = { pnr: 'R001' };
+            const vacantSegment = { coachNo: 'S1' };
+            EligibilityService.isEligibleForSegment = jest.fn().mockReturnValue(true);
+
+            const result = ReallocationService.isEligibleForSegment(
+                racPassenger,
+                vacantSegment,
+                mockTrainState,
+                1
+            );
+
+            expect(EligibilityService.isEligibleForSegment).toHaveBeenCalledWith(
+                racPassenger,
+                vacantSegment,
+                mockTrainState,
+                1
+            );
+            expect(result).toBe(true);
+        });
+
+        it('delegates getEligibleRACForVacantSegment', () => {
+            const segment = { coachNo: 'S1', berthNo: 10 };
+            const eligible = [{ pnr: 'R001' }];
+            EligibilityService.getEligibleRACForVacantSegment = jest.fn().mockReturnValue(eligible);
+
+            const result = ReallocationService.getEligibleRACForVacantSegment(mockTrainState, segment, 1);
+            expect(result).toEqual(eligible);
+        });
+    });
+
     describe('findCoPassenger', () => {
         it('should delegate to EligibilityService', () => {
             const racPassenger = { pnr: 'R001' };
@@ -248,7 +280,7 @@ describe('ReallocationService - Comprehensive Tests', () => {
             expect(result.offersCreated).toBe(0);
         });
 
-        it('should skip offline passengers', async () => {
+        it('should process offline passengers but not send push notifications', async () => {
             const vacantBerthInfo = { fullBerthNo: 'S1-15', coachNo: 'S1', type: 'Lower' };
             const currentStation = { name: 'Station B', code: 'STB' };
 
@@ -256,13 +288,17 @@ describe('ReallocationService - Comprehensive Tests', () => {
                 { pnr: 'R001', name: 'RAC1', boarded: true, passengerStatus: 'Offline' }
             ];
 
+            UpgradeNotificationService.hasDeniedBerth.mockResolvedValue(false);
+            UpgradeNotificationService.createUpgradeNotification.mockResolvedValue({ id: 'N001' });
+
             const result = await ReallocationService.processVacancyForUpgrade(
                 mockTrainState,
                 vacantBerthInfo,
                 currentStation
             );
 
-            expect(result.offersCreated).toBe(0);
+            expect(result.offersCreated).toBe(1);
+            expect(WebPushService.sendPushNotification).not.toHaveBeenCalled();
         });
 
         it('should skip passengers who denied this berth', async () => {
@@ -393,6 +429,272 @@ describe('ReallocationService - Comprehensive Tests', () => {
 
             expect(result.offersCreated).toBe(1);
             expect(result.error).toBeNull();
+        });
+
+        it('should return outer error when denied-berth lookup throws', async () => {
+            const vacantBerthInfo = { fullBerthNo: 'S1-15', coachNo: 'S1', type: 'Lower' };
+            const currentStation = { name: 'Station B', code: 'STB' };
+            mockTrainState.racQueue = [{ pnr: 'R001', name: 'RAC1', boarded: true }];
+
+            UpgradeNotificationService.hasDeniedBerth.mockRejectedValue(new Error('denied-check-fail'));
+
+            const result = await ReallocationService.processVacancyForUpgrade(
+                mockTrainState,
+                vacantBerthInfo,
+                currentStation
+            );
+
+            expect(result).toEqual({ error: 'denied-check-fail', offersCreated: 0 });
+        });
+
+        it('should not increment offers when notification creation returns null', async () => {
+            const vacantBerthInfo = { fullBerthNo: 'S1-15', coachNo: 'S1', type: 'Lower' };
+            const currentStation = { name: 'Station B', code: 'STB' };
+            mockTrainState.racQueue = [
+                { pnr: 'R001', name: 'RAC1', boarded: true, irctcId: 'IR001' }
+            ];
+            UpgradeNotificationService.hasDeniedBerth.mockResolvedValue(false);
+            UpgradeNotificationService.createUpgradeNotification.mockResolvedValue(null);
+
+            const result = await ReallocationService.processVacancyForUpgrade(
+                mockTrainState,
+                vacantBerthInfo,
+                currentStation
+            );
+
+            expect(result.offersCreated).toBe(0);
+        });
+    });
+
+    describe('stage matrix helpers', () => {
+        beforeEach(() => {
+            mockTrainState.stations = [
+                { name: 'Station A', code: 'STA' },
+                { name: 'Station B', code: 'STB' },
+                { name: 'Station C', code: 'STC' }
+            ];
+        });
+
+        it('returns stage1 matrix for eligible segments', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: 10, type: 'Lower', class: 'SL', fromIdx: 0, toIdx: 2, from: 'STA', to: 'STC' }
+            ]);
+            EligibilityService.getStage1EligibleRAC.mockReturnValue([{ pnr: 'R001' }]);
+
+            const result = ReallocationService.getStage1Eligible(mockTrainState);
+            expect(result).toHaveLength(1);
+            expect(result[0]).toEqual(expect.objectContaining({ berth: 'S1-10', stage1Count: 1 }));
+        });
+
+        it('returns empty stage1 matrix when no segment has eligible RAC', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: 10, type: 'Lower', class: 'SL', fromIdx: 0, toIdx: 2, from: 'STA', to: 'STC' }
+            ]);
+            EligibilityService.getStage1EligibleRAC.mockReturnValue([]);
+            expect(ReallocationService.getStage1Eligible(mockTrainState)).toEqual([]);
+        });
+
+        it('returns empty stage1 matrix on error', () => {
+            VacancyService.getVacantSegments.mockImplementation(() => {
+                throw new Error('boom');
+            });
+            expect(ReallocationService.getStage1Eligible(mockTrainState)).toEqual([]);
+        });
+
+        it('returns stage2 results when segment found', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: '10', type: 'Lower', class: 'SL', fromIdx: 0, toIdx: 2, from: 'STA', to: 'STC' }
+            ]);
+            EligibilityService.getStage1EligibleRAC.mockReturnValue([{ pnr: 'R001' }]);
+            EligibilityService.getStage2Results.mockReturnValue({
+                onlineEligible: [{ pnr: 'R001' }],
+                offlineEligible: [],
+                notEligible: []
+            });
+
+            const result = ReallocationService.getStage2Results(mockTrainState, { coach: 'S1', berthNo: '10' });
+            expect(result).toEqual(expect.objectContaining({ berth: 'S1-10' }));
+            expect(result.onlineEligible).toHaveLength(1);
+        });
+
+        it('returns stage2 result using fallback station labels when station indexes are missing', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: '10', type: 'Lower', class: 'SL', fromIdx: 8, toIdx: 9, from: 'A', to: 'B' }
+            ]);
+            EligibilityService.getStage1EligibleRAC.mockReturnValue([{ pnr: 'R001' }]);
+            EligibilityService.getStage2Results.mockReturnValue({
+                onlineEligible: [],
+                offlineEligible: [{ pnr: 'R001' }],
+                notEligible: []
+            });
+
+            const result = ReallocationService.getStage2Results(mockTrainState, { coach: 'S1', berthNo: '10' });
+            expect(result.vacantFrom).toBe('A');
+            expect(result.vacantTo).toBe('B');
+        });
+
+        it('returns stage2 error payload when segment missing', () => {
+            VacancyService.getVacantSegments.mockReturnValue([]);
+
+            const result = ReallocationService.getStage2Results(mockTrainState, { coach: 'S1', berthNo: '10' });
+            expect(result.error).toBe('Vacant berth not found');
+        });
+
+        it('returns stage2 error payload when stage-2 calculation throws', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: '10', type: 'Lower', class: 'SL', fromIdx: 0, toIdx: 2, from: 'STA', to: 'STC' }
+            ]);
+            EligibilityService.getStage1EligibleRAC.mockReturnValue([{ pnr: 'R001' }]);
+            EligibilityService.getStage2Results.mockImplementation(() => {
+                throw new Error('stage2 fail');
+            });
+
+            const result = ReallocationService.getStage2Results(mockTrainState, { coach: 'S1', berthNo: '10' });
+            expect(result).toEqual(expect.objectContaining({ error: 'stage2 fail' }));
+            expect(result.onlineEligible).toEqual([]);
+        });
+    });
+
+    describe('group and legacy eligibility', () => {
+        beforeEach(() => {
+            mockTrainState.stations = [
+                { name: 'Station A', code: 'STA' },
+                { name: 'Station B', code: 'STB' },
+                { name: 'Station C', code: 'STC' }
+            ];
+            mockTrainState.coaches = [
+                {
+                    berths: [
+                        { passenger: { pnr: 'PNR1', pnrStatus: 'CNF', name: 'CNF Passenger', coach: 'S1', berth: 1 } }
+                    ]
+                }
+            ];
+        });
+
+        it('returns no eligible groups when no vacant segments', () => {
+            VacancyService.getVacantSegments.mockReturnValue([]);
+            const result = ReallocationService.getEligibleGroupsForVacantSeats(mockTrainState);
+            expect(result).toEqual(expect.objectContaining({ totalVacantSeats: 0, eligibleGroups: [] }));
+        });
+
+        it('returns eligible groups sorted by RAC priority', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: 10, type: 'Lower', class: 'SL', fromIdx: 0, toIdx: 2, from: 'STA', to: 'STC' }
+            ]);
+            RACQueueService.getRACQueue.mockReturnValue([
+                { pnr: 'PNR2', name: 'R2', racStatus: 5, _id: '2' },
+                { pnr: 'PNR1', name: 'R1', racStatus: 1, _id: '1' }
+            ]);
+            EligibilityService.isEligibleForSegment = jest.fn().mockReturnValue(true);
+
+            const result = ReallocationService.getEligibleGroupsForVacantSeats(mockTrainState);
+
+            expect(result.eligibleGroups.length).toBeGreaterThan(0);
+            expect(result.eligibleGroups[0].pnr).toBe('PNR1');
+        });
+
+        it('includes detailed vacant seat and group metadata in response', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: 10, type: 'Lower', class: 'SL', fromIdx: 0, toIdx: 2, from: 'STA', to: 'STC' }
+            ]);
+            RACQueueService.getRACQueue.mockReturnValue([
+                { pnr: 'PNR1', name: 'R1', racStatus: 1, _id: '1', age: 25, gender: 'M' }
+            ]);
+            EligibilityService.isEligibleForSegment = jest.fn().mockReturnValue(true);
+
+            const result = ReallocationService.getEligibleGroupsForVacantSeats(mockTrainState);
+            expect(result.totalVacantSeats).toBe(1);
+            expect(result.vacantSeats[0]).toEqual(expect.objectContaining({
+                berth: 'S1-10',
+                coach: 'S1',
+                berthNo: 10
+            }));
+            expect(result.eligibleGroups[0]).toEqual(expect.objectContaining({
+                pnr: 'PNR1',
+                eligibleCount: 1,
+                totalCount: 2
+            }));
+            expect(result.eligibleGroups[0].racPassengers[0]).toEqual(expect.objectContaining({
+                id: '1',
+                name: 'R1',
+                age: 25,
+                gender: 'M'
+            }));
+        });
+
+        it('returns message when no groups are eligible for any segment', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: 10, type: 'Lower', class: 'SL', fromIdx: 0, toIdx: 2, from: 'STA', to: 'STC' }
+            ]);
+            RACQueueService.getRACQueue.mockReturnValue([
+                { pnr: 'PNR1', name: 'R1', racStatus: 1, _id: '1' }
+            ]);
+            EligibilityService.isEligibleForSegment = jest.fn().mockReturnValue(false);
+
+            const result = ReallocationService.getEligibleGroupsForVacantSeats(mockTrainState);
+            expect(result.eligibleGroups).toEqual([]);
+            expect(result.message).toBe('No eligible groups found');
+        });
+
+        it('skips groups that already rejected upgrade', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: 10, type: 'Lower', class: 'SL', fromIdx: 0, toIdx: 2, from: 'STA', to: 'STC' }
+            ]);
+            RACQueueService.getRACQueue.mockReturnValue([
+                { pnr: 'PNR1', name: 'R1', racStatus: 1, _id: '1', hasRejectedGroupUpgrade: true }
+            ]);
+            EligibilityService.isEligibleForSegment = jest.fn().mockReturnValue(true);
+
+            const result = ReallocationService.getEligibleGroupsForVacantSeats(mockTrainState);
+            expect(result.eligibleGroups).toEqual([]);
+        });
+
+        it('returns error payload when group eligibility calculation throws', () => {
+            VacancyService.getVacantSegments.mockImplementation(() => {
+                throw new Error('group fail');
+            });
+
+            const result = ReallocationService.getEligibleGroupsForVacantSeats(mockTrainState);
+            expect(result).toEqual(expect.objectContaining({ totalVacantSeats: 0, error: 'group fail' }));
+        });
+
+        it('builds legacy eligibility matrix', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: 10, type: 'Lower', class: 'SL', fromIdx: 0, toIdx: 2, from: 'STA', to: 'STC' }
+            ]);
+            EligibilityService.getStage1EligibleRAC.mockReturnValue([{ pnr: 'R001' }]);
+
+            const result = ReallocationService.getEligibilityMatrix(mockTrainState);
+            expect(result[0]).toEqual(expect.objectContaining({ berth: 'S1-10', eligibleCount: 1 }));
+        });
+
+        it('builds legacy matrix with station-name fallback segment string', () => {
+            VacancyService.getVacantSegments.mockReturnValue([
+                { coachNo: 'S1', berthNo: 10, type: 'Lower', class: 'SL', fromIdx: 9, toIdx: 10, from: 'X', to: 'Y' }
+            ]);
+            EligibilityService.getStage1EligibleRAC.mockReturnValue([{ pnr: 'R001' }]);
+
+            const result = ReallocationService.getEligibilityMatrix(mockTrainState);
+            expect(result[0]).toEqual(expect.objectContaining({
+                vacantFrom: 'X',
+                vacantTo: 'Y',
+                vacantSegment: 'X → Y'
+            }));
+        });
+
+        it('returns empty legacy matrix on error', () => {
+            VacancyService.getVacantSegments.mockImplementation(() => {
+                throw new Error('matrix fail');
+            });
+            expect(ReallocationService.getEligibilityMatrix(mockTrainState)).toEqual([]);
+        });
+    });
+
+    describe('getRACStats', () => {
+        it('delegates to RACQueueService', () => {
+            RACQueueService.getRACStats.mockReturnValue({ total: 4 });
+            const result = ReallocationService.getRACStats(mockTrainState);
+            expect(result).toEqual({ total: 4 });
         });
     });
 });

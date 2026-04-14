@@ -6,8 +6,10 @@ const NotificationService = require('../../services/NotificationService');
 jest.mock('../../services/StationWiseApprovalService');
 jest.mock('../../services/WebPushService');
 jest.mock('../../services/NotificationService');
+jest.mock('../../services/NotificationQueueService');
 jest.mock('../../config/db');
 jest.mock('../../config/websocket');
+jest.mock('../../services/UpgradeNotificationService');
 
 describe('CurrentStationReallocationService', () => {
     let mockTrainState;
@@ -320,6 +322,19 @@ describe('CurrentStationReallocationService', () => {
             expect(result).toHaveProperty('vacantFromIdx');
             expect(result).toHaveProperty('vacantToIdx');
         });
+
+        it('should detect bounded vacancy between two occupied spans', () => {
+            const berth = {
+                passengers: [
+                    { pnr: 'A', fromIdx: 0, toIdx: 1, noShow: false },
+                    { pnr: 'B', fromIdx: 3, toIdx: 4, noShow: false }
+                ],
+                segmentOccupancy: [['A'], [], [], ['B']]
+            };
+
+            const result = CurrentStationReallocationService._checkBerthVacantAtSegment(berth, 2, mockTrainState);
+            expect(result).toEqual({ isVacant: true, vacantFromIdx: 1, vacantToIdx: 3 });
+        });
     });
 
     describe('_findVacantRanges', () => {
@@ -360,6 +375,21 @@ describe('CurrentStationReallocationService', () => {
             expect(result.length).toBe(1);
             expect(result[0].fromIdx).toBe(0);
             expect(result[0].toIdx).toBe(4);
+        });
+
+        it('should return multiple vacant ranges split by occupancy', () => {
+            const berth = {
+                passengers: [
+                    { pnr: 'P1', fromIdx: 1, toIdx: 2, noShow: false }
+                ],
+                segmentOccupancy: [[], ['P1'], [], []]
+            };
+
+            const result = CurrentStationReallocationService._findVacantRanges(berth, mockTrainState);
+            expect(result).toEqual([
+                { fromIdx: 0, toIdx: 1 },
+                { fromIdx: 2, toIdx: 4 }
+            ]);
         });
     });
 
@@ -447,7 +477,8 @@ describe('CurrentStationReallocationService', () => {
         beforeEach(() => {
             StationWiseApprovalService._savePendingReallocations = jest.fn().mockResolvedValue({ success: true });
             WebPushService.sendRACApprovalRequestToTTEs = jest.fn().mockResolvedValue(true);
-            WebPushService.sendUpgradeOfferToPassenger = jest.fn().mockResolvedValue(true);
+            const NotificationQueueService = require('../../services/NotificationQueueService');
+            NotificationQueueService.enqueueUpgradeOffers = jest.fn().mockResolvedValue(true);
             NotificationService.sendApprovalRequestNotification = jest.fn().mockResolvedValue(true);
 
             const wsManager = require('../../config/websocket');
@@ -516,8 +547,9 @@ describe('CurrentStationReallocationService', () => {
 
             const result = await CurrentStationReallocationService.createPendingReallocationsFromMatches(mockTrainState);
 
-            expect(result.onlineCount).toBeGreaterThan(0);
-            expect(WebPushService.sendUpgradeOfferToPassenger).toHaveBeenCalled();
+            expect(result.notifiedCount).toBeGreaterThan(0);
+            const NotificationQueueService = require('../../services/NotificationQueueService');
+            expect(NotificationQueueService.enqueueUpgradeOffers).toHaveBeenCalled();
         });
 
         it('should handle database errors gracefully', async () => {
@@ -540,7 +572,8 @@ describe('CurrentStationReallocationService', () => {
             mockTrainState.getBoardedRACPassengers.mockReturnValue(racPassengers);
             mockTrainState.coaches[0].berths[0].passengers = [];
             mockPassengersCollection.findOne.mockResolvedValue({ IRCTC_ID: 'IR_001', Passenger_Status: 'Online' });
-            WebPushService.sendUpgradeOfferToPassenger.mockRejectedValue(new Error('Push failed'));
+            const NotificationQueueService = require('../../services/NotificationQueueService');
+            NotificationQueueService.enqueueUpgradeOffers.mockImplementation(() => { throw new Error('Push failed'); });
 
             const result = await CurrentStationReallocationService.createPendingReallocationsFromMatches(mockTrainState);
 
@@ -559,6 +592,39 @@ describe('CurrentStationReallocationService', () => {
 
             const savedReallocations = StationWiseApprovalService._savePendingReallocations.mock.calls[0][0];
             expect(savedReallocations[0].approvalTarget).toBe('TTE_ONLY');
+        });
+
+        it('should skip passenger when upgrade status is REJECTED', async () => {
+            const racPassengers = [
+                { pnr: 'P001', name: 'John', racStatus: 'RAC 1', fromIdx: 0, toIdx: 4, passengerStatus: 'Online' }
+            ];
+            mockTrainState.getBoardedRACPassengers.mockReturnValue(racPassengers);
+            mockTrainState.coaches[0].berths[0].passengers = [];
+            mockPassengersCollection.findOne.mockResolvedValue({
+                IRCTC_ID: 'IR_001',
+                Passenger_Status: 'Online',
+                Upgrade_Status: 'REJECTED'
+            });
+
+            const result = await CurrentStationReallocationService.createPendingReallocationsFromMatches(mockTrainState);
+
+            expect(result.success).toBe(true);
+            expect(result.created).toBe(0);
+            expect(StationWiseApprovalService._savePendingReallocations).toHaveBeenCalledWith([]);
+        });
+
+        it('should continue when TTE push notification fails', async () => {
+            const racPassengers = [
+                { pnr: 'P001', name: 'John', racStatus: 'RAC 1', fromIdx: 0, toIdx: 4, passengerStatus: 'Online' }
+            ];
+            mockTrainState.getBoardedRACPassengers.mockReturnValue(racPassengers);
+            mockTrainState.coaches[0].berths[0].passengers = [];
+            mockPassengersCollection.findOne.mockResolvedValue({ IRCTC_ID: 'IR_001', Passenger_Status: 'Online' });
+            WebPushService.sendRACApprovalRequestToTTEs.mockRejectedValue(new Error('tte push fail'));
+
+            const result = await CurrentStationReallocationService.createPendingReallocationsFromMatches(mockTrainState);
+            expect(result.success).toBe(true);
+            expect(result.created).toBeGreaterThan(0);
         });
     });
 });

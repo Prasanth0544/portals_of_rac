@@ -312,4 +312,18 @@ describe('NoShowService - Comprehensive Tests', () => {
             ).rejects.toThrow();
         });
     });
+
+    describe('_updateStats', () => {
+        it('should increment total and rac no-show for RAC passenger', () => {
+            const state = { stats: { totalNoShow: 0, racNoShow: 0 } };
+            NoShowService._updateStats(state, { pnrStatus: 'RAC' });
+            expect(state.stats.totalNoShow).toBe(1);
+            expect(state.stats.racNoShow).toBe(1);
+        });
+
+        it('should safely skip stats update when stats object is missing', () => {
+            const state = {};
+            expect(() => NoShowService._updateStats(state, { pnrStatus: 'CNF' })).not.toThrow();
+        });
+    });
 });

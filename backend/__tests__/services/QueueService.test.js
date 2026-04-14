@@ -77,6 +77,16 @@ describe('QueueService', () => {
 
             expect(QueueService.getSize()).toBe(1);
         });
+
+        it('should dequeue passengers at destination station', () => {
+            QueueService.queue = [
+                { pnr: 'PNR001', racNumber: 1, to: 'STB' },
+                { pnr: 'PNR002', racNumber: 2, to: 'STC' }
+            ];
+            QueueService.dequeueAtDestination('STB');
+            expect(QueueService.getSize()).toBe(1);
+            expect(QueueService.getFront().pnr).toBe('PNR002');
+        });
     });
 
     describe('getFront', () => {

@@ -48,15 +48,17 @@ class NotificationService {
         console.log('   SMTP:', process.env.EMAIL_HOST || 'gmail (default)');
 
         // ✅ Verify SMTP credentials on startup
-        this.emailTransporter.verify((error, success) => {
-            if (error) {
-                console.error('❌ SMTP credential verification FAILED:', error.message);
-                console.error('   → Check EMAIL_USER and EMAIL_PASSWORD in .env');
-                console.error('   → Generate a new App Password: https://myaccount.google.com/apppasswords');
-            } else {
-                console.log('✅ SMTP credentials verified — email is ready to send');
-            }
-        });
+        if (this.emailTransporter && process.env.NODE_ENV !== 'test') {
+            this.emailTransporter.verify((error, success) => {
+                if (error) {
+                    console.error('❌ SMTP credential verification FAILED:', error.message);
+                    console.error('   → Check EMAIL_USER and EMAIL_PASSWORD in .env');
+                    console.error('   → Generate a new App Password: https://myaccount.google.com/apppasswords');
+                } else {
+                    console.log('✅ SMTP credentials verified — email is ready to send');
+                }
+            });
+        }
     }
 
     /**

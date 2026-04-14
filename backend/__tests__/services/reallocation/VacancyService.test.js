@@ -176,4 +176,53 @@ describe('VacancyService', () => {
             expect(result.length).toBeLessThanOrEqual(2);
         });
     });
+
+    describe('private branch paths', () => {
+        it('should handle legacy null occupancy values when building ranges', () => {
+            const berth = {
+                segmentOccupancy: [null, null, ['P1'], null]
+            };
+            const stations = [
+                { stationCode: 'A' },
+                { stationCode: 'B' },
+                { stationCode: 'C' },
+                { stationCode: 'D' },
+                { stationCode: 'E' }
+            ];
+            const ranges = VacancyService._getVacantSegmentRanges(berth, stations);
+            expect(ranges).toEqual([
+                expect.objectContaining({ fromIdx: 0, toIdx: 2, fromStation: 'A', toStation: 'C' }),
+                expect.objectContaining({ fromIdx: 3, toIdx: 4, fromStation: 'D', toStation: 'E' })
+            ]);
+        });
+
+        it('should return unknown station codes when station data is missing', () => {
+            const berth = {
+                segmentOccupancy: [[], ['P1'], []]
+            };
+            const ranges = VacancyService._getVacantSegmentRanges(berth, []);
+            expect(ranges[0].fromStation).toBe('UNKNOWN');
+            expect(ranges[0].toStation).toBe('UNKNOWN');
+        });
+
+        it('should merge adjacent vacancy ranges with matching boundary station', () => {
+            const merged = VacancyService._mergeAdjacentVacancies([
+                { fromIdx: 0, toIdx: 2, fromStation: 'A', toStation: 'C' },
+                { fromIdx: 2, toIdx: 4, fromStation: 'C', toStation: 'E' },
+                { fromIdx: 5, toIdx: 6, fromStation: 'F', toStation: 'G' }
+            ]);
+            expect(merged).toEqual([
+                expect.objectContaining({ fromIdx: 0, toIdx: 4, toStation: 'E' }),
+                expect.objectContaining({ fromIdx: 5, toIdx: 6 })
+            ]);
+        });
+
+        it('should not merge non-adjacent ranges', () => {
+            const merged = VacancyService._mergeAdjacentVacancies([
+                { fromIdx: 0, toIdx: 1, fromStation: 'A', toStation: 'B' },
+                { fromIdx: 2, toIdx: 3, fromStation: 'C', toStation: 'D' }
+            ]);
+            expect(merged).toHaveLength(2);
+        });
+    });
 });

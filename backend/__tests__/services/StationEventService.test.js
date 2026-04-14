@@ -7,9 +7,13 @@ const StationEventService = require('../../services/StationEventService');
 const ReallocationService = require('../../services/ReallocationService');
 const StationWiseApprovalService = require('../../services/StationWiseApprovalService');
 const CONSTANTS = require('../../services/reallocation/reallocationConstants');
+const CurrentStationReallocationService = require('../../services/CurrentStationReallocationService');
 
 jest.mock('../../services/ReallocationService');
 jest.mock('../../services/StationWiseApprovalService');
+jest.mock('../../services/CurrentStationReallocationService', () => ({
+    createPendingReallocationsFromMatches: jest.fn()
+}));
 
 describe('StationEventService - Comprehensive Tests', () => {
     let mockTrainState;
@@ -18,6 +22,7 @@ describe('StationEventService - Comprehensive Tests', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        CurrentStationReallocationService.createPendingReallocationsFromMatches.mockResolvedValue({ created: 0 });
 
         mockBerth = {
             fullBerthNo: 'S1-15',
@@ -60,6 +65,20 @@ describe('StationEventService - Comprehensive Tests', () => {
     });
 
     describe('processStationArrival', () => {
+        it('should set racAllocated from auto-created pending matches', async () => {
+            CurrentStationReallocationService.createPendingReallocationsFromMatches.mockResolvedValue({ created: 2 });
+            const result = await StationEventService.processStationArrival(mockTrainState);
+            expect(result.racAllocated).toBe(2);
+        });
+
+        it('should continue with racAllocated zero when auto-upgrade check fails', async () => {
+            CurrentStationReallocationService.createPendingReallocationsFromMatches.mockRejectedValue(
+                new Error('auto-check-fail')
+            );
+            const result = await StationEventService.processStationArrival(mockTrainState);
+            expect(result.racAllocated).toBe(0);
+        });
+
         it('should process station arrival successfully', async () => {
             mockBerth.getBoardingPassengers.mockReturnValue([
                 { name: 'John', pnr: 'P001', from: 'STB', boarded: false }
@@ -109,6 +128,7 @@ describe('StationEventService - Comprehensive Tests', () => {
         });
 
         it('should disable automatic RAC upgrades', async () => {
+            CurrentStationReallocationService.createPendingReallocationsFromMatches.mockResolvedValue({ created: 0 });
             const result = await StationEventService.processStationArrival(mockTrainState);
 
             expect(result.racAllocated).toBe(0);
@@ -312,6 +332,41 @@ describe('StationEventService - Comprehensive Tests', () => {
             );
 
             expect(result.count).toBeGreaterThanOrEqual(0);
+        });
+
+        it('should return zero when newly vacant berths produce no vacant segments', async () => {
+            CONSTANTS.CURRENT_MODE = CONSTANTS.REALLOCATION_MODE.AUTO;
+            const occupiedBerth = { ...mockBerth, segmentOccupancy: [['P1'], ['P1'], ['P1']] };
+            const result = await StationEventService.processRACUpgradesWithEligibility(
+                mockTrainState,
+                [{ berth: occupiedBerth, coachNo: 'S1', berthNo: '15', class: 'SL' }]
+            );
+            expect(result).toEqual({ count: 0, upgrades: [] });
+        });
+
+        it('should skip segment when no eligible RAC is found', async () => {
+            CONSTANTS.CURRENT_MODE = CONSTANTS.REALLOCATION_MODE.AUTO;
+            const vacantBerths = [{ berth: mockBerth, coachNo: 'S1', berthNo: '15', class: 'SL' }];
+            ReallocationService.getEligibleRACForVacantSegment.mockReturnValue(null);
+            const result = await StationEventService.processRACUpgradesWithEligibility(mockTrainState, vacantBerths);
+            expect(result.count).toBe(0);
+        });
+
+        it('should count co-passenger upgrade when present', async () => {
+            CONSTANTS.CURRENT_MODE = CONSTANTS.REALLOCATION_MODE.AUTO;
+            const vacantBerths = [{ berth: mockBerth, coachNo: 'S1', berthNo: '15', class: 'SL' }];
+            ReallocationService.getEligibleRACForVacantSegment.mockReturnValue({
+                pnr: 'R001',
+                name: 'RAC Passenger',
+                racStatus: 'RAC 1'
+            });
+            ReallocationService.upgradeRACPassengerWithCoPassenger.mockResolvedValue({
+                success: true,
+                passenger: { pnr: 'R001' },
+                coPassenger: { pnr: 'R002' }
+            });
+            const result = await StationEventService.processRACUpgradesWithEligibility(mockTrainState, vacantBerths);
+            expect(result.count).toBe(2);
         });
 
         it('should handle upgrade failures gracefully', async () => {

@@ -46,7 +46,8 @@ describe('StationWiseApprovalService - Comprehensive Tests', () => {
             s: { db: mockDatabase }
         }));
 
-        wsManager.broadcast = jest.fn();
+        wsManager.sendToTTEs = jest.fn();
+        wsManager.sendToUser = jest.fn();
 
         mockTrainState = {
             trainNo: '17225',
@@ -109,7 +110,7 @@ describe('StationWiseApprovalService - Comprehensive Tests', () => {
             expect(result.count).toBe(1);
             expect(result.pending).toHaveLength(1);
             expect(result.pending[0].passengerPNR).toBe('R001');
-            expect(wsManager.broadcast).toHaveBeenCalled();
+            expect(wsManager.sendToTTEs).toHaveBeenCalled();
         });
 
         it('should skip if no eligible passengers', async () => {
@@ -146,6 +147,27 @@ describe('StationWiseApprovalService - Comprehensive Tests', () => {
             );
 
             expect(result.count).toBe(0);
+        });
+
+        it('should return zero when vacant berths produce no vacant segments', async () => {
+            const occupiedBerths = [{
+                berth: {
+                    segmentOccupancy: [['P1'], ['P2'], ['P3']],
+                    fullBerthNo: 'S1-15',
+                    berthNo: '15',
+                    coachNo: 'S1',
+                    type: 'Lower'
+                },
+                coachNo: 'S1',
+                class: 'SL'
+            }];
+
+            const result = await StationWiseApprovalService.createPendingReallocations(
+                mockTrainState,
+                occupiedBerths
+            );
+
+            expect(result).toEqual({ count: 0, pending: [] });
         });
     });
 
@@ -215,7 +237,7 @@ describe('StationWiseApprovalService - Comprehensive Tests', () => {
         });
 
         it('should skip non-pending reallocations', async () => {
-            const reallocationIds = ['id1'];
+            const reallocationIds = ['507f1f77bcf86cd799439011'];
             mockCollection.findOne.mockResolvedValue({ status: 'approved' });
 
             const result = await StationWiseApprovalService.approveBatch(
@@ -246,6 +268,75 @@ describe('StationWiseApprovalService - Comprehensive Tests', () => {
             );
 
             expect(result.totalApproved).toBe(0);
+        });
+
+        it('should include per-id failure when findOne throws inside loop', async () => {
+            const reallocationIds = ['507f1f77bcf86cd799439011'];
+            mockCollection.findOne.mockRejectedValue(new Error('find fail'));
+
+            const result = await StationWiseApprovalService.approveBatch(
+                reallocationIds,
+                'TTE123',
+                mockTrainState
+            );
+
+            expect(result.success).toBe(true);
+            expect(result.results[0]).toEqual(
+                expect.objectContaining({ id: '507f1f77bcf86cd799439011', success: false, error: 'find fail' })
+            );
+        });
+
+        it('should throw when outer approveBatch setup fails', async () => {
+            db.getPassengersCollection.mockImplementation(() => {
+                throw new Error('db access fail');
+            });
+
+            await expect(
+                StationWiseApprovalService.approveBatch(['id1'], 'TTE123', mockTrainState)
+            ).rejects.toThrow('db access fail');
+        });
+
+        it('should execute full approve path for valid object id', async () => {
+            const validId = '507f1f77bcf86cd799439011';
+            const mockPending = {
+                _id: validId,
+                status: 'pending',
+                passengerPNR: 'P001',
+                passengerName: 'John',
+                proposedCoach: 'S1',
+                proposedBerth: '15',
+                proposedBerthFull: 'S1-15'
+            };
+            mockCollection.findOne.mockResolvedValue(mockPending);
+            AllocationService.applyReallocation.mockResolvedValue({ success: true });
+            mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+            const WebPushService = require('../../services/WebPushService');
+            WebPushService.sendApprovalNotificationToAdmins = jest.fn().mockResolvedValue(true);
+
+            const result = await StationWiseApprovalService.approveBatch([validId], 'TTE123', mockTrainState);
+            expect(result.totalApproved).toBe(1);
+            expect(WebPushService.sendApprovalNotificationToAdmins).toHaveBeenCalled();
+        });
+
+        it('should continue approval when admin push send fails', async () => {
+            const validId = '507f1f77bcf86cd799439011';
+            const mockPending = {
+                _id: validId,
+                status: 'pending',
+                passengerPNR: 'P001',
+                passengerName: 'John',
+                proposedCoach: 'S1',
+                proposedBerth: '15',
+                proposedBerthFull: 'S1-15'
+            };
+            mockCollection.findOne.mockResolvedValue(mockPending);
+            AllocationService.applyReallocation.mockResolvedValue({ success: true });
+            mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+            const WebPushService = require('../../services/WebPushService');
+            WebPushService.sendApprovalNotificationToAdmins = jest.fn().mockRejectedValue(new Error('admin push fail'));
+
+            const result = await StationWiseApprovalService.approveBatch([validId], 'TTE123', mockTrainState);
+            expect(result.totalApproved).toBe(1);
         });
     });
 
@@ -296,9 +387,55 @@ describe('StationWiseApprovalService - Comprehensive Tests', () => {
             mockCollection.findOne.mockResolvedValue(mockPending);
             mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
 
+            const WebPushService = require('../../services/WebPushService');
+            WebPushService.sendPushNotification = jest.fn().mockResolvedValue(true);
+
             await StationWiseApprovalService.rejectReallocation(validId, 'Test', 'TTE123');
 
-            expect(wsManager.broadcast).toHaveBeenCalled();
+            expect(wsManager.sendToUser).toHaveBeenCalled();
+            expect(WebPushService.sendPushNotification).toHaveBeenCalled();
+        });
+
+        it('should return success even if rejection push fails', async () => {
+            const validId = '507f1f77bcf86cd799439011';
+            mockCollection.findOne.mockResolvedValue({
+                passengerIrctcId: 'IR123',
+                passengerPNR: 'P001',
+                proposedBerthFull: 'S1-15'
+            });
+            mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+            const WebPushService = require('../../services/WebPushService');
+            WebPushService.sendPushNotification = jest.fn().mockRejectedValue(new Error('push fail'));
+
+            const result = await StationWiseApprovalService.rejectReallocation(validId, 'Reason', 'TTE123');
+            expect(result).toEqual({ success: true, message: 'Reallocation rejected' });
+        });
+
+        it('should continue rejection when websocket send fails', async () => {
+            const validId = '507f1f77bcf86cd799439011';
+            mockCollection.findOne.mockResolvedValue({
+                passengerIrctcId: 'IR123',
+                passengerPNR: 'P001',
+                proposedBerthFull: 'S1-15'
+            });
+            mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 });
+            const WebPushService = require('../../services/WebPushService');
+            WebPushService.sendPushNotification = jest.fn().mockResolvedValue(true);
+            wsManager.sendToUser.mockImplementation(() => {
+                throw new Error('ws fail');
+            });
+
+            const result = await StationWiseApprovalService.rejectReallocation(validId, 'Reason', 'TTE123');
+            expect(result).toEqual({ success: true, message: 'Reallocation rejected' });
+        });
+
+        it('should throw when rejectReallocation outer flow fails', async () => {
+            db.getPassengersCollection.mockImplementation(() => {
+                throw new Error('reject fail');
+            });
+            await expect(
+                StationWiseApprovalService.rejectReallocation('507f1f77bcf86cd799439011', 'Reason', 'TTE123')
+            ).rejects.toThrow('reject fail');
         });
     });
 
@@ -473,6 +610,20 @@ describe('StationWiseApprovalService - Comprehensive Tests', () => {
 
             expect(ranges.length).toBe(1);
             expect(ranges[0].fromIdx).toBe(1);
+        });
+    });
+
+    describe('_savePendingReallocations', () => {
+        it('should return zeros when there is nothing to save', async () => {
+            const result = await StationWiseApprovalService._savePendingReallocations([]);
+            expect(result).toEqual({ insertedCount: 0, deletedCount: 0 });
+        });
+
+        it('should throw when mongo persistence fails', async () => {
+            mockCollection.deleteMany.mockRejectedValue(new Error('save-fail'));
+            await expect(
+                StationWiseApprovalService._savePendingReallocations([{ trainId: '17225', status: 'pending' }])
+            ).rejects.toThrow('save-fail');
         });
     });
 });
