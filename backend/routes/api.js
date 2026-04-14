@@ -178,6 +178,42 @@ router.post('/tte/undo',
 
 // ========== TRAIN ROUTES ==========
 router.get('/trains', (req, res) => trainController.list(req, res));
+
+// Admin train overview (TTEs, passenger counts, notification stats)
+router.get('/admin/train-overview',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  (req, res) => trainController.getTrainOverview(req, res)
+);
+
+// Per-train config (get / update)
+router.get('/trains/:trainNo/config',
+  (req, res) => configController.getTrainConfig(req, res)
+);
+
+router.put('/trains/:trainNo/config',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  validationMiddleware.sanitizeBody,
+  (req, res) => configController.updateTrainConfig(req, res)
+);
+
+// Register a new train
+router.post('/trains/register',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  validationMiddleware.sanitizeBody,
+  (req, res) => configController.registerTrain(req, res)
+);
+
+// Engine status
+router.get('/train/engine-status',
+  (req, res) => trainController.getEngineStatus(req, res)
+);
+
+router.get('/train/engines',
+  (req, res) => trainController.getEngineStatus(req, res)
+);
 // Dynamic configuration setup (from frontend)
 router.post('/config/setup',
   validationMiddleware.sanitizeBody,
