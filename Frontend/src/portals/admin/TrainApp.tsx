@@ -274,10 +274,10 @@ function App({ initialPage }: AppProps): React.ReactElement {
   }, [currentPage, journeyStarted, autoInitAttempted, stateRestored]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const isAuth = localStorage.getItem('isAuthenticated');
     const userData = localStorage.getItem('user');
 
-    if (token && userData) {
+    if (isAuth && userData) {
       setIsAuthenticated(true);
       setUser(JSON.parse(userData));
     }
@@ -704,7 +704,7 @@ function App({ initialPage }: AppProps): React.ReactElement {
   };
 
   const handleLogout = async (): Promise<void> => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('user');
     // Clear the TrainDashboard configured flag so the config form shows
     // correctly when the user logs back in and opens the train again

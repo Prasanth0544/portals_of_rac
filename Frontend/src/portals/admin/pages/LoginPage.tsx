@@ -26,10 +26,8 @@ function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
             });
 
             if (response.data.success) {
-                localStorage.setItem('token', response.data.token);
-                if (response.data.refreshToken) {
-                    localStorage.setItem('refreshToken', response.data.refreshToken);
-                }
+                // Tokens are now in httpOnly cookies — only store non-sensitive metadata
+                localStorage.setItem('isAuthenticated', 'true');
                 localStorage.setItem('user', JSON.stringify(response.data.user));
                 window.location.reload();
             }

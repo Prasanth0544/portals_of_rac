@@ -1,7 +1,7 @@
 // Push Notification Manager for Passenger Portal
 // Handles subscription, permission, and communication with backend
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../api';
 
 /**
  * Convert base64 VAPID key to Uint8Array
@@ -55,8 +55,8 @@ export async function requestPushPermission(irctcId: string): Promise<boolean> {
         console.log('✅ Service Worker ready');
 
         // Get VAPID public key from backend
-        const vapidResponse = await fetch(`${API_URL}/push/vapid-public-key`);
-        const { publicKey } = await vapidResponse.json();
+        const vapidResponse = await api.get<{ publicKey: string }>('/push/vapid-public-key');
+        const { publicKey } = vapidResponse.data;
 
         // Check existing subscription
         let subscription = await registration.pushManager.getSubscription();
@@ -74,16 +74,12 @@ export async function requestPushPermission(irctcId: string): Promise<boolean> {
 
         // ALWAYS send subscription to backend (it uses upsert in MongoDB)
         console.log('[OUT] Sending subscription to backend for:', irctcId);
-        const response = await fetch(`${API_URL}/passenger/push-subscribe`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                irctcId,
-                subscription: subscription.toJSON()
-            })
+        const response = await api.post('/passenger/push-subscribe', {
+            irctcId,
+            subscription: subscription.toJSON()
         });
 
-        const result = await response.json();
+        const result = response.data;
         if (result.success) {
             console.log('✅ Push subscription registered with backend (MongoDB)');
         } else {
@@ -109,11 +105,7 @@ export async function unsubscribeFromPush(irctcId: string): Promise<boolean> {
             await subscription.unsubscribe();
 
             // Notify backend
-            await fetch(`${API_URL}/passenger/push-unsubscribe`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ irctcId })
-            });
+            await api.post('/passenger/push-unsubscribe', { irctcId });
 
             console.log('✅ Unsubscribed from push notifications');
             return true;

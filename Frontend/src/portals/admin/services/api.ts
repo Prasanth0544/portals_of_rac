@@ -112,10 +112,8 @@ ensureCsrfToken();
 
 api.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
+        // Auth tokens are sent automatically via httpOnly cookies (withCredentials: true)
+        // No need to manually attach Authorization header
 
         // Add CSRF token for state-changing requests
         if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {

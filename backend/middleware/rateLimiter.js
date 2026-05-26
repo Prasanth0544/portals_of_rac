@@ -1,17 +1,20 @@
 // backend/middleware/rateLimiter.js
 // Rate limiting middleware to protect against brute force and API abuse
+// Environment-aware: strict limits in production, relaxed in development
 
 const rateLimit = require('express-rate-limit');
+
+const isProd = process.env.NODE_ENV === 'production';
 
 /**
  * Authentication Rate Limiter
  * For login endpoints - strict limit to prevent brute force attacks
  * Development: 50 attempts per 15 minutes per IP
- * Production: 5 attempts per 15 minutes per IP
+ * Production:  5 attempts per 15 minutes per IP
  */
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 50, // Limit to 50 attempts per window
+    max: isProd ? 5 : 50,
     message: {
         success: false,
         message: 'Too many login attempts from this IP. Please try again after 15 minutes.',
@@ -29,14 +32,17 @@ const authLimiter = rateLimit({
 /**
  * OTP Rate Limiter
  * For OTP sending endpoints - very strict to prevent email spam
- * 3 requests per hour per IP
+ * Development: 50 requests per 15 minutes per IP
+ * Production:  3 requests per hour per IP
  */
 const otpLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 50, // 50 requests per 15 minutes (dev-friendly)
+    windowMs: isProd ? 60 * 60 * 1000 : 15 * 60 * 1000, // 1 hour (prod) / 15 min (dev)
+    max: isProd ? 3 : 50,
     message: {
         success: false,
-        message: 'OTP request limit exceeded. Please try again after 15 minutes.',
+        message: isProd
+            ? 'OTP request limit exceeded. Please try again after 1 hour.'
+            : 'OTP request limit exceeded. Please try again after 15 minutes.',
         code: 'RATE_LIMIT_OTP'
     },
     standardHeaders: true,
@@ -50,12 +56,12 @@ const otpLimiter = rateLimit({
 /**
  * General API Rate Limiter
  * For all API endpoints - moderate limit to prevent abuse
- * Development: 1000 requests per 15 minutes per IP
- * Production: 100 requests per 15 minutes per IP
+ * Development: 5000 requests per 15 minutes per IP
+ * Production:  200 requests per 15 minutes per IP (state-changing only)
  */
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5000, // Development: generous limit for polling-heavy UIs
+    max: isProd ? 200 : 5000,
     message: {
         success: false,
         message: 'Too many requests from this IP. Please try again later.',
@@ -78,11 +84,12 @@ const apiLimiter = rateLimit({
 /**
  * Sensitive Operations Rate Limiter
  * For sensitive actions like password reset, account changes
- * 10 requests per hour per IP
+ * Development: 20 requests per hour per IP
+ * Production:  10 requests per hour per IP
  */
 const sensitiveOpLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // 10 requests per hour
+    max: isProd ? 10 : 20,
     message: {
         success: false,
         message: 'Too many sensitive operation requests. Please try again later.',

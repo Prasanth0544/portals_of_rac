@@ -161,11 +161,10 @@ const FamilyUpgradeSelectionPage: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            const token = localStorage.getItem('token');
             await axios.post(
                 `${API_BASE_URL}/reallocation/reject-group-upgrade`,
                 { pnr, reason: 'User declined offer' },
-                { headers: { Authorization: `Bearer ${token}` } }
+                { withCredentials: true }
             );
 
             alert(' Upgrade offer declined. You will not receive future group upgrade offers for this booking.');
@@ -186,7 +185,6 @@ const FamilyUpgradeSelectionPage: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            const token = localStorage.getItem('token');
             const response = await axios.post(
                 `${API_BASE_URL}/reallocation/select-passengers`,
                 {
@@ -195,7 +193,7 @@ const FamilyUpgradeSelectionPage: React.FC = () => {
                     requestedBy: 'passenger'
                 },
                 {
-                    headers: { Authorization: `Bearer ${token}` }
+                    withCredentials: true
                 }
             );
 

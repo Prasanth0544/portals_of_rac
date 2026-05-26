@@ -107,29 +107,29 @@ class AuthController {
       );
 
       // Set tokens as httpOnly cookies (secure in production)
+      // For cross-origin deployments (Vercel frontend + Render backend),
+      // sameSite must be 'none' with secure: true
       const isProduction = process.env.NODE_ENV === "production";
 
       res.cookie("accessToken", token, {
         httpOnly: true,
         secure: isProduction,
-        sameSite: "strict",
+        sameSite: isProduction ? "none" : "strict",
         maxAge: 15 * 60 * 1000, // 15 minutes
       });
 
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: isProduction,
-        sameSite: "strict",
+        sameSite: isProduction ? "none" : "strict",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
-      // Return success with tokens and user info
-      // Also return tokens in body for backward compatibility
+      // Return success with user info only (no tokens in body)
+      // Tokens are securely delivered via httpOnly cookies
       res.json({
         success: true,
         message: "Login successful",
-        token,
-        refreshToken,
         expiresIn: 900, // 15 minutes in seconds
         user: {
           employeeId: user.employeeId,
@@ -506,32 +506,32 @@ class AuthController {
       );
 
       // Set tokens as httpOnly cookies (secure in production)
+      // For cross-origin deployments (Vercel frontend + Render backend),
+      // sameSite must be 'none' with secure: true
       const isProduction = process.env.NODE_ENV === "production";
 
       res.cookie("accessToken", token, {
         httpOnly: true,
         secure: isProduction,
-        sameSite: "strict",
+        sameSite: isProduction ? "none" : "strict",
         maxAge: 15 * 60 * 1000, // 15 minutes
       });
 
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: isProduction,
-        sameSite: "strict",
+        sameSite: isProduction ? "none" : "strict",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
-      // Return success with tokens, user info, and tickets
-      // Also return tokens in body for backward compatibility
+      // Return success with user info only (no tokens in body)
+      // Tokens are securely delivered via httpOnly cookies
       res.json({
         success: true,
         message: "Login successful",
-        token,
-        refreshToken,
         expiresIn: 900, // 15 minutes in seconds
         user: {
-          irctcId: user.IRCTC_ID, // ✅ FIXED: Read from uppercase field
+          irctcId: user.IRCTC_ID,
           name: user.name,
           email: user.email,
           phone: user.phone,
@@ -797,11 +797,12 @@ class AuthController {
   /**
    * Refresh Access Token
    * POST /api/auth/refresh
-   * Body: { refreshToken }
+   * Body: { refreshToken } OR reads from httpOnly cookie
    */
   async refresh(req, res) {
     try {
-      const { refreshToken } = req.body;
+      // Accept refresh token from body or cookie
+      const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken;
 
       if (!refreshToken) {
         return res.status(400).json({
@@ -831,9 +832,17 @@ class AuthController {
         { expiresIn: JWT_EXPIRES_IN },
       );
 
+      // Set new access token as httpOnly cookie
+      const isProduction = process.env.NODE_ENV === "production";
+      res.cookie("accessToken", newAccessToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "strict",
+        maxAge: 15 * 60 * 1000, // 15 minutes
+      });
+
       res.json({
         success: true,
-        token: newAccessToken,
         expiresIn: 900, // 15 minutes in seconds
       });
     } catch (error) {

@@ -97,8 +97,7 @@ class OTPService {
             let emailSent = false;
             try {
                 const EMAIL_TIMEOUT_MS = 12000; // 12 seconds max for email delivery
-                const emailPromise = NotificationService.emailTransporter.sendMail({
-                    from: `"Indian Railways OTP" <${process.env.EMAIL_USER}>`,
+                const emailPromise = NotificationService._sendMail({
                     to: email,
                     subject: '🔐 Your OTP for Indian Railways',
                     html: `

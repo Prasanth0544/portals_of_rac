@@ -190,11 +190,87 @@ The system implements **Robust State Persistence** to ensure data integrity duri
 | Feature | Implementation |
 |---------|----------------|
 | **JWT Authentication** | Access tokens (1h) + Refresh tokens (7d) |
-| **Role-Based Access** | Admin, TTE, Passenger roles |
-| **CSRF Protection** | Double-submit cookie pattern |
+| **Role-Based Access** | ADMIN, TTE, PASSENGER roles enforced per route |
+| **CSRF Protection** | Double-submit cookie pattern (`csurf`) |
 | **Rate Limiting** | 5 login attempts/15min, 100 general/15min |
 | **Input Sanitization** | XSS prevention, HTML escaping |
 | **Password Hashing** | bcrypt with salt rounds |
+| **Route Auth Coverage** | All state-mutating and PII-reading routes protected |
+
+---
+
+## 🔑 Authentication Strategy (Item 14)
+
+### Token Transport
+All portals run on a **single origin** (`portals-of-rac.vercel.app`). Rather than relying on cookies (which are scoped to the domain and cause cross-portal token collisions), each portal stores its JWT in `localStorage` and sends it via the `Authorization: Bearer <token>` header.
+
+```
+priority:
+  1. Authorization header  ← portal-specific, no cross-portal collision
+  2. httpOnly accessToken cookie ← browser fallback (same origin only)
+```
+
+### Role Hierarchy
+| Role | Can access |
+|------|------------|
+| `ADMIN` | Train lifecycle (init/start/reset/next-station), all TTE routes, all passenger data, config |
+| `TTE` | Passenger operations, reallocation approve/reject, offline upgrades, boarding verification |
+| `PASSENGER` | Own PNR, own notifications, upgrade offers, OTP flows |
+| _(public)_ | `/api/health`, `/api/trains`, `/api/train/state`, `/api/train/stats`, `/api/passenger/pnr/:pnr` |
+
+### Route Protection Summary
+| Route group | Auth required | Role |
+|---|---|---|
+| `POST /train/initialize` | ✅ | ADMIN |
+| `POST /train/start-journey` | ✅ | ADMIN |
+| `POST /train/next-station` | ✅ | ADMIN |
+| `POST /train/reset` | ✅ | ADMIN |
+| `POST /admin/*` | ✅ | ADMIN |
+| `GET/POST /tte/*` | ✅ | TTE, ADMIN |
+| `GET/POST /reallocation/pending` | ✅ | TTE, ADMIN |
+| `POST /reallocation/upgrade/*/approve` | ✅ | TTE, ADMIN |
+| `POST /reallocation/upgrade/*/reject` | ✅ | TTE, ADMIN |
+| `POST /reallocation/create-from-matches` | ✅ | TTE, ADMIN |
+| `GET /passengers/all` | ✅ | TTE, ADMIN |
+| `GET /passengers/counts` | ✅ | TTE, ADMIN |
+| `POST /passengers/add` | ✅ | ADMIN |
+| `GET /passenger/notifications` | ✅ | PASSENGER |
+| `POST /passenger/notifications/*` | ✅ | PASSENGER |
+| `GET /passenger/pnr/:pnr` | 🔓 public | _(none)_ |
+| `GET /api/health` | 🔓 public | _(none)_ |
+
+### Token Lifecycle
+```
+Login → accessToken (1h, localStorage) + refreshToken (7d, httpOnly cookie)
+         ↓
+     On 401 → POST /api/auth/refresh → new accessToken
+         ↓
+     On refresh failure → redirect to login
+```
+
+---
+
+## 🔀 Multi-Replica Architecture (Item 17)
+
+### Decision: Stay on 1 replica + keep Redis pub/sub code
+
+**Render free tier = 1 replica always.** There is no horizontal scaling on the free plan. The WebSocket manager already has full Redis pub/sub support that activates automatically when `REDIS_URL` is set.
+
+| Scenario | Behaviour |
+|---|---|
+| `REDIS_URL` not set (Render free) | In-memory broadcast only — works perfectly for 1 replica |
+| `REDIS_URL` set (paid/self-hosted) | Redis pub/sub activates — cross-replica WS messages propagate automatically |
+
+**Why we kept the Redis code:**
+- Zero cost when disabled (safe no-op `_attachRedisPubSub()` guard)
+- Production-ready upgrade path: just add `REDIS_URL` env var to scale out
+- No code change needed when upgrading Render plan
+
+**To scale to multiple replicas (future):**
+1. Upgrade to Render Starter plan (multiple instances)
+2. Add a Redis instance (Upstash free tier: `rediss://...`)
+3. Set `REDIS_URL=rediss://default:token@endpoint:6379` in Render env vars
+4. Deploy — pub/sub activates automatically, zero code changes
 
 ---
 
@@ -226,15 +302,33 @@ MONGODB_URI=mongodb://localhost:27017
 
 # JWT
 JWT_SECRET=your-secret-key-here
-JWT_REFRESH_SECRET=your-refresh-secret-here
 
-# Web Push (generate with: npx web-push generate-vapid-keys)
+# Web Push (generate: npx web-push generate-vapid-keys)
 VAPID_PUBLIC_KEY=your-vapid-public-key
 VAPID_PRIVATE_KEY=your-vapid-private-key
 VAPID_EMAIL=mailto:your-email@example.com
 
 # CORS (comma-separated)
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5174,http://localhost:5175
+ALLOWED_ORIGINS=http://localhost:3000,https://portals-of-rac.vercel.app
+
+# Frontend URL (used in email links and push notifications)
+FRONTEND_URL=https://portals-of-rac.vercel.app
+```
+
+**Email — Production (Render):** Render blocks SMTP. Use Resend instead:
+```env
+RESEND_API_KEY=re_xxxxxxxxxxxx   # get free key at resend.com
+```
+
+**Email — Local dev:** Gmail SMTP (when RESEND_API_KEY is not set):
+```env
+EMAIL_USER=your@gmail.com
+EMAIL_PASSWORD=your_app_password  # https://myaccount.google.com/apppasswords
+```
+
+**Redis (optional — enables multi-replica WebSocket):**
+```env
+REDIS_URL=rediss://default:token@endpoint:6379  # Upstash free tier
 ```
 
 See `.env.example` for full configuration options.

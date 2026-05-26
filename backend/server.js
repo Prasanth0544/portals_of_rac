@@ -162,7 +162,7 @@ async function startServer() {
     // Per-train config (stations, passengers) is loaded dynamically
     // when a train is selected from the Landing Page.
     // ═══════════════════════════════════════════════════════════
-    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    const mongoUri = process.env.MONGODB_URI;
 
     // Connect in bootstrap mode (auth + Trains_Details only)
     try {
@@ -178,28 +178,19 @@ async function startServer() {
       }
 
       // ═══════════════════════════════════════════════════════════
-      // CLEANUP OLD SESSION DATA ON SERVER START
-      // This ensures no duplicate reallocations from previous sessions
+      // SAFE CLEANUP: Remove stale session data on server start
+      // Production: only removes data older than STALE_THRESHOLD_HOURS (default 24h)
+      // Development: clears everything for a clean slate
+      // Set STARTUP_CLEANUP=false to disable entirely
       // ═══════════════════════════════════════════════════════════
       try {
-        // Use rac DB (available in bootstrap mode) to clean session data
         const racDb = await db.getDb();
         if (racDb) {
-          const stationReallocations = racDb.collection(COLLECTIONS.STATION_REALLOCATIONS);
-          const reallocResult = await stationReallocations.deleteMany({});
-          if (reallocResult.deletedCount > 0) {
-            console.log(`🗑️ Server start: Cleared ${reallocResult.deletedCount} old reallocations`);
-          }
-
-          const upgradeNotifications = racDb.collection(COLLECTIONS.UPGRADE_NOTIFICATIONS);
-          const notifResult = await upgradeNotifications.deleteMany({});
-          if (notifResult.deletedCount > 0) {
-            console.log(`🗑️ Server start: Cleared ${notifResult.deletedCount} old notifications`);
-          }
-          console.log('✅ Old session data cleared - fresh start');
+          const { cleanupStaleSessionData } = require('./utils/startupCleanup');
+          await cleanupStaleSessionData(racDb);
         }
       } catch (cleanupErr) {
-        console.warn('⚠️ Could not clear old data on startup:', cleanupErr.message);
+        console.warn('⚠️ Could not run startup cleanup:', cleanupErr.message);
       }
 
     } catch (error) {
@@ -207,28 +198,33 @@ async function startServer() {
       console.warn('You can POST /api/config/setup to configure runtime.');
     }
 
+    // Connect Redis (optional — graceful fallback to in-memory if unavailable)
+    const redisClient = require('./config/redisClient');
+    await redisClient.connect();
+
     // Initialize WebSocket (independent of DB) and start server
     wsManager.initialize(httpServer);
 
     httpServer.listen(PORT, () => {
 
       console.log('');
-      console.log('╔════════════════════════════════════════════════╗');
-      console.log('║   🚂 RAC REALLOCATION API SERVER V3.0        ║');
-      console.log('║      Multi-Train Architecture                 ║');
-      console.log('╚════════════════════════════════════════════════╝');
-      console.log(`✅ HTTP Server:    http://localhost:${PORT}`);
-      console.log(`✅ WebSocket:      ws://localhost:${PORT}`);
-      console.log(`✅ Environment:    ${process.env.NODE_ENV || 'development'}`);
-      console.log(`✅ Node Version:   ${process.version}`);
+      console.log('================================================');
+      console.log('  WebSocket Server Initialized                  ');
+      console.log('  Real-time Offer Push: ENABLED                 ');
+      console.log('================================================');
       console.log('');
-      console.log('📊 Configuration:');
-      console.log(`   Auth DB:         ${DBS.STATIONS}`);
-      console.log(`   Passengers DB:   ${DBS.PASSENGERS}`);
-      console.log(`   Trains Registry: ${COLLECTIONS.TRAINS_DETAILS}`);
-      console.log(`   Mode:            Multi-Train (per-train config from Trains_Details)`);
+      console.log(`  HTTP Server  : http://localhost:${PORT}`);
+      console.log(`  WebSocket   : ws://localhost:${PORT}`);
+      console.log(`  Environment : ${process.env.NODE_ENV || 'development'}`);
+      console.log(`  Node        : ${process.version}`);
       console.log('');
-      console.log(`📡 WebSocket Server: Ready (${wsManager.getClientCount()} clients)`);
+      console.log('  Configuration:');
+      console.log(`    Auth DB         : ${DBS.STATIONS}`);
+      console.log(`    Passengers DB   : ${DBS.PASSENGERS}`);
+      console.log(`    Trains Registry : ${COLLECTIONS.TRAINS_DETAILS}`);
+      console.log('    Mode            : Multi-Train (per-train config from Trains_Details)');
+      console.log('');
+      console.log(`  WebSocket: Ready (${wsManager.getClientCount()} clients)`);
       console.log('');
 
       // Start group upgrade timeout processor
@@ -236,11 +232,12 @@ async function startServer() {
       GroupUpgradeService.startTimeoutProcessor();
       console.log('');
 
-      console.log('🎯 Ready to accept requests!');
+      console.log('  Ready to accept requests!');
       console.log('');
-      console.log('Try:');
-      console.log(`  curl http://localhost:${PORT}/`);
-      console.log(`  curl http://localhost:${PORT}/api/health`);
+      console.log('  Quick test:');
+      console.log(`    curl http://localhost:${PORT}/api/health`);
+      console.log(`    curl http://localhost:${PORT}/api/push/status`);
+      console.log(`    curl http://localhost:${PORT}/api/email/status`);
       console.log('');
     });
 
@@ -256,6 +253,10 @@ process.on('SIGINT', async () => {
   // Stop group upgrade timeout processor
   const GroupUpgradeService = require('./services/GroupUpgradeService');
   GroupUpgradeService.stopTimeoutProcessor();
+
+  // Close Redis connections
+  const redisClient = require('./config/redisClient');
+  await redisClient.close();
 
   // Close WebSocket connections
   wsManager.closeAll();

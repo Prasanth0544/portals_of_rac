@@ -13,6 +13,13 @@ dist/
 coverage/
 **/coverage/
 
+# Test and coverage artifacts
+**/jest_*.json
+**/jest_*.txt
+**/coverage_*.txt
+**/test_failures.log
+**/ts_errors*.txt
+
 # Environment variables
 .env
 **/.env

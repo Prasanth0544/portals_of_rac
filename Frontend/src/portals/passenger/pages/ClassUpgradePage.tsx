@@ -18,9 +18,8 @@ const ClassUpgradePage: React.FC = () => {
 
     useEffect(() => {
         if (!irctcId) return;
-        const token = localStorage.getItem('token');
         fetch(`${API_URL}/passengers/by-irctc/${irctcId}`, {
-            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'include',
         })
             .then((r) => r.json())
             .then((data) => {

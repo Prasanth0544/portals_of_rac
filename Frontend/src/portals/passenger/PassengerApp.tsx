@@ -26,11 +26,11 @@ import FamilyUpgradeSelectionPage from './pages/FamilyUpgradeSelectionPage';
 import QRTicketViewPage from './pages/QRTicketViewPage';
 import NotificationBell from './components/NotificationBell';
 import { initializePushNotifications } from './services/pushNotificationService';
-import axios from 'axios';
+import api from './api';
 import './App.css';
 import './UserMenu.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 
 interface User {
     name?: string;
@@ -196,12 +196,10 @@ function PassengerApp({ onLogout }: PassengerAppProps): React.ReactElement {
         let stopped = false;
 
         const fetchUpgradeCount = async (): Promise<void> => {
-            if (stopped || !localStorage.getItem('token')) return;
+            if (stopped || !localStorage.getItem('isAuthenticated')) return;
             try {
-                const token = localStorage.getItem('token');
-                const response = await axios.get(
-                    `${API_URL}/passenger/pending-upgrades/${user.IRCTC_ID}`,
-                    { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+                const response = await api.get(
+                    `/passenger/pending-upgrades/${user.IRCTC_ID}`
                 );
                 if (response.data.success) {
                     setUpgradeCount(response.data.pendingUpgrades?.length || 0);

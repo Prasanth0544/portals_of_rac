@@ -1,5 +1,7 @@
-// backend/config/websocket.js - Enhanced with Real-time Offer Push
+// backend/config/websocket.js - Enhanced with Real-time Offer Push + Redis Pub/Sub
 const WebSocket = require("ws");
+
+const REDIS_CHANNEL = 'ws:broadcast';
 
 class WebSocketManager {
   constructor() {
@@ -8,6 +10,9 @@ class WebSocketManager {
     this.pnrSubscriptions = new Map(); // PNR -> Set of WebSocket clients
     this.clientsByIrctcId = new Map(); // IRCTC_ID -> Set of WebSocket clients
     this.clientsByRole = new Map();    // 'TTE'|'PASSENGER'|'ADMIN' -> Set of WebSocket clients
+    this._redisPub = null;
+    this._redisSub = null;
+    this._replicaId = `replica_${process.pid}_${Date.now()}`;
   }
 
   /**
@@ -107,14 +112,56 @@ class WebSocketManager {
       });
     });
 
-    console.log("");
-    console.log("╔════════════════════════════════════════════╗");
-    console.log("║   ✅ WebSocket Server Initialized         ║");
-    console.log("║   📡 Real-time Offer Push: ENABLED        ║");
-    console.log("╚════════════════════════════════════════════╝");
-    console.log("");
+    console.log('');
+    console.log('  WebSocket Server: Initialized');
+    console.log('  Real-time Offer Push: ENABLED');
+    console.log('');
+
+    // Attach Redis pub/sub if available (for multi-replica support)
+    this._attachRedisPubSub();
 
     return this.wss;
+  }
+
+  /**
+   * Attach Redis pub/sub for cross-replica message propagation.
+   * Safe no-op if Redis is unavailable.
+   */
+  _attachRedisPubSub() {
+    try {
+      const redis = require('./redisClient');
+      if (!redis.isAvailable()) return;
+
+      this._redisPub = redis.getPublisher();
+      this._redisSub = redis.getSubscriber();
+
+      if (!this._redisPub || !this._redisSub) return;
+
+      // Subscribe to the broadcast channel
+      this._redisSub.subscribe(REDIS_CHANNEL, (err) => {
+        if (err) {
+          console.warn('⚠️ Redis WS subscribe failed:', err.message);
+          this._redisPub = null;
+          this._redisSub = null;
+          return;
+        }
+        console.log('📡 WebSocket: Redis pub/sub attached (multi-replica ready)');
+      });
+
+      // When we receive a message from another replica, forward to local clients
+      this._redisSub.on('message', (channel, rawMsg) => {
+        if (channel !== REDIS_CHANNEL) return;
+        try {
+          const envelope = JSON.parse(rawMsg);
+          // Skip messages we published ourselves
+          if (envelope._replicaId === this._replicaId) return;
+          // Forward to local clients
+          this._localBroadcast(envelope.data);
+        } catch { /* ignore parse errors */ }
+      });
+    } catch {
+      // ioredis or redisClient not available — silent fallback
+    }
   }
 
   /**
@@ -417,13 +464,30 @@ class WebSocketManager {
   }
 
   /**
-   * Broadcast to all connected clients
+   * Broadcast to all connected clients (local + cross-replica via Redis)
    */
   broadcast(dataObj) {
-    const message = JSON.stringify({
-      ...dataObj,
-      timestamp: new Date().toISOString(),
-    });
+    const enriched = { ...dataObj, timestamp: new Date().toISOString() };
+
+    // Publish to Redis so other replicas forward to their local clients
+    if (this._redisPub) {
+      try {
+        this._redisPub.publish(REDIS_CHANNEL, JSON.stringify({
+          _replicaId: this._replicaId,
+          data: enriched,
+        }));
+      } catch { /* Redis down — local-only broadcast */ }
+    }
+
+    // Send to this replica's local clients
+    return this._localBroadcast(enriched);
+  }
+
+  /**
+   * Send to local WebSocket clients only (called directly or via Redis subscriber)
+   */
+  _localBroadcast(dataObj) {
+    const message = JSON.stringify(dataObj);
     let sentCount = 0;
 
     this.clients.forEach((client) => {

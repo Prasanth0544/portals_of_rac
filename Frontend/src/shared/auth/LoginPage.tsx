@@ -100,12 +100,9 @@ function LoginPage({ onLoginSuccess }: LoginPageProps): React.ReactElement {
 
             const data = response.data;
 
-            if (data.success && data.token) {
-                // Store auth tokens
-                localStorage.setItem('token', data.token);
-                if (data.refreshToken) {
-                    localStorage.setItem('refreshToken', data.refreshToken);
-                }
+            if (data.success) {
+                // Tokens are now in httpOnly cookies — only store non-sensitive metadata
+                localStorage.setItem('isAuthenticated', 'true');
                 localStorage.setItem('activePortal', role);
 
                 // Store user data (shape differs per role)
@@ -140,8 +137,7 @@ function LoginPage({ onLoginSuccess }: LoginPageProps): React.ReactElement {
         } catch (err: any) {
             if (isStaffRole) {
                 // Clear stale auth data on staff login failure
-                localStorage.removeItem('token');
-                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('isAuthenticated');
                 localStorage.removeItem('user');
                 localStorage.removeItem('trainAssigned');
             }

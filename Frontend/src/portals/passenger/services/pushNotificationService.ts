@@ -1,7 +1,7 @@
 // passenger-portal/src/services/pushNotificationService.ts
 // Handles push notification subscription for Passenger portal
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../api';
 
 interface SubscriptionResult {
     success: boolean;
@@ -39,9 +39,8 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
  */
 const getVapidPublicKey = async (): Promise<string | null> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/push/vapid-key`);
-        const data: VapidKeyResponse = await response.json();
-        return data.vapidPublicKey;
+        const response = await api.get<VapidKeyResponse>('/push/vapid-key');
+        return response.data.vapidPublicKey;
     } catch (error) {
         console.error('❌ Failed to get VAPID key:', error);
         return null;
@@ -110,15 +109,12 @@ export const subscribeToPushNotifications = async (): Promise<SubscriptionResult
         }
 
         console.log('[OUT] Subscribing to push notifications for:', irctcId);
-        const response = await fetch(`${API_BASE_URL}/passenger/push-subscribe`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ irctcId, subscription })
+        const response = await api.post('/passenger/push-subscribe', {
+            irctcId,
+            subscription
         });
 
-        const result = await response.json();
+        const result = response.data;
 
         if (result.success) {
             console.log('✅ Passenger subscribed to push notifications');

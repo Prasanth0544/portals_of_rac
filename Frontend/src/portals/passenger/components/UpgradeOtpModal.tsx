@@ -237,6 +237,19 @@ const UpgradeOtpModal: React.FC<UpgradeOtpModalProps> = ({
 
     const otpFull = otpDigits.every(d => d !== '');
 
+    // Pre-compute step indicator classes to avoid TS narrowing issues in JSX
+    const isIdentityStep = step === 'identity';
+    const isOtpStep = step === 'otp';
+    const isProcessingStep = step === 'processing';
+    const isResultStep = step === 'result';
+    const isPastOtp = isProcessingStep || isResultStep;
+
+    const step1Class = `otp-step ${isIdentityStep ? 'active' : 'completed'}`;
+    const step1Connector = `otp-step-connector ${!isIdentityStep ? 'completed' : ''}`;
+    const step2Class = `otp-step ${isOtpStep ? 'active' : (isPastOtp ? 'completed' : '')}`;
+    const step2Connector = `otp-step-connector ${isPastOtp ? 'completed' : ''}`;
+    const step3Class = `otp-step ${isResultStep ? (resultSuccess ? 'completed' : 'active') : (isProcessingStep ? 'active' : '')}`;
+
     return (
         <div className="otp-modal-overlay" onClick={onClose}>
             <div className="otp-modal" onClick={e => e.stopPropagation()}>
@@ -253,23 +266,23 @@ const UpgradeOtpModal: React.FC<UpgradeOtpModalProps> = ({
 
                 {/* Step Indicator */}
                 <div className="otp-steps">
-                    <div className={`otp-step ${step === 'identity' ? 'active' : 'completed'}`}>
+                    <div className={step1Class}>
                         <span className="otp-step-number">
-                            {step !== 'identity' ? '✓' : '1'}
+                            {!isIdentityStep ? '✓' : '1'}
                         </span>
                         <span>Identity</span>
                     </div>
-                    <div className={`otp-step-connector ${step !== 'identity' ? 'completed' : ''}`} />
-                    <div className={`otp-step ${step === 'otp' ? 'active' : (['processing', 'result'].includes(step) ? 'completed' : '')}`}>
+                    <div className={step1Connector} />
+                    <div className={step2Class}>
                         <span className="otp-step-number">
-                            {['processing', 'result'].includes(step) ? '✓' : '2'}
+                            {isPastOtp ? '✓' : '2'}
                         </span>
                         <span>OTP</span>
                     </div>
-                    <div className={`otp-step-connector ${['processing', 'result'].includes(step) ? 'completed' : ''}`} />
-                    <div className={`otp-step ${step === 'result' ? (resultSuccess ? 'completed' : 'active') : (step === 'processing' ? 'active' : '')}`}>
+                    <div className={step2Connector} />
+                    <div className={step3Class}>
                         <span className="otp-step-number">
-                            {step === 'result' && resultSuccess ? '✓' : '3'}
+                            {isResultStep && resultSuccess ? '✓' : '3'}
                         </span>
                         <span>Confirm</span>
                     </div>

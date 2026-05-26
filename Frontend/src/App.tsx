@@ -39,7 +39,7 @@ function App(): React.ReactElement {
     // Initialize auth state synchronously from localStorage
     // so route guards don't redirect on first render before useEffect runs
     const [authenticated, setAuthenticated] = useState<boolean>(() => {
-        return !!localStorage.getItem('token') && !!localStorage.getItem('activePortal');
+        return !!localStorage.getItem('isAuthenticated') && !!localStorage.getItem('activePortal');
     });
     const [activePortal, setActivePortal] = useState<PortalRole | null>(() => {
         return (localStorage.getItem('activePortal') as PortalRole | null);

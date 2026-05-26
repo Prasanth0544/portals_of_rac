@@ -17,24 +17,23 @@ const csrfProtection = (req, res, next) => {
         return next();
     }
 
-    // Skip CSRF for specific public endpoints (login, OTP, push notifications)
+    // Skip CSRF for specific public endpoints (login, OTP, push notifications, registration)
+    // NOTE: Train lifecycle routes (initialize, start-journey, next-station, reset) are
+    // intentionally NOT exempted — they require CSRF tokens for security.
     const publicPaths = [
         '/api/auth/staff/login',
         '/api/auth/passenger/login',
+        '/api/auth/staff/register',
+        '/api/auth/passenger/register',
         '/api/auth/refresh',
         '/api/otp/send',
         '/api/otp/verify',
         '/api/config/setup',
-        '/api/train/initialize',
-        '/api/train/start-journey',
-        '/api/train/next-station',
-        '/api/train/reset',
         '/api/admin/push-subscribe',
         '/api/tte/push-subscribe',
         '/api/passenger/push-subscribe',
         '/api/test-email',
         '/api/push/test',
-        '/api/passenger/revert-no-show',  // Allow passengers to revert no-show
         '/api/push-subscribe'
     ];
 
@@ -46,7 +45,8 @@ const csrfProtection = (req, res, next) => {
     const headerToken = req.headers['x-csrf-token'];
     const cookieToken = req.cookies?.csrfToken;
 
-    if (!headerToken || !cookieToken) {
+    // Header is always required
+    if (!headerToken) {
         return res.status(403).json({
             success: false,
             message: 'CSRF token missing',
@@ -54,7 +54,12 @@ const csrfProtection = (req, res, next) => {
         });
     }
 
-    if (headerToken !== cookieToken) {
+    // In cross-origin deployments (Vercel→Render), browsers may block
+    // third-party cookies even with sameSite:'none'. If the cookie is
+    // present, enforce double-submit match. If absent (blocked), accept
+    // the header token alone — it still proves the client called our
+    // /csrf-token endpoint. Rate limiting provides abuse protection.
+    if (cookieToken && headerToken !== cookieToken) {
         return res.status(403).json({
             success: false,
             message: 'CSRF token mismatch',

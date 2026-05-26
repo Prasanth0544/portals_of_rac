@@ -14,6 +14,28 @@
 
 services:
   # ─────────────────────────────────────────
+  # Redis - Session & Cache Store
+  # ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─────────────────────────────────────────
   # MongoDB - Production Settings
   # ─────────────────────────────────────────
   mongodb:
@@ -58,6 +80,8 @@ services:
       - EMAIL_PORT=${EMAIL_PORT}
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      # Redis (optional — graceful fallback if unavailable)
+      - REDIS_URL=redis://redis:6379
     deploy:
       resources:
         limits:
@@ -91,3 +115,7 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
+
+volumes:
+  redis_data:
+    driver: local

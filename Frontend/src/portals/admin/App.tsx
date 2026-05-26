@@ -10,7 +10,7 @@ function App(): React.ReactElement {
     // Read token synchronously so the correct route renders immediately on refresh
     // (useEffect would cause a flash of the login page, losing the URL path)
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(
-        () => !!localStorage.getItem('token')
+        () => !!localStorage.getItem('isAuthenticated')
     );
     const [showSignUp, setShowSignUp] = React.useState<boolean>(false);
 

@@ -2,9 +2,7 @@
 // Passenger portal: Shows available higher-class (3A/2A) upgrade options with cost for Sleeper RAC passengers
 
 import React, { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../api';
 
 interface BerthOption {
     berth: {
@@ -57,11 +55,7 @@ export default function UpgradeOptionsCard({ irctcId, pnr, passengerClass, pnrSt
         if (!isEligible || !irctcId) return;
         setLoading(true);
         try {
-            const trainNo = localStorage.getItem('trainNo');
-            const url = `${API_URL}/passenger/upgrade-options/${irctcId}${trainNo ? `?trainNo=${trainNo}` : ''}`;
-            const res = await axios.get(url, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-            });
+            const res = await api.get(`/passenger/upgrade-options/${irctcId}`);
             if (res.data.success) {
                 setOptions(res.data.data.options || {});
                 setHasOptions(res.data.data.hasOptions || false);
@@ -80,11 +74,9 @@ export default function UpgradeOptionsCard({ irctcId, pnr, passengerClass, pnrSt
         setApplying(true);
         setResult(null);
         try {
-            const trainNo = localStorage.getItem('trainNo');
-            await axios.post(
-                `${API_URL}/passenger/request-cross-class-upgrade`,
-                { pnr, targetCoach: selected.berth.coach, targetBerthNo: selected.berth.berthNo, trainNo },
-                { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+            await api.post(
+                '/passenger/request-cross-class-upgrade',
+                { pnr, targetCoach: selected.berth.coach, targetBerthNo: selected.berth.berthNo }
             );
             setResult({ type: 'success', text: `✅ Upgrade confirmed! Your new berth: ${selected.berth.fullBerthNo} (${selected.berth.classLabel}). Please pay ₹${selected.cost} to the TTE.` });
             setSelected(null);

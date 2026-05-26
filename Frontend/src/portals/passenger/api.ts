@@ -68,10 +68,8 @@ ensureCsrfToken();
 // Add request interceptor to attach token, CSRF, and trainNo to all requests
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Auth tokens are sent automatically via httpOnly cookies (withCredentials: true)
+    // No need to manually attach Authorization header
 
     // Auto-inject trainNo from localStorage into every request
     // This ensures all API calls are scoped to the passenger's train
@@ -147,36 +145,28 @@ api.interceptors.response.use(
         data?.message?.toLowerCase().includes("jwt");
 
       if (isExpiredToken) {
-        const refreshToken = localStorage.getItem("refreshToken");
-        if (refreshToken) {
-          try {
-            console.log("[Passenger API] Token expired, attempting refresh...");
-            const refreshResponse = await axios.post(
-              `${API_BASE_URL}/auth/refresh`,
-              { refreshToken },
-            );
-            const newToken = refreshResponse.data.token;
+        try {
+          console.log("[Passenger API] Token expired, attempting refresh via cookie...");
+          await axios.post(
+            `${API_BASE_URL}/auth/refresh`,
+            {},
+            { withCredentials: true },
+          );
+          console.log("[Passenger API] Token refreshed successfully");
 
-            // Save new token
-            localStorage.setItem("token", newToken);
-            console.log("[Passenger API] Token refreshed successfully");
-
-            // Retry original request with new token
-            error.config.headers.Authorization = `Bearer ${newToken}`;
-            return api.request(error.config);
-          } catch (refreshError) {
-            console.error(
-              "[Passenger API] Token refresh failed:",
-              refreshError,
-            );
-          }
+          // Retry original request — new access token is in the cookie
+          return api.request(error.config);
+        } catch (refreshError) {
+          console.error(
+            "[Passenger API] Token refresh failed:",
+            refreshError,
+          );
         }
       }
 
-      // If refresh fails or no refresh token, logout
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
+      // If refresh fails, clear non-sensitive user metadata
       localStorage.removeItem("passengerPNR");
+      localStorage.removeItem("user");
       console.warn("⚠️ Session expired. Please login again.");
     }
 

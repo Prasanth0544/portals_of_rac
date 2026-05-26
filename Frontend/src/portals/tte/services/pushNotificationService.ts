@@ -118,15 +118,13 @@ export const subscribeToPushNotifications = async (): Promise<PushSubscriptionRe
 
         console.log('✅ Push subscription created');
 
-        // Send subscription to backend
-        const token = localStorage.getItem('token');
+        // Send subscription to backend (auth via httpOnly cookie)
         const csrfToken = getCsrfToken();
         const response = await fetch(`${API_BASE_URL}/tte/push-subscribe`, {
             method: 'POST',
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
                 ...(csrfToken && { 'X-CSRF-Token': csrfToken })
             },
             body: JSON.stringify({ subscription })

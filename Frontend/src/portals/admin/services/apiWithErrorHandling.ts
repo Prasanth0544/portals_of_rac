@@ -103,10 +103,8 @@ ensureCsrfToken();
 
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Auth tokens are sent automatically via httpOnly cookies (withCredentials: true)
+    // No need to manually attach Authorization header
 
     // Add CSRF token for state-changing requests
     if (
@@ -197,33 +195,26 @@ api.interceptors.response.use(
         data?.message?.toLowerCase().includes("jwt");
 
       if (isExpiredToken) {
-        const refreshToken = localStorage.getItem("refreshToken");
-        if (refreshToken) {
-          try {
-            if (import.meta.env.DEV) console.log("[API] Token expired, attempting refresh...");
-            const refreshResponse = await axios.post(
-              `${API_BASE_URL}/auth/refresh`,
-              { refreshToken },
-            );
-            const newToken = refreshResponse.data.token;
+        try {
+          if (import.meta.env.DEV) console.log("[API] Token expired, attempting cookie-based refresh...");
+          // Refresh token is in httpOnly cookie — browser sends it automatically
+          await axios.post(
+            `${API_BASE_URL}/auth/refresh`,
+            {},
+            { withCredentials: true },
+          );
+          if (import.meta.env.DEV) console.log("[API] Token refreshed successfully via cookie");
 
-            // Save new token
-            localStorage.setItem("token", newToken);
-            if (import.meta.env.DEV) console.log("[API] Token refreshed successfully");
-
-            // Retry original request with new token
-            error.config.headers.Authorization = `Bearer ${newToken}`;
-            return api.request(error.config);
-          } catch (refreshError) {
-            if (import.meta.env.DEV) console.error("[API] Token refresh failed:", refreshError);
-          }
+          // Retry original request — new access token is now in the cookie
+          return api.request(error.config);
+        } catch (refreshError) {
+          if (import.meta.env.DEV) console.error("[API] Token refresh failed:", refreshError);
         }
       }
 
-      // If refresh fails or no refresh token, logout
+      // If refresh fails, clear auth state and redirect to login
       if (import.meta.env.DEV) console.error("[API] Auth error:", data);
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("isAuthenticated");
       localStorage.removeItem("user");
       window.location.href = "/login";
       return Promise.reject({

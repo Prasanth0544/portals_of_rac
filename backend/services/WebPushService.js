@@ -12,19 +12,21 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:admin@indianrailways.com';
 
-// Validate VAPID keys are configured
-if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-    console.error('❌ VAPID keys not configured! Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in .env');
-    console.error('   Generate new keys: npx web-push generate-vapid-keys');
-    throw new Error('VAPID keys required for Web Push Service');
-}
+// Validate VAPID keys are configured — degrade gracefully if missing
+const VAPID_ENABLED = !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
 
-// Configure VAPID
-webPush.setVapidDetails(
-    VAPID_EMAIL,
-    VAPID_PUBLIC_KEY,
-    VAPID_PRIVATE_KEY
-);
+if (!VAPID_ENABLED) {
+    console.warn('⚠️  VAPID keys not configured — web push notifications are DISABLED');
+    console.warn('   Generate new keys: npx web-push generate-vapid-keys');
+    console.warn('   Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in .env');
+} else {
+    // Configure VAPID only when keys are present
+    webPush.setVapidDetails(
+        VAPID_EMAIL,
+        VAPID_PUBLIC_KEY,
+        VAPID_PRIVATE_KEY
+    );
+}
 
 // Frontend URL for deep-links in push notifications
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -32,14 +34,46 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 class WebPushService {
     constructor() {
         console.log('📨 WebPushService initialized');
-        console.log('   VAPID configured ✓');
+        console.log(`   VAPID: ${VAPID_ENABLED ? '✓ configured' : '✗ disabled (missing keys)'}`);
         console.log('   Frontend URL:', FRONTEND_URL);
     }
 
     /**
      * Send push notification to a specific passenger
      */
+    /**
+     * Send a single raw push (used by test route and broadcasting loops)
+     * @param {object} subscription - Raw PushSubscription object
+     * @param {object} payload - Notification payload
+     */
+    async sendPush(subscription, payload) {
+        if (!VAPID_ENABLED) {
+            return { success: false, error: 'VAPID not configured' };
+        }
+        if (!subscription || !subscription.endpoint) {
+            return { success: false, error: 'Invalid subscription' };
+        }
+        try {
+            await webPush.sendNotification(
+                subscription,
+                JSON.stringify(payload),
+                { TTL: 60 * 60 * 24 }
+            );
+            return { success: true };
+        } catch (error) {
+            if (error.statusCode === 410 || error.statusCode === 404) {
+                await PushSubscriptionService.deleteSubscription(subscription.endpoint);
+                console.log('   🗑️  Removed stale subscription');
+            }
+            return { success: false, error: error.message, statusCode: error.statusCode };
+        }
+    }
+
     async sendPushNotification(irctcId, payload) {
+        if (!VAPID_ENABLED) {
+            console.warn('⚠️  Push skipped — VAPID not configured');
+            return { success: false, error: 'VAPID not configured', sent: 0 };
+        }
         if (!irctcId) {
             console.error('❌ Cannot send push: IRCTC ID required');
             return { success: false, error: 'IRCTC ID required' };
@@ -153,13 +187,18 @@ class WebPushService {
      * Get VAPID public key (for frontend)
      */
     getVapidPublicKey() {
-        return VAPID_PUBLIC_KEY;
+        return VAPID_PUBLIC_KEY || null;
+    }
+
+    isEnabled() {
+        return VAPID_ENABLED;
     }
 
     /**
      * Send push to ALL TTE portals (for offline passenger upgrades)
      */
     async sendPushToAllTTEs(payload) {
+        if (!VAPID_ENABLED) return { sent: 0, failed: 0 };
         const subscriptions = await PushSubscriptionService.getAllTTESubscriptions();
 
         if (subscriptions.length === 0) {
@@ -190,6 +229,7 @@ class WebPushService {
      * Send push to ALL Admin portals
      */
     async sendPushToAllAdmins(payload) {
+        if (!VAPID_ENABLED) return { sent: 0, failed: 0 };
         const subscriptions = await PushSubscriptionService.getAllAdminSubscriptions();
 
         if (subscriptions.length === 0) {

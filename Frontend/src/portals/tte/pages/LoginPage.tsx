@@ -22,8 +22,8 @@ function LoginPage({ }: LoginPageProps): React.ReactElement {
         try {
             const response = await tteAPI.login(employeeId, password);
 
-            if (response.success && response.token && response.user) {
-                // Map API response to localStorage format
+            if (response.success && response.user) {
+                // Tokens are now in httpOnly cookies — only store non-sensitive metadata
                 const apiUser = response.user;
                 const userForStorage = {
                     username: apiUser.name || apiUser.employeeId || '',
@@ -32,18 +32,14 @@ function LoginPage({ }: LoginPageProps): React.ReactElement {
                     trainAssigned: apiUser.trainAssigned || ''
                 };
 
-                localStorage.setItem('token', response.token);
-                if (response.refreshToken) {
-                    localStorage.setItem('refreshToken', response.refreshToken);
-                }
+                localStorage.setItem('isAuthenticated', 'true');
                 localStorage.setItem('user', JSON.stringify(userForStorage));
                 localStorage.setItem('trainAssigned', String(apiUser.trainAssigned || ''));
                 window.location.reload();
             }
         } catch (err: any) {
             // Clear any stale auth data so it doesn't interfere with the next login attempt
-            localStorage.removeItem('token');
-            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('isAuthenticated');
             localStorage.removeItem('user');
             localStorage.removeItem('trainAssigned');
             setError(err.response?.data?.message || 'Login failed. Please try again.');

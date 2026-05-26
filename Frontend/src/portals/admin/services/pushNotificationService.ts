@@ -99,12 +99,12 @@ export const subscribeToPushNotifications = async (): Promise<SubscriptionResult
 
         console.log('✅ Push subscription created');
 
-        const token = localStorage.getItem('token');
+        // Send subscription to backend (auth via httpOnly cookie)
         const response = await fetch(`${API_BASE_URL}/admin/push-subscribe`, {
             method: 'POST',
+            credentials: 'include',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({ subscription })
         });

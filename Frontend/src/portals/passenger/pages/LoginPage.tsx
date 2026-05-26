@@ -25,11 +25,9 @@ function LoginPage({ onSwitchToSignUp }: LoginPageProps): React.ReactElement {
             const loginId = loginType === 0 ? irctcId : email;
             const response = await passengerAPI.login(loginId, password, loginType === 0 ? 'irctcId' : 'email');
 
-            if (response.success && response.token) {
-                localStorage.setItem('token', response.token);
-                if (response.refreshToken) {
-                    localStorage.setItem('refreshToken', response.refreshToken);
-                }
+            if (response.success) {
+                // Tokens are now in httpOnly cookies — only store non-sensitive metadata
+                localStorage.setItem('isAuthenticated', 'true');
                 localStorage.setItem('user', JSON.stringify(response.user));
                 localStorage.setItem('tickets', JSON.stringify(response.tickets));
                 // Store trainNo from first ticket for multi-train API scoping

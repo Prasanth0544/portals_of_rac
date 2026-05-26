@@ -192,10 +192,10 @@ function App(): React.ReactElement {
     const [showSignUp, setShowSignUp] = useState<boolean>(false);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const isAuth = localStorage.getItem('isAuthenticated');
         const userData = localStorage.getItem('user');
 
-        if (token && userData) {
+        if (isAuth && userData) {
             setAuthenticated(true);
             setUser(JSON.parse(userData));
             // Initialize push notifications for passenger portal
@@ -224,7 +224,7 @@ function App(): React.ReactElement {
     }, [user?.IRCTC_ID]);
 
     const handleLogout = (): void => {
-        localStorage.removeItem('token');
+        localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('user');
         setAuthenticated(false);
         setUser(null);

@@ -50,7 +50,11 @@ jobs:
       
       - name: Lint Frontend
         working-directory: ./Frontend
-        run: npm run lint || true  # Don't fail on lint warnings
+        run: npm run lint
+      
+      - name: TypeScript Check
+        working-directory: ./Frontend
+        run: npx tsc --noEmit
 
   # ─────────────────────────────────────────
   # Test Job - Run backend tests

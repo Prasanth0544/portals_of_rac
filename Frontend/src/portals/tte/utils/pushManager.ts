@@ -59,15 +59,13 @@ export async function subscribeTTEToPush(tteId: string): Promise<boolean> {
             console.log('✅ TTE already subscribed');
         }
 
-        // Send subscription to backend with auth token and CSRF
-        const token = localStorage.getItem('token');
+        // Send subscription to backend with CSRF (auth via httpOnly cookie)
         const csrfToken = getCsrfToken();
         await fetch(`${API_BASE_URL}/tte/push-subscribe`, {
             method: 'POST',
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': token ? `Bearer ${token}` : '',
                 ...(csrfToken && { 'X-CSRF-Token': csrfToken })
             },
             body: JSON.stringify({
@@ -114,14 +112,12 @@ export async function unsubscribeTTEFromPush(tteId: string): Promise<boolean> {
         if (subscription) {
             await subscription.unsubscribe();
 
-            const token = localStorage.getItem('token');
             const csrfToken = getCsrfToken();
             await fetch(`${API_BASE_URL}/tte/push-unsubscribe`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': token ? `Bearer ${token}` : '',
                     ...(csrfToken && { 'X-CSRF-Token': csrfToken })
                 },
                 body: JSON.stringify({ tteId })

@@ -70,57 +70,52 @@ function App(): React.ReactElement {
 
     const [isLoading, setIsLoading] = useState<boolean>(true); // Add loading state
 
-    // Helper function to refresh access token
-    const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
+    // Helper function to refresh access token via httpOnly cookie
+    const refreshAccessToken = async (): Promise<boolean> => {
         try {
-            console.log('[TTE Auth] Attempting to refresh access token...');
+            console.log('[TTE Auth] Attempting to refresh access token via cookie...');
             const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken })
+                credentials: 'include'
             });
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.success && data.token) {
-                    console.log('[TTE Auth] Token refreshed successfully');
-                    localStorage.setItem('token', data.token);
-                    return data.token;
+                if (data.success) {
+                    console.log('[TTE Auth] Token refreshed successfully via cookie');
+                    return true;
                 }
             }
             console.log('[TTE Auth] Token refresh failed');
-            return null;
+            return false;
         } catch (error) {
             console.error('[TTE Auth] Token refresh error:', error);
-            return null;
+            return false;
         }
     };
 
-    // Check for existing auth token on mount and verify/refresh it
+    // Check for existing auth on mount and verify/refresh it
     useEffect(() => {
         const verifyAndSetup = async (): Promise<void> => {
-            const token = localStorage.getItem('token');
-            const refreshToken = localStorage.getItem('refreshToken');
+            const isAuth = localStorage.getItem('isAuthenticated');
             const userData = localStorage.getItem('user');
 
-            if (!token && !refreshToken) {
-                // No tokens at all - show login
+            if (!isAuth) {
+                // No auth flag - show login
                 setIsLoading(false);
                 return;
             }
 
-            if (token && userData) {
+            if (userData) {
                 try {
-                    // Verify token is still valid by calling /auth/verify
+                    // Verify session via cookie-based auth
                     const response = await fetch(`${API_BASE_URL}/auth/verify`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
+                        credentials: 'include'
                     });
 
                     if (response.ok) {
-                        // Token is valid
-                        console.log('[TTE Auth] Token verified successfully');
+                        console.log('[TTE Auth] Session verified successfully');
                         setIsAuthenticated(true);
                         setUser(JSON.parse(userData));
                         setIsLoading(false);
@@ -137,18 +132,16 @@ function App(): React.ReactElement {
                         return;
                     }
 
-                    // Token verification failed - try to refresh
-                    console.log('[TTE Auth] Token verification failed, attempting refresh...');
+                    // Token verification failed - try to refresh via cookie
+                    console.log('[TTE Auth] Session verification failed, attempting refresh...');
                 } catch (error) {
-                    console.error('[TTE Auth] Token verification error:', error);
+                    console.error('[TTE Auth] Session verification error:', error);
                 }
-            }
 
-            // Try to refresh token if we have a refresh token
-            if (refreshToken && userData) {
-                const newToken = await refreshAccessToken(refreshToken);
+                // Try to refresh token via httpOnly cookie
+                const refreshed = await refreshAccessToken();
 
-                if (newToken) {
+                if (refreshed) {
                     // Successfully refreshed - user stays logged in
                     setIsAuthenticated(true);
                     setUser(JSON.parse(userData));
@@ -169,8 +162,7 @@ function App(): React.ReactElement {
 
             // All attempts failed - clear everything and show login
             console.log('[TTE Auth] All refresh attempts failed, requiring re-login');
-            localStorage.removeItem('token');
-            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('isAuthenticated');
             localStorage.removeItem('user');
             setIsAuthenticated(false);
             setUser(null);
@@ -221,8 +213,7 @@ function App(): React.ReactElement {
 
     // Logout handler
     const handleLogout = (): void => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('user');
         localStorage.removeItem('trainAssigned');
         setIsAuthenticated(false);

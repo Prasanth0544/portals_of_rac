@@ -1,9 +1,21 @@
 // backend/utils/envValidator.js
 // Environment variable validation on startup
+// Canonical names: MONGODB_URI, ALLOWED_ORIGINS, VAPID_EMAIL
+
+/**
+ * Deprecated → canonical name mappings.
+ * If a deprecated name is set but the canonical one is not, the value
+ * is copied and a warning is emitted.
+ */
+const deprecatedAliases = {
+    'MONGO_URI':    'MONGODB_URI',
+    'CORS_ORIGIN':  'ALLOWED_ORIGINS',
+    'VAPID_SUBJECT': 'VAPID_EMAIL',
+};
 
 const requiredEnvVars = [
-    // MongoDB
-    { name: 'MONGO_URI', default: 'mongodb://localhost:27017', required: false },
+    // MongoDB (canonical: MONGODB_URI)
+    { name: 'MONGODB_URI', default: 'mongodb://localhost:27017', required: false },
 
     // JWT
     { name: 'JWT_SECRET', default: null, required: true, sensitive: true },
@@ -12,15 +24,15 @@ const requiredEnvVars = [
     { name: 'PORT', default: '5000', required: false },
     { name: 'NODE_ENV', default: 'development', required: false },
 
-    // CORS
-    { name: 'CORS_ORIGIN', default: 'http://localhost:3000,https://portals-of-rac.vercel.app', required: false }
+    // CORS (canonical: ALLOWED_ORIGINS)
+    { name: 'ALLOWED_ORIGINS', default: 'http://localhost:3000,https://portals-of-rac.vercel.app', required: false }
 ];
 
 const optionalEnvVars = [
-    // Web Push (VAPID)
+    // Web Push (VAPID) — canonical: VAPID_EMAIL
     { name: 'VAPID_PUBLIC_KEY', default: null },
     { name: 'VAPID_PRIVATE_KEY', default: null },
-    { name: 'VAPID_SUBJECT', default: null },
+    { name: 'VAPID_EMAIL', default: null },
 
     // Email
     { name: 'EMAIL_HOST', default: null },
@@ -33,14 +45,30 @@ const optionalEnvVars = [
 ];
 
 /**
+ * Migrate deprecated env var names to their canonical equivalents.
+ * Emits a warning for each deprecated name found.
+ */
+function migrateDeprecatedEnvVars() {
+    const warnings = [];
+    for (const [deprecated, canonical] of Object.entries(deprecatedAliases)) {
+        if (process.env[deprecated] && !process.env[canonical]) {
+            process.env[canonical] = process.env[deprecated];
+            warnings.push(`⚠️  Deprecated env var "${deprecated}" — use "${canonical}" instead (auto-migrated)`);
+        }
+    }
+    return warnings;
+}
+
+/**
  * Validate environment variables on startup
  * @returns {Object} validation result
  */
 function validateEnv() {
     console.log('\n🔍 Validating environment variables...\n');
 
+    const deprecationWarnings = migrateDeprecatedEnvVars();
     const errors = [];
-    const warnings = [];
+    const warnings = [...deprecationWarnings];
     const loaded = [];
 
     // Check required variables
@@ -75,7 +103,7 @@ function validateEnv() {
     }
 
     // Check VAPID keys completeness
-    const vapidKeys = ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT'];
+    const vapidKeys = ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_EMAIL'];
     const vapidSet = vapidKeys.filter(k => process.env[k]);
     if (vapidSet.length > 0 && vapidSet.length < 3) {
         warnings.push(`⚠️  Incomplete VAPID configuration - need all 3 keys for push notifications`);
@@ -135,7 +163,7 @@ function getEnvInfo() {
     return {
         nodeEnv: process.env.NODE_ENV || 'development',
         port: process.env.PORT || 5000,
-        mongoUri: process.env.MONGO_URI ? '(set)' : '(default)',
+        mongoUri: process.env.MONGODB_URI ? '(set)' : '(default)',
         jwtConfigured: !!process.env.JWT_SECRET,
         vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
         emailConfigured: !!(process.env.EMAIL_HOST && process.env.EMAIL_USER)

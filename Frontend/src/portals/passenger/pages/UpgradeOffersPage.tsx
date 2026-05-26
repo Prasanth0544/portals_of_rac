@@ -184,11 +184,8 @@ const UpgradeOffersPage: React.FC = () => {
     const fetchPassengerPNR = async (irctcId: string): Promise<void> => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch(`${API_URL}/passengers/by-irctc/${irctcId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                credentials: 'include'
             });
             const data = await response.json();
 
@@ -241,13 +238,12 @@ const UpgradeOffersPage: React.FC = () => {
 
         setAccepting(offerId);
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch(`${API_URL}/passenger/accept-upgrade`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     pnr: pnr,
                     notificationId: offerId  // backend expects notificationId
@@ -275,13 +271,12 @@ const UpgradeOffersPage: React.FC = () => {
 
         setDenying(offerId);
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch(`${API_URL}/passenger/deny-upgrade`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     pnr: pnr,
                     offerId: offerId
