@@ -95,12 +95,20 @@ const useTteSocket = (): UseTteSocketReturn => {
 
             case 'NO_SHOW':
                 console.log('📝 No-show event:', data);
+                const noShowListeners = listenersRef.current.get(type);
+                if (noShowListeners) {
+                    noShowListeners.forEach(listener => listener(data));
+                }
                 break;
 
             case 'RAC_UPGRADE_ACCEPTED':
                 console.log('✅ Passenger accepted upgrade:', data);
                 if (data) {
                     setPendingUpgrades(prev => [...prev, data]);
+                }
+                const acceptListeners = listenersRef.current.get(type);
+                if (acceptListeners) {
+                    acceptListeners.forEach(listener => listener(data));
                 }
                 break;
 
@@ -109,14 +117,26 @@ const useTteSocket = (): UseTteSocketReturn => {
                 if (data?.stats) {
                     setStats(data.stats);
                 }
+                const statsListeners = listenersRef.current.get(type);
+                if (statsListeners) {
+                    statsListeners.forEach(listener => listener(data));
+                }
                 break;
 
             case 'PASSENGER_BOARDED':
                 console.log(' Passenger boarded:', data);
+                const boardedListeners = listenersRef.current.get(type);
+                if (boardedListeners) {
+                    boardedListeners.forEach(listener => listener(data));
+                }
                 break;
 
             case 'PASSENGER_DEBOARDED':
                 console.log('👋 Passenger deboarded:', data);
+                const deboardedListeners = listenersRef.current.get(type);
+                if (deboardedListeners) {
+                    deboardedListeners.forEach(listener => listener(data));
+                }
                 break;
 
             default:

@@ -27,8 +27,9 @@ describe('OTPService', () => {
             collection: jest.fn().mockReturnValue(mockCollection)
         });
 
+        NotificationService._sendMail = jest.fn().mockResolvedValue({ messageId: 'test-id' });
         NotificationService.emailTransporter = {
-            sendMail: jest.fn().mockResolvedValue({ messageId: 'test-id' })
+            sendMail: NotificationService._sendMail
         };
 
         OTPService.initialized = false;
@@ -120,7 +121,7 @@ describe('OTPService', () => {
 
             expect(result.success).toBe(true);
             expect(mockCollection.updateOne).toHaveBeenCalled();
-            expect(NotificationService.emailTransporter.sendMail).toHaveBeenCalled();
+            expect(NotificationService._sendMail).toHaveBeenCalled();
         });
 
         it('should store OTP with correct structure', async () => {
@@ -140,14 +141,14 @@ describe('OTPService', () => {
         it('should send email with OTP in HTML format', async () => {
             await OTPService.sendOTP('IR123', 'P001234567', 'test@test.com', 'verification');
 
-            const emailCall = NotificationService.emailTransporter.sendMail.mock.calls[0][0];
+            const emailCall = NotificationService._sendMail.mock.calls[0][0];
             expect(emailCall.to).toBe('test@test.com');
             expect(emailCall.html).toContain('OTP');
             expect(emailCall.subject).toContain('OTP');
         });
 
         it('should handle email sending errors gracefully', async () => {
-            NotificationService.emailTransporter.sendMail.mockRejectedValue(new Error('Email failed'));
+            NotificationService._sendMail.mockRejectedValue(new Error('Email failed'));
 
             const result = await OTPService.sendOTP('IR123', 'P001234567', 'test@test.com');
             expect(result.success).toBe(true);

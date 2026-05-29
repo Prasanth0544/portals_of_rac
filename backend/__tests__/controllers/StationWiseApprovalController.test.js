@@ -42,7 +42,9 @@ describe('StationWiseApprovalController - Comprehensive Tests', () => {
         mockTrainState = {
             trainNo: '17225',
             trainName: 'Test Express',
-            updateStats: jest.fn()
+            journeyDate: '2026-05-29',
+            updateStats: jest.fn(),
+            getCurrentStation: jest.fn().mockReturnValue({ code: 'STA', name: 'Station A', idx: 0 })
         };
 
         trainController.getGlobalTrainState = jest.fn(() => mockTrainState);

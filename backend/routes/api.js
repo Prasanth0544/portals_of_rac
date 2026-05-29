@@ -8,6 +8,7 @@
 //   tteRoutes.js          — /tte/*
 //   passengerRoutes.js    — /passenger/*, /passengers/*, /visualization/*
 //   pushRoutes.js         — /push/*, push subscribe/unsubscribe, test endpoints
+//   analyticsRoutes.js    — /analytics/* (Phase 2)
 //   evaluationApi.js      — /evaluation/* (test harness)
 
 const express = require('express');
@@ -20,5 +21,7 @@ router.use(require('./reallocationRoutes'));
 router.use(require('./tteRoutes'));
 router.use(require('./passengerRoutes'));
 router.use(require('./pushRoutes'));
+router.use(require('./analyticsRoutes'));  // Phase 2 — Analytics & Audit
+router.use('/evaluation', require('./evaluationApi'));  // Evaluation dashboard test harness
 
 module.exports = router;

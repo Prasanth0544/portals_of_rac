@@ -40,6 +40,13 @@ const COLLECTIONS = {
     // OTP
     OTP_STORE: process.env.OTP_STORE_COLLECTION || 'otp_store',
     UPGRADE_DENIAL_LOG: process.env.UPGRADE_DENIAL_LOG_COLLECTION || 'upgrade_denial_log',
+
+    // Phase 2 — Analytics & Audit (all in 'rac' DB via db.getDb())
+    UPGRADE_HISTORY:      process.env.UPGRADE_HISTORY_COLLECTION      || 'upgrade_history',
+    JOURNEY_HISTORY:      process.env.JOURNEY_HISTORY_COLLECTION      || 'journey_history',
+    ANALYTICS:            process.env.ANALYTICS_COLLECTION            || 'analytics',
+    TRAIN_SCHEDULE_CACHE: process.env.TRAIN_SCHEDULE_CACHE_COLLECTION || 'train_schedule_cache',
+    SYSTEM_CONFIG:        process.env.SYSTEM_CONFIG_COLLECTION        || 'system_config',
 };
 
 // Other defaults

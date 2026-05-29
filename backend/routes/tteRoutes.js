@@ -161,4 +161,16 @@ router.post('/tte/confirm-all-boarded',
   (req, res) => tteController.confirmAllBoarded(req, res)
 );
 
+// ========== PHASE 2 — UPGRADE AUDIT TRAIL ==========
+
+// Get upgrade audit trail for the current active journey
+// Query params: trainNo (optional)
+const analyticsController = require('../controllers/analyticsController');
+
+router.get('/tte/upgrade-audit',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
+  (req, res) => analyticsController.getTTEUpgradeAudit(req, res)
+);
+
 module.exports = router;

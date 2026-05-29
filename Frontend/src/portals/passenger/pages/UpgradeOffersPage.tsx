@@ -224,6 +224,10 @@ const UpgradeOffersPage: React.FC = () => {
                     status: (n.status || 'pending').toLowerCase(),
                 }));
                 setOffers(normalized);
+
+                // ✅ Dispatch custom event to update main layout's badge count instantly
+                const pendingCount = normalized.filter(o => o.status === 'pending').length;
+                window.dispatchEvent(new CustomEvent('passenger:upgrade_count_update', { detail: pendingCount }));
             }
         } catch (error) {
             console.error('Error fetching upgrade offers:', error);

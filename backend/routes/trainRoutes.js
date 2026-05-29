@@ -162,4 +162,21 @@ router.post('/admin/fix-rac-boarding',
   }
 );
 
+// ========== PHASE 2 — SYSTEM CONFIG ROUTES ==========
+
+// Get all system config key-value pairs (admin panel)
+router.get('/admin/system-config',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  (req, res) => configController.getSystemConfig(req, res)
+);
+
+// Set a specific config key (admin only)
+router.post('/admin/system-config/:key',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  validationMiddleware.sanitizeBody,
+  (req, res) => configController.setSystemConfig(req, res)
+);
+
 module.exports = router;

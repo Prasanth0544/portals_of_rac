@@ -48,4 +48,8 @@ module.exports = {
   subscribeToPush: (req, res) => notification.subscribeToPush(req, res),
   unsubscribeFromPush: (req, res) => notification.unsubscribeFromPush(req, res),
   getVapidPublicKey: (req, res) => notification.getVapidPublicKey(req, res),
+
+  // Helper/utility exports for backwards compatibility/tests
+  checkBerthAvailability: (berth, fromIdx, toIdx) => core.checkBerthAvailability(berth, fromIdx, toIdx),
+  countVacantBerths: (trainState) => core.countVacantBerths(trainState),
 };

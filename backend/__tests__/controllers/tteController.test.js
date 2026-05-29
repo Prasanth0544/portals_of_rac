@@ -4,6 +4,7 @@
  */
 
 const controller = require('../../controllers/tteController');
+const upgradeController = require('../../controllers/tte/upgradeController');
 const db = require('../../config/db');
 const wsManager = require('../../config/websocket');
 const trainController = require('../../controllers/trainController');
@@ -687,7 +688,7 @@ describe('tteController - Comprehensive Tests', () => {
         });
 
         it('should return pending offline upgrades', async () => {
-            controller.offlineUpgradesQueue = [{ id: 'U1', status: 'pending' }, { id: 'U2', status: 'confirmed' }];
+            upgradeController._memQueue = [{ id: 'U1', status: 'pending' }, { id: 'U2', status: 'confirmed' }];
             await controller.getOfflineUpgrades(req, res);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
                 success: true,
@@ -703,14 +704,14 @@ describe('tteController - Comprehensive Tests', () => {
 
         it('should return 404 when confirmOfflineUpgrade id not found', async () => {
             req.body = { upgradeId: 'U404' };
-            controller.offlineUpgradesQueue = [];
+            upgradeController._memQueue = [];
             await controller.confirmOfflineUpgrade(req, res);
             expect(res.status).toHaveBeenCalledWith(404);
         });
 
         it('should return 400 when confirmOfflineUpgrade train is not initialized', async () => {
             req.body = { upgradeId: 'U1' };
-            controller.offlineUpgradesQueue = [{ id: 'U1', pnr: 'P001', coach: 'S1', berthNo: 10, passengerName: 'John' }];
+            upgradeController._memQueue = [{ id: 'U1', pnr: 'P001', coach: 'S1', berthNo: 10, passengerName: 'John' }];
             trainController.getGlobalTrainState.mockReturnValue(null);
             await controller.confirmOfflineUpgrade(req, res);
             expect(res.status).toHaveBeenCalledWith(400);
@@ -718,7 +719,7 @@ describe('tteController - Comprehensive Tests', () => {
 
         it('should return 400 when confirmOfflineUpgrade service fails', async () => {
             req.body = { upgradeId: 'U1' };
-            controller.offlineUpgradesQueue = [{ id: 'U1', pnr: 'P001', coach: 'S1', berthNo: 10, passengerName: 'John' }];
+            upgradeController._memQueue = [{ id: 'U1', pnr: 'P001', coach: 'S1', berthNo: 10, passengerName: 'John' }];
             ReallocationService.upgradeRACPassengerWithCoPassenger.mockResolvedValue({ success: false, error: 'upgrade fail' });
             await controller.confirmOfflineUpgrade(req, res);
             expect(res.status).toHaveBeenCalledWith(400);
@@ -726,7 +727,7 @@ describe('tteController - Comprehensive Tests', () => {
 
         it('should confirm offline upgrade successfully', async () => {
             req.body = { upgradeId: 'U1' };
-            controller.offlineUpgradesQueue = [{ id: 'U1', pnr: 'P001', coach: 'S1', berthNo: 10, passengerName: 'John', status: 'pending' }];
+            upgradeController._memQueue = [{ id: 'U1', pnr: 'P001', coach: 'S1', berthNo: 10, passengerName: 'John', status: 'pending' }];
             ReallocationService.upgradeRACPassengerWithCoPassenger.mockResolvedValue({ success: true });
             await controller.confirmOfflineUpgrade(req, res);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
@@ -734,14 +735,14 @@ describe('tteController - Comprehensive Tests', () => {
 
         it('should return 404 when rejecting missing offline upgrade', async () => {
             req.body = { upgradeId: 'U404' };
-            controller.offlineUpgradesQueue = [];
+            upgradeController._memQueue = [];
             await controller.rejectOfflineUpgrade(req, res);
             expect(res.status).toHaveBeenCalledWith(404);
         });
 
         it('should reject offline upgrade successfully', async () => {
             req.body = { upgradeId: 'U1' };
-            controller.offlineUpgradesQueue = [{ id: 'U1', passengerName: 'John', status: 'pending' }];
+            upgradeController._memQueue = [{ id: 'U1', passengerName: 'John', status: 'pending' }];
             await controller.rejectOfflineUpgrade(req, res);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });

@@ -34,10 +34,13 @@ class AuthController {
         });
       }
 
-      // Find user in tte_users collection
+      // Find user in tte_users collection (case-insensitive login)
       const racDb = await db.getDb();
       const tteUsersCollection = racDb.collection(COLLECTIONS.TTE_USERS);
-      const user = await tteUsersCollection.findOne({ employeeId });
+      const escapedId = employeeId.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const user = await tteUsersCollection.findOne({
+        employeeId: { $regex: new RegExp(`^${escapedId}$`, "i") },
+      });
 
       console.log(
         `[LOGIN DEBUG] employeeId: ${employeeId}, user found: ${!!user}, role: ${user?.role}`,
@@ -81,9 +84,9 @@ class AuthController {
         }
       }
 
-      // Update last login
+      // Update last login using exact ID from database doc
       await tteUsersCollection.updateOne(
-        { employeeId },
+        { employeeId: user.employeeId },
         { $set: { lastLogin: new Date() } },
       );
 
@@ -178,24 +181,11 @@ class AuthController {
 
       const normalizedRole = role.toUpperCase();
 
-      // Validate Employee ID prefix matches role
-      // Admin IDs must start with ADMIN_, TTE IDs must start with TTE_
-      if (
-        normalizedRole === "ADMIN" &&
-        !employeeId.toUpperCase().startsWith("ADMIN_")
-      ) {
+      // Validate Employee ID: must be at least 8 characters long
+      if (employeeId.trim().length < 8) {
         return res.status(400).json({
           success: false,
-          message: "Admin Employee ID must start with ADMIN_ (e.g., ADMIN_02)",
-        });
-      }
-      if (
-        normalizedRole === "TTE" &&
-        !employeeId.toUpperCase().startsWith("TTE_")
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "TTE Employee ID must start with TTE_ (e.g., TTE_02)",
+          message: "Employee ID must be at least 8 characters long",
         });
       }
 
@@ -217,11 +207,12 @@ class AuthController {
         });
       }
 
-      // Check if employee ID already exists
+      // Check if employee ID already exists (case-insensitive and escaped regex)
       const racDb = await db.getDb();
       const tteUsersCollection = racDb.collection(COLLECTIONS.TTE_USERS);
+      const escapedId = employeeId.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
       const existingUser = await tteUsersCollection.findOne({
-        employeeId: { $regex: new RegExp(`^${employeeId}$`, "i") },
+        employeeId: { $regex: new RegExp(`^${escapedId}$`, "i") },
       });
 
       if (existingUser) {
@@ -240,12 +231,12 @@ class AuthController {
           ? ["ALL"]
           : ["MARK_BOARDING", "MARK_NO_SHOW", "VIEW_PASSENGERS", "OFFLINE_UPGRADE"];
 
-      // Create user document
+      // Create user document (preserve exact casing from registration)
       const newUser = {
-        employeeId: employeeId.toUpperCase(),
+        employeeId: employeeId.trim(),
         passwordHash,
         email: email?.trim()?.toLowerCase() || null,
-        name: name || employeeId.toUpperCase(),
+        name: name || employeeId.trim(),
         role: normalizedRole,
         active: true,
         trainAssigned: normalizedRole === "TTE" ? null : null,
@@ -259,7 +250,7 @@ class AuthController {
       await tteUsersCollection.insertOne(newUser);
 
       console.log(
-        `✅ New ${normalizedRole} registered: ${employeeId.toUpperCase()}`,
+        `✅ New ${normalizedRole} registered: ${newUser.employeeId}`,
       );
 
       // ✅ Send welcome email if email was provided (non-blocking)
@@ -322,9 +313,12 @@ class AuthController {
         });
       }
 
-      // Check if this employee ID already exists
+      // Check if this employee ID already exists (case-insensitive and escaped regex)
       const tteUsersCollection = racDb.collection(COLLECTIONS.TTE_USERS);
-      const duplicate = await tteUsersCollection.findOne({ employeeId: employeeId.trim() });
+      const escapedId = employeeId.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const duplicate = await tteUsersCollection.findOne({
+        employeeId: { $regex: new RegExp(`^${escapedId}$`, "i") },
+      });
       if (duplicate) {
         return res.status(409).json({
           success: false,

@@ -1,8 +1,7 @@
-// tte-portal/src/pages/OfflineUpgradesPage.tsx
-
 import React, { useState, useEffect } from 'react';
 import { tteAPI } from '../api';
 import "../styles/pages/OfflineUpgradesPage.css";
+import useTteSocket from '../hooks/useTteSocket';
 
 interface Passenger {
     pnr: string;
@@ -26,6 +25,9 @@ function OfflineUpgradesPage(): React.ReactElement {
     const [loading, setLoading] = useState<boolean>(true);
     const [currentStation, setCurrentStation] = useState<string>("");
     const [filter, setFilter] = useState<string>("all");
+
+    // WebSocket hook for real-time updates
+    const { on } = useTteSocket();
 
     const fetchBoardedRACPassengers = async (): Promise<void> => {
         try {
@@ -58,11 +60,37 @@ function OfflineUpgradesPage(): React.ReactElement {
     useEffect(() => {
         fetchBoardedRACPassengers();
         fetchUpgradedPassengers();
+
+        // Listen for real-time events to update the UI instantly
+        const unsubTrain = on('TRAIN_UPDATE', () => {
+            console.log('🔄 OfflineUpgrades: Refreshing due to train update');
+            fetchBoardedRACPassengers();
+            fetchUpgradedPassengers();
+        });
+
+        const unsubRealloc = on('RAC_REALLOCATION_APPROVED', () => {
+            console.log('🔄 OfflineUpgrades: Refreshing due to reallocation');
+            fetchBoardedRACPassengers();
+            fetchUpgradedPassengers();
+        });
+
+        const unsubNoShow = on('NO_SHOW', () => {
+            console.log('🔄 OfflineUpgrades: Refreshing due to no-show');
+            fetchBoardedRACPassengers();
+            fetchUpgradedPassengers();
+        });
+
         const interval = setInterval(() => {
             fetchBoardedRACPassengers();
             fetchUpgradedPassengers();
         }, 60000);
-        return () => clearInterval(interval);
+
+        return () => {
+            clearInterval(interval);
+            unsubTrain();
+            unsubRealloc();
+            unsubNoShow();
+        };
     }, []);
 
     // Get the right list based on filter

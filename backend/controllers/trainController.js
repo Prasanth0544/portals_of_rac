@@ -475,6 +475,12 @@ class TrainController {
           totalRACUpgraded: trainState.stats.totalRACUpgraded
         };
 
+        // ── Phase 2: Persist journey summary (non-blocking) ────────────────
+        const JourneyHistoryService = require('../services/JourneyHistoryService');
+        JourneyHistoryService.recordCompletion(trainState).catch(err =>
+          console.warn('⚠️ JourneyHistory record failed (non-critical):', err.message)
+        );
+
         // Mark as COMPLETE in MongoDB
         await updateTrainStatus(trainState.trainNo, 'COMPLETE', {
           currentStation: trainState.stations[trainState.stations.length - 1].name

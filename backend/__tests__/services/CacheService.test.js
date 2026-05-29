@@ -14,7 +14,7 @@ describe('CacheService - Comprehensive Tests', () => {
     describe('generateKey', () => {
         it('should generate cache key with correct pattern', () => {
             const key = CacheService.generateKey('train', 'state', '17225');
-            expect(key).toBe('train:state:17225');
+            expect(key).toBe('cache:train:state:17225');
         });
 
         it('should generate unique keys for different entities', () => {

@@ -745,6 +745,11 @@
    MODAL  (matches .journey-section card feel)
    ============================================================ */
 
+/* Base state: always in the DOM but invisible and non-interactive.
+   The --visible modifier makes it appear.
+   This prevents the FOUC / "Ghost Modal" flash caused by conditional
+   mounting ({show && <Modal />}) which tears down the DOM on every
+   parent re-render (e.g. the 15s auto-refresh timer). */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -755,6 +760,17 @@
     z-index: 1000;
     backdrop-filter: blur(3px);
     padding: 16px;
+    /* Hidden by default */
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+
+.modal-overlay--visible {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
 }
 
 .modal-content {
@@ -764,11 +780,18 @@
     max-width: 500px;
     width: 100%;
     box-shadow: 0 10px 30px rgba(44, 62, 80, 0.3);
-    animation: modalSlideIn 0.25s ease;
+    /* No animation here — animation is applied only when the overlay becomes visible */
     border: 1px solid #e1e8ed;
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
+    transform: translateY(-18px);
+    transition: transform 0.25s ease;
+}
+
+.modal-overlay--visible .modal-content {
+    transform: translateY(0);
+    animation: modalSlideIn 0.25s ease;
 }
 
 @keyframes modalSlideIn {
@@ -792,7 +815,34 @@
     padding-bottom: 15px;
     border-bottom: 1px solid #e1e8ed;
 }
+/* Inline error banner shown inside the modal when an API call fails.
+   Replaces the previous pattern of only using a toast (which was easy to miss). */
+.modal-inline-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #fff2f2;
+    border: 1px solid #e74c3c;
+    border-left: 4px solid #e74c3c;
+    border-radius: 6px;
+    color: #c0392b;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    line-height: 1.4;
+    animation: fadeInDown 0.2s ease;
+}
 
+.modal-inline-error__icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
 
 
 
@@ -1214,5 +1264,51 @@
 
     .train-search-field {
         width: 100% !important;
+    }
+}
+
+/* ============================================================
+   REAL-TIME WEBSOCKET STATUS BADGE (PREMIUM UX)
+   ============================================================ */
+.ws-status-badge {
+    font-size: clamp(9px, 0.8vw + 2px, 11px);
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: clamp(5px, 0.8vw + 2px, 12px);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.ws-status-badge.connected {
+    background: rgba(39, 174, 96, 0.18) !important;
+    color: #2ecc71 !important;
+    border: 1px solid rgba(39, 174, 96, 0.35) !important;
+}
+
+.ws-status-badge.disconnected {
+    background: rgba(231, 76, 60, 0.18) !important;
+    color: #e74c3c !important;
+    border: 1px solid rgba(231, 76, 60, 0.35) !important;
+    animation: wsStatusPulseRed 2.5s infinite ease-in-out;
+}
+
+@keyframes wsStatusPulseRed {
+    0% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4);
+    }
+    50% {
+        opacity: 0.65;
+        box-shadow: 0 0 8px 2px rgba(231, 76, 60, 0.15);
+    }
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4);
     }
 }

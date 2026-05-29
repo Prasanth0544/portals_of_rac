@@ -12,6 +12,8 @@ const AllocationService = require('../services/reallocation/AllocationService');
 
 // ========== REALLOCATION ROUTES ==========
 router.post('/passenger/no-show',
+  authMiddleware,
+  requireRole(['TTE', 'ADMIN']),
   validationMiddleware.sanitizeBody,
   validationMiddleware.validatePNR,
   validationMiddleware.checkTrainInitialized,

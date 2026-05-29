@@ -7,6 +7,7 @@ const StationWiseApprovalService = require('../services/StationWiseApprovalServi
 const trainController = require('./trainController');
 const db = require('../config/db');
 const { COLLECTIONS } = require('../config/collections');
+const UpgradeHistoryService = require('../services/UpgradeHistoryService');
 
 class StationWiseApprovalController {
     /**
@@ -77,6 +78,29 @@ class StationWiseApprovalController {
             // Update train stats after approvals
             trainState.updateStats();
 
+            // ── Phase 2: Audit each approved upgrade ──────────────────────────
+            const approvedResults = (result.results || []).filter(r => r.success);
+            const currentStation = trainState.getCurrentStation();
+            const journeyDate = trainState.journeyDate || new Date().toISOString().slice(0, 10);
+
+            for (const r of approvedResults) {
+                // Find the pending reallocation data from the original result set
+                UpgradeHistoryService.record({
+                    train_number:         String(trainState.trainNo),
+                    journey_date:         journeyDate,
+                    passenger_pnr:        r.passengerPNR  || r.passenger || '',
+                    passenger_name:       r.passengerName  || r.passenger || '',
+                    from_status:          'RAC',
+                    to_status:            'CNF',
+                    upgrade_type:         'STATION_VACANCY',
+                    triggered_by:         'deboarding',
+                    triggered_at_station: currentStation?.code || null,
+                    approval_status:      'APPROVED',
+                    approved_by:          tteId || 'TTE',
+                    approved_at:          new Date(),
+                }).catch(() => {});
+            }
+
             // Broadcast approval to ALL clients (TTEs update dashboard, passengers fetch new status)
             const wsManager = require('../config/websocket');
             console.log(`🔔 Broadcasting RAC_REALLOCATION_APPROVED to all clients...`);
@@ -127,6 +151,22 @@ class StationWiseApprovalController {
                 reason,
                 tteId || 'TTE'
             );
+
+            // ── Phase 2: Audit rejected upgrade ──────────────────────────────
+            const trainState = trainController.getGlobalTrainState(req.query.trainNo || req.body.trainNo);
+            UpgradeHistoryService.record({
+                train_number:         trainState ? String(trainState.trainNo) : 'unknown',
+                journey_date:         trainState?.journeyDate || new Date().toISOString().slice(0, 10),
+                passenger_pnr:        req.body.passengerPNR || id,
+                upgrade_type:         'STATION_VACANCY',
+                triggered_by:         'deboarding',
+                from_status:          'RAC',
+                to_status:            'RAC',
+                approval_status:      'REJECTED',
+                approved_by:          tteId || 'TTE',
+                rejection_reason:     reason,
+                approved_at:          new Date(),
+            }).catch(() => {});
 
             res.json(result);
         } catch (error) {

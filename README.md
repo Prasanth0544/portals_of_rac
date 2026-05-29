@@ -39,7 +39,7 @@ RAC-Reallocation-System/
 | **Database** | MongoDB with dynamic collections per train/date |
 | **Notifications** | Web Push (VAPID), Email (Nodemailer), In-App (WebSocket) |
 | **Security** | CSRF protection, rate limiting, JWT refresh tokens, bcrypt |
-| **Testing** | Jest 30, Supertest, 1,153 unit & integration tests |
+| **Testing** | Jest 30, Supertest, 1,545 unit & integration tests |
 
 ### Test Coverage
 
@@ -51,7 +51,7 @@ RAC-Reallocation-System/
 | Utils | 71.55% | ✅ |
 | Controllers | 68.58% | 🟡 |
 
-**Test Stats:** 50 test suites (all passing) · 1,153 unit & integration tests ✅
+**Test Stats:** 60 test suites (all passing) · 1,545 unit & integration tests ✅
 
 ---
 
@@ -81,7 +81,7 @@ RAC-Reallocation-System/
 - Station-wise reallocation phase controls
 
 ### ⚙️ Backend API
-- 84 REST API endpoints (39 GET, 45 POST)
+- 113 REST API endpoints
 - Real-time WebSocket broadcasting
 - Automatic RAC-to-CNF upgrades
 - Segment-based berth tracking
@@ -485,15 +485,14 @@ npm run test:e2e     # Run Playwright tests
 
 ## 📊 Project Statistics
 
-| Metric | Value |
-|--------|-------|
-| **Total Lines of Code** | 40,000+ (excluding deps) |
-| **Backend Services** | 20+ services |
-| **API Endpoints** | 50+ routes |
-| **Frontend Pages** | 23 (Admin), 17 (TTE), 10 (Passenger) |
-| **Test Suites** | 50 |
-| **Unit Tests** | 1,153 |
-| **Test Coverage** | 79.57% |
+| Metric | Count | Details |
+|---|---|---|
+| **Total Lines of Code (LOC)** | **102,127 lines** | Combined Backend + Frontend codebases (excl. dependencies) |
+| ├── *Backend LOC* | *49,158 lines* | JavaScript, Node.js controllers, services, models, routes |
+| └── *Frontend LOC* | *52,969 lines* | TypeScript, TSX views, CSS, services |
+| **Total Automated Tests** | **1,545 tests** | 100% passing rate in Jest |
+| └── *Test Suites* | *60 suites* | Controllers, services, integration, chaos, and smoke tests |
+| **Total Backend API Endpoints** | **113 endpoints** | Auth (10), Passenger (28), Push (11), Reallocation (18), TTE (19), Train (19), Analytics (6), Evaluation (2) |
 
 ---
 
@@ -505,4 +504,4 @@ ISC
 
 **Proof of Concept built for Indian Railways — Train 17225 Amaravathi Express** 🚂
 
-**Last Updated:** February 26, 2026
+**Last Updated:** May 29, 2026 (Phase 2 Stats & Test Suites Fully Verified)

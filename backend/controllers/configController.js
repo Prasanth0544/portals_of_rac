@@ -74,8 +74,9 @@ class ConfigController {
   }
 
   /**
-   * Register a new train (Admin Landing Page)
-   * Validates that specific collections exist for the train before registering.
+   * Register a new train (Admin Landing Page).
+   * Auto-creates the stations and passengers collections if they do not already exist,
+   * so the admin can register any new train directly from the UI without manual DB setup.
    */
   async registerTrain(req, res) {
     try {
@@ -86,69 +87,53 @@ class ConfigController {
         sleeperCoachesCount,
         threeTierACCoachesCount,
       } = req.body;
+
       if (!trainNo || !trainName) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Train Number and Name are required",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Train Number and Name are required",
+        });
       }
 
       const racDb = await db.getDb(); // Connects to 'rac'
-      const stationColName = `${trainNo}_stations`;
-
-      // Check if stations collection exists in 'rac' DB
-      const stationCols = await racDb
-        .listCollections({ name: stationColName })
-        .toArray();
-      if (stationCols.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: `Station collection '${stationColName}' not found in RAC database. Please create it first.`,
-        });
-      }
-
-      // Derive passengers collection name from Trains_Details (convention: trainNo_passengers)
       const trainsCollection = racDb.collection(COLLECTIONS.TRAINS_DETAILS);
 
-      // Check if train already exists in Trains_Details and has Passengers_Collection_Name
-      let existingDoc = await trainsCollection.findOne({ trainNo });
-      if (!existingDoc) {
-        existingDoc = await trainsCollection.findOne({
-          Train_Number: Number(trainNo),
-        });
+      // ── Existing check (to reuse collection names if already registered) ───
+      let existing = await trainsCollection.findOne({ trainNo });
+      if (!existing && !isNaN(Number(trainNo))) {
+        existing = await trainsCollection.findOne({ Train_Number: Number(trainNo) });
       }
 
-      const passColName =
-        existingDoc?.Passengers_Collection_Name ||
-        existingDoc?.passengersCollection ||
-        `${trainNo}_passengers`;
+      // ── Collection names (conventional or reuse existing) ─────────────────
+      const stationColName = existing ? (existing.stationsCollection || existing.Station_Collection_Name || `${trainNo}_stations`) : `${trainNo}_stations`;
+      const passColName    = existing ? (existing.passengersCollection || existing.Passengers_Collection_Name || `${trainNo}_passengers`) : `${trainNo}_passengers`;
 
-      // Validate that the passengers collection exists in PassengersDB
+      // ── Auto-create stations collection in 'rac' DB if missing ───────────
+      const stationCols = await racDb.listCollections({ name: stationColName }).toArray();
+      if (stationCols.length === 0) {
+        await racDb.createCollection(stationColName);
+        console.log(`✅ Auto-created stations collection: ${stationColName}`);
+      }
+
+      // ── Auto-create passengers collection in PassengersDB if missing ──────
       const { MongoClient } = require("mongodb");
-      const mongoUri =
-        process.env.MONGODB_URI ||
-        process.env.MONGO_URI ||
-        "mongodb://localhost:27017";
+      const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://localhost:27017";
       const passengersDbName = process.env.PASSENGERS_DB || "PassengersDB";
 
       const client = new MongoClient(mongoUri);
       await client.connect();
-      const pDb = client.db(passengersDbName);
-      const passCols = await pDb
-        .listCollections({ name: passColName })
-        .toArray();
-      await client.close();
-
-      if (passCols.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: `Passenger collection '${passColName}' not found in ${passengersDbName}. Please create it first.`,
-        });
+      try {
+        const pDb = client.db(passengersDbName);
+        const passCols = await pDb.listCollections({ name: passColName }).toArray();
+        if (passCols.length === 0) {
+          await pDb.createCollection(passColName);
+          console.log(`✅ Auto-created passengers collection: ${passColName} in ${passengersDbName}`);
+        }
+      } finally {
+        await client.close();
       }
 
-      // Save/update Trains_Details
+      // ── Save to Trains_Details ────────────────────────────────────────────
       const trainData = {
         trainNo,
         trainName,
@@ -158,26 +143,21 @@ class ConfigController {
         updatedAt: new Date(),
       };
 
-      // Add optional coach configuration fields
-      if (totalCoaches !== undefined)
-        trainData.totalCoaches = Number(totalCoaches);
-      if (sleeperCoachesCount !== undefined)
-        trainData.sleeperCoachesCount = Number(sleeperCoachesCount);
-      if (threeTierACCoachesCount !== undefined)
-        trainData.threeTierACCoachesCount = Number(threeTierACCoachesCount);
+      if (totalCoaches !== undefined)      trainData.totalCoaches = Number(totalCoaches);
+      if (sleeperCoachesCount !== undefined) trainData.sleeperCoachesCount = Number(sleeperCoachesCount);
+      if (threeTierACCoachesCount !== undefined) trainData.threeTierACCoachesCount = Number(threeTierACCoachesCount);
 
       await trainsCollection.updateOne(
         { trainNo },
-        {
-          $set: trainData,
-          $setOnInsert: { createdAt: new Date() },
-        },
+        { $set: trainData, $setOnInsert: { createdAt: new Date() } },
         { upsert: true },
       );
 
-      return res.json({
+      console.log(`✅ Train ${trainNo} (${trainName}) registered.`);
+      return res.status(201).json({
         success: true,
         message: `Train ${trainNo} (${trainName}) registered successfully.`,
+        data: { trainNo, trainName, stationsCollection: stationColName, passengersCollection: passColName },
       });
     } catch (error) {
       console.error("Register train error:", error);
@@ -387,6 +367,47 @@ class ConfigController {
       });
     } catch (error) {
       console.error("updateTrainConfig error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+  /**
+   * GET /api/admin/system-config
+   * Returns all system_config key-value pairs (admin panel).
+   */
+  async getSystemConfig(req, res) {
+    try {
+      const SystemConfigService = require('../services/SystemConfigService');
+      const configs = await SystemConfigService.getAll();
+      return res.json({ success: true, data: configs });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * POST /api/admin/system-config/:key
+   * Upsert a single config key-value pair.
+   * Body: { value: <any> }
+   */
+  async setSystemConfig(req, res) {
+    try {
+      const { key } = req.params;
+      const { value } = req.body;
+
+      if (value === undefined) {
+        return res.status(400).json({ success: false, message: '`value` is required in request body' });
+      }
+
+      const updatedBy = req.user?.employeeId || req.user?.email || 'admin';
+      const SystemConfigService = require('../services/SystemConfigService');
+      await SystemConfigService.set(key, value, updatedBy);
+
+      return res.json({
+        success: true,
+        message: `Config '${key}' updated by ${updatedBy}`,
+        data: { key, value, updatedBy },
+      });
+    } catch (error) {
       return res.status(500).json({ success: false, message: error.message });
     }
   }

@@ -1,5 +1,5 @@
 // admin-portal/src/pages/LandingPage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   listTrains,
@@ -11,6 +11,7 @@ import "../styles/pages/LandingPage.css";
 import "../UserMenu.css";
 import { successToast, errorToast } from "../services/toastNotification";
 import TrainTabBar from "../components/TrainTabBar";
+import wsService from "../services/websocket";
 
 interface Train {
   trainNo: string;
@@ -54,20 +55,85 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
   const [tteEmail, setTteEmail] = useState("");
   const [createdTTE, setCreatedTTE] = useState<any>(null);
   const [signingUpTTE, setSigningUpTTE] = useState(false);
+  const [tteError, setTteError] = useState<string>('');      // inline error shown inside TTE modal
+  const [addTrainError, setAddTrainError] = useState<string>(''); // inline error for Add Train modal
+
+  // Ref that always holds the live "is any modal open?" value.
+  // This prevents the stale-closure problem in the setInterval callback
+  // (the interval captures the initial state values which are always false).
+  const modalOpenRef = useRef(false);
+  useEffect(() => {
+    modalOpenRef.current = showAddTrainModal || showSignUpTTEModal;
+  }, [showAddTrainModal, showSignUpTTEModal]);
 
   // Load trains on mount + auto-refresh every 15 seconds
+  // IMPORTANT: The interval is paused while any modal is open to prevent
+  // parent re-renders from causing a modal flash (FOUC / Ghost Modal).
   useEffect(() => {
     loadTrains();
-    const interval = setInterval(loadTrains, 15000);
+    const interval = setInterval(() => {
+      // Skip the entire refresh cycle while a modal is open.
+      // This is the primary guard against the flicker bug.
+      if (modalOpenRef.current) return;
+      loadTrains();
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
+  // Setup WebSocket connection and listeners for real-time reactive updates
+  const [wsConnected, setWsConnected] = useState(false);
+
+  useEffect(() => {
+    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
+    
+    // Connect wsService if it's not connected
+    if (!wsService.isConnected()) {
+      wsService.connect(WS_URL);
+    }
+    
+    setWsConnected(wsService.isConnected());
+
+    // Helper to register listeners and keep track for cleanup
+    const listeners: { event: string; callback: (...args: any[]) => void }[] = [];
+    const addListener = (event: string, cb: (...args: any[]) => void) => {
+      wsService.on(event, cb);
+      listeners.push({ event, callback: cb });
+    };
+
+    const handleWebsocketRefresh = () => {
+      console.log("🔄 Real-time LandingPage update triggered via WebSocket");
+      // Respect modalOpenRef to avoid FOUC / Ghost Modal flicker
+      if (modalOpenRef.current) return;
+      loadTrains();
+    };
+
+    addListener('connected', () => setWsConnected(true));
+    addListener('disconnected', () => setWsConnected(false));
+    addListener('train_update', handleWebsocketRefresh);
+    addListener('station_arrival', handleWebsocketRefresh);
+    addListener('rac_reallocation', handleWebsocketRefresh);
+    addListener('no_show', handleWebsocketRefresh);
+    addListener('stats_update', handleWebsocketRefresh);
+
+    return () => {
+      // Unsubscribe all listeners on unmount
+      for (const { event, callback } of listeners) {
+        wsService.off(event, callback);
+      }
+    };
+  }, []);
+
   const loadTrains = async () => {
+    // Never mutate state while a modal is open — that triggers a parent re-render
+    // which React uses to diff / remount child trees, causing the modal flash.
+    if (modalOpenRef.current) return;
     setLoading(true);
     const [trainResult, overviewResult] = await Promise.all([
       listTrains(),
       getTrainOverview(),
     ]);
+    // Guard again after the async gap — modal may have opened during the fetch.
+    if (modalOpenRef.current) return;
     if (trainResult.success && trainResult.data) {
       setTrains(trainResult.data);
     } else {
@@ -85,6 +151,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
 
   const handleAddTrain = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAddTrainError('');
     setAddingTrain(true);
 
     const result = await registerTrain(
@@ -101,38 +168,44 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
       );
       setNewTrainNo("");
       setNewTrainName("");
-
       setTotalCoaches("");
       setSleeperCoachesCount("");
       setThreeTierACCoachesCount("");
+      setAddTrainError('');
       setShowAddTrainModal(false);
       loadTrains();
     } else {
-      errorToast(
-        "Registration Failed",
-        result.error || "Failed to register train",
-      );
+      const msg = result.error || "Failed to register train. Please try again.";
+      setAddTrainError(msg);          // show inline
+      errorToast("Registration Failed", msg);
     }
     setAddingTrain(false);
   };
 
   const handleSignUpTTE = async (e: React.FormEvent) => {
     e.preventDefault();
+    setTteError('');
     setSigningUpTTE(true);
 
-    const result = await registerTTE(
-      selectedTrain,
-      tteName.trim(),
-      tteEmployeeId.trim(),
-      ttePassword,
-      ttePhone.trim() || undefined,
-      tteEmail.trim() || undefined,
-    );
-    if (result.success && result.data?.user) {
-      setCreatedTTE(result.data.user);
-      successToast("TTE Created", `TTE ID: ${result.data.user.employeeId}`);
-    } else {
-      errorToast("TTE Creation Failed", result.error || "Failed to create TTE");
+    try {
+      const result = await registerTTE(
+        selectedTrain,
+        tteName.trim(),
+        tteEmployeeId.trim(),
+        ttePassword,
+        ttePhone.trim() || undefined,
+        tteEmail.trim() || undefined,
+      );
+      if (result.success && result.data?.user) {
+        setCreatedTTE(result.data.user);
+        setTteError('');
+        successToast("TTE Created", `TTE ID: ${result.data.user.employeeId}`);
+      } else {
+        const msg = result.error || "Failed to create TTE. Please try again.";
+        setTteError(msg);            // show inline inside modal
+        errorToast("TTE Creation Failed", msg);
+      }
+    } finally {
       setSigningUpTTE(false);
     }
   };
@@ -140,6 +213,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
   const handleCloseTTEModal = () => {
     setShowSignUpTTEModal(false);
     setCreatedTTE(null);
+    setTteError('');
     setSelectedTrain("");
     setTteName("");
     setTteEmployeeId("");
@@ -147,6 +221,11 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
     setTtePhone("");
     setTteEmail("");
     setSigningUpTTE(false);
+  };
+
+  const handleCloseAddTrainModal = () => {
+    setShowAddTrainModal(false);
+    setAddTrainError('');
   };
 
   const handleOpenTrain = (trainNo: string) => {
@@ -236,9 +315,15 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
     <div className="landing-page">
       <div className="landing-container">
         <div className="landing-header">
-          <h1>🚂 RAC Reallocation System — Admin Control Center</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+            <h1>🚂 RAC Reallocation System — Admin Control Center</h1>
+            <span className={`ws-status-badge ${wsConnected ? 'connected' : 'disconnected'}`} title={wsConnected ? "Connected to live updates" : "Reconnecting..."}>
+              {wsConnected ? '● Live Sync' : '○ Offline'}
+            </span>
+          </div>
           <div className="user-menu">
             <button
+              type="button"
               className="menu-button"
               onClick={() => setMenuOpen(!menuOpen)}
             >
@@ -253,7 +338,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                   <p className="user-role">{user?.role || "ADMIN"}</p>
                 </div>
                 <hr />
-                <button onClick={handleLogout} className="menu-item logout">
+                <button type="button" onClick={handleLogout} className="menu-item logout">
                   Logout
                 </button>
               </div>
@@ -267,24 +352,28 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
           <h2 className="section-title">ACTIONS</h2>
           <div className="action-buttons">
             <button
+              type="button"
               className="action-btn add-train-btn"
               onClick={() => setShowAddTrainModal(true)}
             >
               <span className="btn-icon">🚂</span> Add Train
             </button>
             <button
+              type="button"
               className="action-btn signup-tte-btn"
               onClick={() => setShowSignUpTTEModal(true)}
             >
               <span className="btn-icon"></span> Sign Up TTE
             </button>
             <button
+              type="button"
               className="action-btn stats-btn"
               onClick={() => navigate("/admin/config")}
             >
               <span className="btn-icon">⚙️</span> Manual Config
             </button>
             <button
+              type="button"
               className="action-btn eval-btn"
               onClick={() => navigate("/admin/evaluation")}
             >
@@ -316,6 +405,7 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
               />
               {searchQuery && (
                 <button
+                  type="button"
                   className="train-search-clear-btn"
                   onClick={() => setSearchQuery("")}
                 >
@@ -461,99 +551,105 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
         </div>
       </div>
 
-      {/* Add Train Modal */}
-      {
-        showAddTrainModal && (
-          <div
-            className="modal-overlay"
-            onClick={() => setShowAddTrainModal(false)}
-          >
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <button className="modal-back-btn" onClick={() => setShowAddTrainModal(false)} title="Close">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
-                  <path d="M19 12H5M12 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <h2>Add New Train</h2>
-              <form onSubmit={handleAddTrain}>
-                <div className="form-group">
-                  <label>Train Number</label>
-                  <input
-                    type="text"
-                    value={newTrainNo}
-                    onChange={(e) => setNewTrainNo(e.target.value)}
-                    placeholder="e.g., 17225"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Train Name</label>
-                  <input
-                    type="text"
-                    value={newTrainName}
-                    onChange={(e) => setNewTrainName(e.target.value)}
-                    placeholder="e.g., Amaravathi Express"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Total Coaches</label>
-                  <input
-                    type="number"
-                    value={totalCoaches}
-                    onChange={(e) => setTotalCoaches(e.target.value)}
-                    placeholder="e.g., 16"
-                    min="1"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Sleeper Coaches</label>
-                  <input
-                    type="number"
-                    value={sleeperCoachesCount}
-                    onChange={(e) => setSleeperCoachesCount(e.target.value)}
-                    placeholder="e.g., 9"
-                    min="0"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>3-Tier AC Coaches</label>
-                  <input
-                    type="number"
-                    value={threeTierACCoachesCount}
-                    onChange={(e) => setThreeTierACCoachesCount(e.target.value)}
-                    placeholder="e.g., 2"
-                    min="0"
-                  />
-                </div>
-                <div className="modal-actions">
-                  <button
-                    type="button"
-                    className="btn-cancel"
-                    onClick={() => setShowAddTrainModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-submit"
-                    disabled={addingTrain}
-                  >
-                    {addingTrain ? "Adding..." : "Add Train"}
-                  </button>
-                </div>
-              </form>
+      {/* Add Train Modal — always mounted, visibility toggled via CSS class to prevent FOUC/flash */}
+      <div
+        className={`modal-overlay${showAddTrainModal ? ' modal-overlay--visible' : ''}`}
+        onClick={handleCloseAddTrainModal}
+        aria-hidden={!showAddTrainModal}
+      >
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-back-btn" onClick={handleCloseAddTrainModal} title="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h2>Add New Train</h2>
+          <form onSubmit={handleAddTrain}>
+            <div className="form-group">
+              <label>Train Number</label>
+              <input
+                type="text"
+                value={newTrainNo}
+                onChange={(e) => setNewTrainNo(e.target.value)}
+                placeholder="e.g., 17225"
+                required
+              />
             </div>
-          </div>
-        )
-      }
+            <div className="form-group">
+              <label>Train Name</label>
+              <input
+                type="text"
+                value={newTrainName}
+                onChange={(e) => setNewTrainName(e.target.value)}
+                placeholder="e.g., Amaravathi Express"
+                required
+              />
+            </div>
 
-      {/* Sign Up TTE Modal */}
-      {
-        showSignUpTTEModal && (
-          <div className="modal-overlay" onClick={handleCloseTTEModal}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="form-group">
+              <label>Total Coaches</label>
+              <input
+                type="number"
+                value={totalCoaches}
+                onChange={(e) => setTotalCoaches(e.target.value)}
+                placeholder="e.g., 16"
+                min="1"
+              />
+            </div>
+            <div className="form-group">
+              <label>Sleeper Coaches</label>
+              <input
+                type="number"
+                value={sleeperCoachesCount}
+                onChange={(e) => setSleeperCoachesCount(e.target.value)}
+                placeholder="e.g., 9"
+                min="0"
+              />
+            </div>
+            <div className="form-group">
+              <label>3-Tier AC Coaches</label>
+              <input
+                type="number"
+                value={threeTierACCoachesCount}
+                onChange={(e) => setThreeTierACCoachesCount(e.target.value)}
+                placeholder="e.g., 2"
+                min="0"
+              />
+            </div>
+            {/* ── Inline error banner ── */}
+            {addTrainError && (
+              <div className="modal-inline-error" role="alert">
+                <span className="modal-inline-error__icon">❌</span>
+                <span>{addTrainError}</span>
+              </div>
+            )}
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-cancel"
+                onClick={handleCloseAddTrainModal}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-submit"
+                disabled={addingTrain}
+              >
+                {addingTrain ? "Adding..." : "Add Train"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Sign Up TTE Modal — always mounted, visibility toggled via CSS class to prevent FOUC/flash */}
+      <div
+        className={`modal-overlay${showSignUpTTEModal ? ' modal-overlay--visible' : ''}`}
+        onClick={handleCloseTTEModal}
+        aria-hidden={!showSignUpTTEModal}
+      >
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <button className="modal-back-btn" onClick={handleCloseTTEModal} title="Close">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="18" height="18">
                   <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -651,6 +747,14 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
                       placeholder="e.g., tte@railway.com"
                     />
                   </div>
+                  {/* ── Inline error banner ── */}
+                  {tteError && (
+                    <div className="modal-inline-error" role="alert">
+                      <span className="modal-inline-error__icon">❌</span>
+                      <span>{tteError}</span>
+                    </div>
+                  )}
+
                   <div className="modal-actions">
                     <button
                       type="button"
@@ -671,8 +775,6 @@ const LandingPage: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => {
               )}
             </div>
           </div>
-        )
-      }
     </div >
   );
 };

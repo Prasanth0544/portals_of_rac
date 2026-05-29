@@ -212,6 +212,12 @@ function PassengerApp({ onLogout }: PassengerAppProps): React.ReactElement {
         fetchUpgradeCount();
         const pollInterval = setInterval(fetchUpgradeCount, 30000);
 
+        const handleBadgeUpdate = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            setUpgradeCount(customEvent.detail);
+        };
+        window.addEventListener('passenger:upgrade_count_update', handleBadgeUpdate);
+
         const handleLogoutEvent = () => {
             stopped = true;
             clearInterval(pollInterval);
@@ -222,6 +228,7 @@ function PassengerApp({ onLogout }: PassengerAppProps): React.ReactElement {
         return () => {
             stopped = true;
             clearInterval(pollInterval);
+            window.removeEventListener('passenger:upgrade_count_update', handleBadgeUpdate);
             window.removeEventListener('app:logout', handleLogoutEvent);
         };
     }, [user?.IRCTC_ID]);

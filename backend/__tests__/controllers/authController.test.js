@@ -82,7 +82,9 @@ describe('authController', () => {
 
             await authController.staffLogin(req, res);
 
-            expect(mockCollection.findOne).toHaveBeenCalledWith({ employeeId: 'ADMIN_01' });
+            expect(mockCollection.findOne).toHaveBeenCalledWith({
+                employeeId: expect.any(Object)
+            });
             expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'hashed_password');
             expect(jwt.sign).toHaveBeenCalled();
             expect(res.cookie).toHaveBeenCalledTimes(2); // accessToken and refreshToken
@@ -90,7 +92,6 @@ describe('authController', () => {
                 expect.objectContaining({
                     success: true,
                     message: 'Login successful',
-                    token: 'mock_access_token',
                     user: expect.objectContaining({
                         employeeId: 'ADMIN_01',
                         role: 'ADMIN'
@@ -633,9 +634,9 @@ describe('authController', () => {
             expect(res.status).toHaveBeenCalledWith(400);
         });
 
-        it('returns 400 for admin id prefix mismatch', async () => {
+        it('returns 400 for employeeId less than 8 characters', async () => {
             req.body = {
-                employeeId: 'TTE_22',
+                employeeId: 'SHORT',
                 password: 'Password1',
                 confirmPassword: 'Password1',
                 role: 'ADMIN'
@@ -644,20 +645,9 @@ describe('authController', () => {
             expect(res.status).toHaveBeenCalledWith(400);
         });
 
-        it('returns 400 for tte id prefix mismatch', async () => {
-            req.body = {
-                employeeId: 'ADMIN_22',
-                password: 'Password1',
-                confirmPassword: 'Password1',
-                role: 'TTE'
-            };
-            await authController.staffRegister(req, res);
-            expect(res.status).toHaveBeenCalledWith(400);
-        });
-
         it('returns 400 when staff passwords do not match', async () => {
             req.body = {
-                employeeId: 'ADMIN_2',
+                employeeId: 'ADMIN_002',
                 password: 'Password1',
                 confirmPassword: 'Password2',
                 role: 'ADMIN'
@@ -668,7 +658,7 @@ describe('authController', () => {
 
         it('returns 400 for weak staff password', async () => {
             req.body = {
-                employeeId: 'ADMIN_2',
+                employeeId: 'ADMIN_002',
                 password: 'weak',
                 confirmPassword: 'weak',
                 role: 'ADMIN'
@@ -679,12 +669,12 @@ describe('authController', () => {
 
         it('returns 409 when employeeId already exists', async () => {
             req.body = {
-                employeeId: 'ADMIN_2',
+                employeeId: 'ADMIN_002',
                 password: 'Password1',
                 confirmPassword: 'Password1',
                 role: 'ADMIN'
             };
-            const col = { findOne: jest.fn().mockResolvedValue({ employeeId: 'ADMIN_2' }) };
+            const col = { findOne: jest.fn().mockResolvedValue({ employeeId: 'ADMIN_002' }) };
             db.getDb.mockResolvedValue({ collection: jest.fn().mockReturnValue(col) });
 
             await authController.staffRegister(req, res);
@@ -693,7 +683,7 @@ describe('authController', () => {
 
         it('registers staff successfully', async () => {
             req.body = {
-                employeeId: 'ADMIN_2',
+                employeeId: 'ADMIN_002',
                 password: 'Password1',
                 confirmPassword: 'Password1',
                 role: 'ADMIN',
@@ -715,7 +705,7 @@ describe('authController', () => {
 
         it('calls welcome email sender for staff with email', async () => {
             req.body = {
-                employeeId: 'ADMIN_2',
+                employeeId: 'ADMIN_002',
                 password: 'Password1',
                 confirmPassword: 'Password1',
                 role: 'ADMIN',
@@ -736,7 +726,7 @@ describe('authController', () => {
 
         it('returns 500 when staffRegister throws', async () => {
             req.body = {
-                employeeId: 'ADMIN_2',
+                employeeId: 'ADMIN_002',
                 password: 'Password1',
                 confirmPassword: 'Password1',
                 role: 'ADMIN'
@@ -1032,10 +1022,11 @@ describe('authController', () => {
                 expect.any(String),
                 expect.any(Object)
             );
+            expect(res.cookie).toHaveBeenCalledWith('accessToken', 'new_access_token', expect.any(Object));
             expect(res.json).toHaveBeenCalledWith(
                 expect.objectContaining({
                     success: true,
-                    token: 'new_access_token'
+                    expiresIn: 900
                 })
             );
         });

@@ -193,6 +193,22 @@ async function startServer() {
         console.warn('⚠️ Could not run startup cleanup:', cleanupErr.message);
       }
 
+      // ── Phase 2: Seed system config defaults (idempotent) ──────────────
+      try {
+        const SystemConfigService = require('./services/SystemConfigService');
+        await SystemConfigService.seedDefaults();
+      } catch (seedErr) {
+        console.warn('⚠️ SystemConfig seed failed (non-critical):', seedErr.message);
+      }
+
+      // ── Phase 2: Trigger analytics aggregation (non-blocking) ──────────
+      try {
+        const AnalyticsService = require('./services/AnalyticsService');
+        AnalyticsService.triggerDailyAggregation();
+      } catch (analyticsErr) {
+        console.warn('⚠️ Analytics trigger failed (non-critical):', analyticsErr.message);
+      }
+
     } catch (error) {
       console.warn('⚠️ DB not connected at startup:', error.message);
       console.warn('You can POST /api/config/setup to configure runtime.');

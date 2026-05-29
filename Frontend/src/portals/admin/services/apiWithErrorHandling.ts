@@ -212,14 +212,17 @@ api.interceptors.response.use(
         }
       }
 
-      // If refresh fails, clear auth state and redirect to login
+      // If refresh fails, clear auth state and use a soft logout event
+      // (never use window.location.href here — it destroys React state and causes modal flash)
       if (import.meta.env.DEV) console.error("[API] Auth error:", data);
       localStorage.removeItem("isAuthenticated");
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      localStorage.removeItem("activePortal");
+      // Dispatch a custom event that root App.tsx listens to — triggers React Router navigation
+      window.dispatchEvent(new CustomEvent("auth:unauthorized"));
       return Promise.reject({
         type: "AUTH_ERROR",
-        message: "Authentication failed. Please login again.",
+        message: "Session expired. Please login again.",
         status,
       } as ApiError);
     }

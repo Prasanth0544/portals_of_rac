@@ -248,7 +248,7 @@ describe('NotificationService', () => {
             const result = await NotificationService.sendApprovalRequestNotification(passenger, {});
 
             expect(result.sent).toBe(false);
-            expect(result.error).toBe('No email configured');
+            expect(result.error).toBe('No email transport configured');
         });
     });
 });

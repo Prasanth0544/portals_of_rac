@@ -30,4 +30,8 @@ module.exports = {
   confirmOfflineUpgrade: (req, res) => upgrade.confirmOfflineUpgrade(req, res),
   rejectOfflineUpgrade: (req, res) => upgrade.rejectOfflineUpgrade(req, res),
   getSentUpgradeOffers: (req, res) => upgrade.getSentUpgradeOffers(req, res),
+
+  // Expose offline upgrades queue for backwards compatibility & tests
+  get offlineUpgradesQueue() { return upgrade._memQueue; },
+  set offlineUpgradesQueue(val) { upgrade._memQueue = val; },
 };

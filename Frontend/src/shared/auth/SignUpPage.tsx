@@ -65,26 +65,20 @@ function SignUpPage(): React.ReactElement {
             let body: Record<string, any>;
 
             if (isAdmin) {
-                // Validate employee ID prefix
-                const idUpper = employeeId.toUpperCase();
-                if (staffRole === 'Admin' && !idUpper.startsWith('ADM_')) {
-                    setError('Admin Employee ID must start with ADM_ (e.g., ADM_001)');
-                    setLoading(false);
-                    return;
-                }
-                if (staffRole === 'TTE' && !idUpper.startsWith('TTE_')) {
-                    setError('TTE Employee ID must start with TTE_ (e.g., TTE_001)');
+                // Validate employee ID: must be at least 8 characters
+                if (employeeId.trim().length < 8) {
+                    setError('Employee ID must be at least 8 characters long');
                     setLoading(false);
                     return;
                 }
 
                 endpoint = '/auth/staff/register';
                 body = {
-                    employeeId: idUpper,
+                    employeeId: employeeId.trim(),
                     password,
                     confirmPassword,
                     role: staffRole,
-                    name: name || idUpper,
+                    name: name || employeeId.trim(),
                     email: staffEmail || undefined,
                 };
             } else {
@@ -158,11 +152,11 @@ function SignUpPage(): React.ReactElement {
                                 <label htmlFor="employeeId">Employee ID</label>
                                 <input
                                     type="text" id="employeeId" value={employeeId}
-                                    onChange={(e: ChangeEvent<HTMLInputElement>) => setEmployeeId(e.target.value.toUpperCase())}
-                                    placeholder={staffRole === 'Admin' ? 'ADM_001' : 'TTE_001'}
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => setEmployeeId(e.target.value)}
+                                    placeholder={staffRole === 'Admin' ? 'e.g. ADMIN_001 or MyAdminID' : 'e.g. TTE_001 or MyTTE_ID'}
                                     required disabled={loading}
                                 />
-                                <small>Must start with {staffRole === 'Admin' ? 'ADM_' : 'TTE_'}</small>
+                                <small>Any unique ID with at least 8 characters</small>
                             </div>
 
                             <div className="form-group">

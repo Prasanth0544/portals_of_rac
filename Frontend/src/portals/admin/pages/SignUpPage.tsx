@@ -30,21 +30,26 @@ function SignUpPage({ onSwitchToLogin }: SignUpPageProps): React.ReactElement {
             return;
         }
 
-        // Validate ID prefix
+        // Validate Employee ID: must be at least 8 characters long, OR start with role prefix
         const idPrefix = role === 'ADMIN' ? 'ADMIN_' : 'TTE_';
-        if (!employeeId.toUpperCase().startsWith(idPrefix)) {
-            setError(`Employee ID must start with ${idPrefix} (e.g., ${idPrefix}02)`);
+        const hasValidPrefix = employeeId.toUpperCase().startsWith(idPrefix);
+
+        if (employeeId.length < 8 && !hasValidPrefix) {
+            setError(role === 'ADMIN'
+                ? 'Employee ID must be at least 8 characters long, or start with ADMIN_ (e.g., ADMIN_02)'
+                : 'Employee ID must be at least 8 characters long, or start with TTE_ (e.g., TTE_02)'
+            );
             setLoading(false);
             return;
         }
 
         try {
             const response = await api.post('/auth/staff/register', {
-                employeeId: employeeId.toUpperCase(),
+                employeeId: employeeId.trim(),
                 password,
                 confirmPassword,
                 role,
-                name: name || employeeId.toUpperCase()
+                name: name || employeeId.trim()
             });
 
             if (response.data.success) {
@@ -103,12 +108,12 @@ function SignUpPage({ onSwitchToLogin }: SignUpPageProps): React.ReactElement {
                             type="text"
                             id="employeeId"
                             value={employeeId}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setEmployeeId(e.target.value.toUpperCase())}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setEmployeeId(e.target.value)}
                             placeholder={getIdPlaceholder()}
                             required
                             disabled={loading}
                         />
-                        <small>Must start with {role === 'ADMIN' ? 'ADMIN_' : 'TTE_'}</small>
+                        <small>Must be 8+ characters, or start with {role === 'ADMIN' ? 'ADMIN_' : 'TTE_'}</small>
                     </div>
 
                     <div className="form-group">

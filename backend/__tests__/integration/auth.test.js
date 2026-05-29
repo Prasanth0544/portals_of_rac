@@ -99,7 +99,8 @@ describe('Auth Flow Integration', () => {
             expect(res.json).toHaveBeenCalled();
             const response = res.json.mock.calls[0][0];
             expect(response.success).toBe(true);
-            expect(response.token).toBeDefined();
+            expect(res.cookie).toHaveBeenCalledWith('accessToken', expect.any(String), expect.any(Object));
+            expect(res.cookie).toHaveBeenCalledWith('refreshToken', expect.any(String), expect.any(Object));
             expect(response.user.role).toBe('ADMIN');
         });
 
@@ -132,7 +133,8 @@ describe('Auth Flow Integration', () => {
             expect(res.json).toHaveBeenCalled();
             const response = res.json.mock.calls[0][0];
             expect(response.success).toBe(true);
-            expect(response.token).toBeDefined();
+            expect(res.cookie).toHaveBeenCalledWith('accessToken', expect.any(String), expect.any(Object));
+            expect(res.cookie).toHaveBeenCalledWith('refreshToken', expect.any(String), expect.any(Object));
             expect(response.user.role).toBe('TTE');
         });
 
@@ -200,7 +202,8 @@ describe('Auth Flow Integration', () => {
             expect(res.json).toHaveBeenCalled();
             const response = res.json.mock.calls[0][0];
             expect(response.success).toBe(true);
-            expect(response.token).toBeDefined();
+            expect(res.cookie).toHaveBeenCalledWith('accessToken', expect.any(String), expect.any(Object));
+            expect(res.cookie).toHaveBeenCalledWith('refreshToken', expect.any(String), expect.any(Object));
             expect(response.user.role).toBe('PASSENGER');
         });
 

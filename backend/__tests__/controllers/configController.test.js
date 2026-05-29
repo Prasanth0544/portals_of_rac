@@ -200,31 +200,21 @@ describe('configController - Comprehensive Tests', () => {
             expect(res.status).toHaveBeenCalledWith(400);
         });
 
-        it('returns 404 when station collection is missing', async () => {
+        it('auto-creates station collection when missing', async () => {
             req.body = { trainNo: '17225', trainName: 'Test' };
-            const racDb = {
-                listCollections: jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue([]) })
+            const trainsCollection = {
+                findOne: jest.fn().mockResolvedValue(null),
+                updateOne: jest.fn().mockResolvedValue({ acknowledged: true })
             };
-            db.getDb.mockResolvedValue({
-                ...racDb,
-                collection: jest.fn()
-            });
-
-            await configController.registerTrain(req, res);
-            expect(res.status).toHaveBeenCalledWith(404);
-        });
-
-        it('returns 404 when passenger collection is missing', async () => {
-            req.body = { trainNo: '17225', trainName: 'Test' };
-            const trainsCollection = { findOne: jest.fn().mockResolvedValue(null) };
             const racDb = {
-                listCollections: jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue([{}]) }),
+                listCollections: jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue([]) }),
+                createCollection: jest.fn().mockResolvedValue({}),
                 collection: jest.fn().mockReturnValue(trainsCollection)
             };
             db.getDb.mockResolvedValue(racDb);
 
             const pDb = {
-                listCollections: jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue([]) })
+                listCollections: jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue([{}]) })
             };
             const mockClient = {
                 connect: jest.fn().mockResolvedValue(),
@@ -234,7 +224,36 @@ describe('configController - Comprehensive Tests', () => {
             MongoClient.mockImplementation(() => mockClient);
 
             await configController.registerTrain(req, res);
-            expect(res.status).toHaveBeenCalledWith(404);
+            expect(racDb.createCollection).toHaveBeenCalledWith('17225_stations');
+            expect(res.status).toHaveBeenCalledWith(201);
+        });
+
+        it('auto-creates passenger collection when missing', async () => {
+            req.body = { trainNo: '17225', trainName: 'Test' };
+            const trainsCollection = {
+                findOne: jest.fn().mockResolvedValue(null),
+                updateOne: jest.fn().mockResolvedValue({ acknowledged: true })
+            };
+            const racDb = {
+                listCollections: jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue([{}]) }),
+                collection: jest.fn().mockReturnValue(trainsCollection)
+            };
+            db.getDb.mockResolvedValue(racDb);
+
+            const pDb = {
+                listCollections: jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue([]) }),
+                createCollection: jest.fn().mockResolvedValue({})
+            };
+            const mockClient = {
+                connect: jest.fn().mockResolvedValue(),
+                db: jest.fn().mockReturnValue(pDb),
+                close: jest.fn().mockResolvedValue()
+            };
+            MongoClient.mockImplementation(() => mockClient);
+
+            await configController.registerTrain(req, res);
+            expect(pDb.createCollection).toHaveBeenCalledWith('17225_passengers');
+            expect(res.status).toHaveBeenCalledWith(201);
         });
 
         it('registers train successfully', async () => {

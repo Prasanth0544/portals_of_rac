@@ -15,6 +15,9 @@ const { MongoClient } = require('mongodb');
 const TrainState = require('../models/TrainState');
 const CurrentStationReallocationService = require('../services/CurrentStationReallocationService');
 const { TRAIN_FIELDS, getStationCollectionName } = require('../config/fields');
+const { authMiddleware, requireRole } = require('../middleware/auth');
+
+const adminOnly = [authMiddleware, requireRole(['ADMIN'])];
 
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017';
 const TRAIN_DETAILS_DB = process.env.TRAIN_DETAILS_DB || process.env.STATIONS_DB || 'rac';
@@ -156,7 +159,7 @@ function validate(ur, cancelCount, racCount) {
 
 // ─── GET /api/evaluation/trains — list trains with station counts ────────────
 
-router.get('/trains', async (req, res) => {
+router.get('/trains', ...adminOnly, async (req, res) => {
     let client;
     try {
         client = new MongoClient(MONGODB_URI);
@@ -193,7 +196,7 @@ router.get('/trains', async (req, res) => {
 
 // ─── POST /api/evaluation/run — run a scenario ─────────────────────────────
 
-router.post('/run', async (req, res) => {
+router.post('/run', ...adminOnly, async (req, res) => {
     let client;
     try {
         const { trainNo, confirmed = 100, rac = 10, cancel = 5, iterations = 1 } = req.body;

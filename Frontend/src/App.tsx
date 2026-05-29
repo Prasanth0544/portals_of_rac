@@ -1,5 +1,5 @@
 // Frontend/src/App.tsx — Root router for the unified frontend
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import RoleSelector from './shared/components/RoleSelector';
 import LoginPage from './shared/auth/LoginPage';
@@ -69,6 +69,14 @@ function App(): React.ReactElement {
         setAuthenticated(false);
         setActivePortal(null);
     };
+
+    // Listen for 401 events from the API interceptor — soft navigation instead of hard reload
+    useEffect(() => {
+        const onUnauthorized = () => handleLogout();
+        window.addEventListener('auth:unauthorized', onUnauthorized);
+        return () => window.removeEventListener('auth:unauthorized', onUnauthorized);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
         <Router>

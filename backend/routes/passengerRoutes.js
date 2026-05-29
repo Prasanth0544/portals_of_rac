@@ -140,6 +140,8 @@ router.get('/passenger/upgrade-notifications/:pnr',
 );
 
 router.post('/passenger/accept-upgrade',
+  authMiddleware,
+  requireRole(['PASSENGER']),
   validationMiddleware.sanitizeBody,
   validationMiddleware.checkTrainInitialized,
   validationMiddleware.checkJourneyStarted,
@@ -147,6 +149,8 @@ router.post('/passenger/accept-upgrade',
 );
 
 router.post('/passenger/deny-upgrade',
+  authMiddleware,
+  requireRole(['PASSENGER']),
   validationMiddleware.sanitizeBody,
   validationMiddleware.checkTrainInitialized,
   validationMiddleware.checkJourneyStarted,

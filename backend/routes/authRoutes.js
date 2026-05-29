@@ -5,7 +5,7 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const otpController = require('../controllers/otpController');
 const validationMiddleware = require('../middleware/validation');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, requireRole } = require('../middleware/auth');
 const { authLimiter, otpLimiter } = require('../middleware/rateLimiter');
 
 // ========== AUTHENTICATION ROUTES ==========
@@ -41,11 +41,19 @@ router.post('/auth/refresh',
   (req, res) => authController.refresh(req, res)
 );
 
-// Staff Registration (Admin + TTE)
+// Staff Registration (Admin + TTE self-register via signup page)
 router.post('/auth/staff/register',
   authLimiter,
   validationMiddleware.sanitizeBody,
   (req, res) => authController.staffRegister(req, res)
+);
+
+// TTE Registration (Admin registers a TTE for a specific train from Landing Page)
+router.post('/auth/tte/register',
+  authMiddleware,
+  requireRole(['ADMIN']),
+  validationMiddleware.sanitizeBody,
+  (req, res) => authController.registerTTE(req, res)
 );
 
 // Passenger Registration
